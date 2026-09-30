@@ -255,7 +255,7 @@ class Evaluator:
             
             dep_p = arr_p + p_node.duration
             arr_next = dep_p + data.time_matrix[p_node.id][next_node.id]
-            if tabu_edges and ((prev.request_id, p_node.request_id) in tabu_edges or (p_node.request_id, next_node.request_id) in tabu_edges): continue
+            if tabu_edges and ((prev.id, p_node.id) in tabu_edges or (p_node.id, next_node.id) in tabu_edges): continue
             delta_time = arr_next - route.arr_time[i]
             
             # O(1) Constraint check
@@ -344,16 +344,16 @@ class Evaluator:
                         
                         is_tabu = False
                         if tabu_edges:
-                            p_prev_req = prev_i.request_id
-                            p_next_req = drop.request_id if j == i else route.nodes[i].request_id
-                            d_prev_req = pick.request_id if j == i else route.nodes[j-1].request_id
-                            d_next_req = next_j.request_id
+                            p_prev_req = prev_i.id
+                            p_next_req = drop.id if j == i else route.nodes[i].id
+                            d_prev_req = pick.id if j == i else route.nodes[j-1].id
+                            d_next_req = next_j.id
                             
                             is_tabu = (
-                                (p_prev_req, pick.request_id) in tabu_edges or
-                                (pick.request_id, p_next_req) in tabu_edges or
-                                (d_prev_req, drop.request_id) in tabu_edges or
-                                (drop.request_id, d_next_req) in tabu_edges
+                                (p_prev_req, pick.id) in tabu_edges or
+                                (pick.id, p_next_req) in tabu_edges or
+                                (d_prev_req, drop.id) in tabu_edges or
+                                (drop.id, d_next_req) in tabu_edges
                             )
                             
                         if not is_tabu and delta_benefit > best_benefit:

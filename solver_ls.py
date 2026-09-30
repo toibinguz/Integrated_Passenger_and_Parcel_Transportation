@@ -7,8 +7,8 @@ from models import GenericNode, Data, Route, Evaluator
 
 # --- CÁC THAM SỐ ĐIỀU KHIỂN (CONTROL PARAMETERS) ---
 # Heuristic Parameters
-TABU_TENURE = 5                 # Thời gian cấm (iterations) cho Tabu Search
-MUTATION_RATE = 0.03            # Tỉ lệ phá hủy ngẫu nhiên (5%)
+TABU_TENURE = 10                 # Thời gian cấm (iterations) cho Tabu Search
+MUTATION_RATE = 0.05            # Tỉ lệ phá hủy ngẫu nhiên (5%)
 GRAVITY_ALPHA = 100.0           # Trọng số mật độ (Gravity) trong best_insert
 
 # Tham số MILP
@@ -100,7 +100,6 @@ class LSSolver:
                             prev_req = routes[r_idx].nodes[pos-1].request_id
                             next_req = routes[r_idx].nodes[pos].request_id
                             if (prev_req, p_node.request_id) in active_tabu_edges or (p_node.request_id, next_req) in active_tabu_edges:
-                                # Nếu dính Tabu, phải tính lại tìm 2nd best (không cache)
                                 ben, pos = Evaluator.evaluate_passenger(routes[r_idx], p_node, data, active_tabu_edges)
                                 
                         if ben > -999999 and use_gravity: 
@@ -314,8 +313,6 @@ class LSSolver:
                         test_route = copy.copy(route)
                         test_route.nodes = base_nodes
                         test_route.update_states(data)
-                        if not test_route.is_feasible:
-                            continue
                             
                         ben_insert, p_pos, d_pos = Evaluator.evaluate_parcel(test_route, node, drop, data)
                         new_total_ben = test_route.total_benefit + ben_insert
@@ -363,20 +360,13 @@ class LSSolver:
                     if node.type == 'PASSENGER':
                         delta = self._delta_cost_remove(route, i, data)
                         if delta > 0:
-                            test_nodes = list(route.nodes)
-                            test_nodes.pop(i)
-                            import copy
-                            test_route = copy.copy(route)
-                            test_route.nodes = test_nodes
-                            test_route.update_states(data)
-                            if test_route.is_feasible:
-                                route.nodes = test_nodes
-                                route.update_states(data)
-                                unserved_pass.append(node)
-                                total_removed += 1
-                                route_changed = True
-                                route_changed_ever = True
-                                continue
+                            route.nodes.pop(i)
+                            route.update_states(data)
+                            unserved_pass.append(node)
+                            total_removed += 1
+                            route_changed = True
+                            route_changed_ever = True
+                            continue
                             
                     elif node.type == 'PARCEL_PICKUP':
                         d_idx = next((j for j in range(i+1, len(route.nodes)-1)
@@ -390,7 +380,7 @@ class LSSolver:
                             test_route.nodes = test_nodes
                             test_route.update_states(data)
 
-                            if test_route.is_feasible and test_route.total_benefit > orig_ben:
+                            if test_route.total_benefit > orig_ben:
                                 route.nodes = test_nodes
                                 route.update_states(data)
                                 for p, d in data.parcels:
@@ -416,7 +406,7 @@ class LSSolver:
             new_nodes = []
             route_changed = False
             for n in r.nodes:
-                if n.type != 'DEPOT' and n.request_id in to_remove_ids:
+                if n.type != 'DEPOT' and (n.type.split('_')[0], n.request_id) in to_remove_ids:
                     route_changed = True
                     if n.type == 'PASSENGER':
                         unserved_pass.append(n)
@@ -432,7 +422,7 @@ class LSSolver:
 
     def random_perturbation(self, routes, unserved_pass, unserved_parc, data, percentage=0.05, tabu_dict=None, current_iter=0, tenure=10):
         # Tính theo số lượng request (mỗi passenger = 1, mỗi parcel pair = 1 request)
-        served_reqs = set([n.request_id for r in routes for n in r.nodes[1:-1]])
+        served_reqs = set([(n.type.split('_')[0], n.request_id) for r in routes for n in r.nodes[1:-1]])
         if not served_reqs: return 0
         num_remove = max(1, int(len(served_reqs) * percentage))
         to_remove = set(random.sample(list(served_reqs), min(num_remove, len(served_reqs))))
@@ -441,9 +431,9 @@ class LSSolver:
         if tabu_dict is not None:
             for r in routes:
                 for i in range(1, len(r.nodes)-1):
-                    if r.nodes[i].request_id in to_remove:
-                        tabu_dict[(r.nodes[i-1].request_id, r.nodes[i].request_id)] = current_iter + tenure
-                        tabu_dict[(r.nodes[i].request_id, r.nodes[i+1].request_id)] = current_iter + tenure
+                    if (r.nodes[i].type.split('_')[0], r.nodes[i].request_id) in to_remove:
+                        tabu_dict[(r.nodes[i-1].id, r.nodes[i].id)] = current_iter + tenure
+                        tabu_dict[(r.nodes[i].id, r.nodes[i+1].id)] = current_iter + tenure
                         
         self._apply_removal(routes, unserved_pass, unserved_parc, to_remove, data)
         return len(to_remove)
@@ -459,9 +449,10 @@ class LSSolver:
             self.log_and_print(f"[INIT] Nạp tour từ file: {initial_tour_file}")
             routes = load_tour(self.data, initial_tour_file)
             
-            served_reqs = set([n.request_id for r in routes for n in r.nodes[1:-1]])
-            unserved_pass = [p for p in self.data.passengers if p.request_id not in served_reqs]
-            unserved_parc = [(p, d) for p, d in self.data.parcels if p.request_id not in served_reqs]
+            served_pass_reqs = set([n.request_id for r in routes for n in r.nodes[1:-1] if n.type == 'PASSENGER'])
+            served_parc_reqs = set([n.request_id for r in routes for n in r.nodes[1:-1] if 'PARCEL' in n.type])
+            unserved_pass = [p for p in self.data.passengers if p.request_id not in served_pass_reqs]
+            unserved_parc = [(p, d) for p, d in self.data.parcels if p.request_id not in served_parc_reqs]
             
             self.best_benefit = sum(r.total_benefit for r in routes)
             self.best_routes = copy.deepcopy(routes)
@@ -594,9 +585,10 @@ class LSSolver:
             # --- PERTURBATION (PHÁ HỦY NGẪU NHIÊN 5% + ÁP DỤNG TABU) ---
             routes = [r.clone() for r in self.best_routes]
             
-            served_reqs = set([n.request_id for r in routes for n in r.nodes[1:-1]])
-            unserved_pass = [p for p in self.data.passengers if p.request_id not in served_reqs]
-            unserved_parc = [(p, d) for p, d in self.data.parcels if p.request_id not in served_reqs]
+            served_pass_reqs = set([n.request_id for r in routes for n in r.nodes[1:-1] if n.type == 'PASSENGER'])
+            served_parc_reqs = set([n.request_id for r in routes for n in r.nodes[1:-1] if 'PARCEL' in n.type])
+            unserved_pass = [p for p in self.data.passengers if p.request_id not in served_pass_reqs]
+            unserved_parc = [(p, d) for p, d in self.data.parcels if p.request_id not in served_parc_reqs]
             
             num_removed = self.random_perturbation(routes, unserved_pass, unserved_parc, self.data, MUTATION_RATE, tabu_dict, it, tabu_tenure)
             
@@ -697,4 +689,4 @@ if __name__ == "__main__":
     data = Data(filename)
     data.filename = filename
     solver = LSSolver(data)
-    solver.solve(max_iterations= 200, init_fraction= 0.95, initial_tour_file=initial_tour)
+    solver.solve(max_iterations= 10000, init_fraction= 0.95, initial_tour_file=initial_tour)

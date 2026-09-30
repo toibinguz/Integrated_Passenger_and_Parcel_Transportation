@@ -1,0 +1,1355 @@
+Total Benefit: 133657
+Xe 0 (Capacity 59):
+  [PARCEL_PICKUP 169] -> [PARCEL_PICKUP 39] -> [PARCEL_DROPOFF 169] -> [PARCEL_PICKUP 125] -> [PASSENGER 153] -> [PARCEL_DROPOFF 39] -> [PARCEL_PICKUP 176] -> [PARCEL_PICKUP 94] -> [PARCEL_DROPOFF 176] -> [PARCEL_DROPOFF 94] -> [PARCEL_DROPOFF 125]
+Xe 1 (Capacity 43):
+  [PASSENGER 184]
+Xe 2 (Capacity 62):
+  [PARCEL_PICKUP 32] -> [PARCEL_PICKUP 64] -> [PARCEL_DROPOFF 32] -> [PARCEL_DROPOFF 64] -> [PARCEL_PICKUP 197] -> [PARCEL_PICKUP 190] -> [PARCEL_PICKUP 66] -> [PARCEL_PICKUP 76] -> [PARCEL_DROPOFF 197] -> [PARCEL_DROPOFF 66] -> [PARCEL_DROPOFF 190] -> [PASSENGER 5] -> [PARCEL_PICKUP 175] -> [PARCEL_DROPOFF 175] -> [PARCEL_PICKUP 37] -> [PARCEL_PICKUP 59] -> [PARCEL_DROPOFF 76] -> [PARCEL_PICKUP 147] -> [PARCEL_PICKUP 98] -> [PARCEL_DROPOFF 59] -> [PARCEL_DROPOFF 37] -> [PARCEL_DROPOFF 147] -> [PARCEL_DROPOFF 98]
+Xe 3 (Capacity 39):
+  [PARCEL_PICKUP 177] -> [PASSENGER 111] -> [PARCEL_DROPOFF 177] -> [PASSENGER 33]
+Xe 4 (Capacity 62):
+  [PARCEL_PICKUP 56] -> [PARCEL_PICKUP 13] -> [PARCEL_DROPOFF 13] -> [PARCEL_PICKUP 25] -> [PARCEL_DROPOFF 56] -> [PARCEL_DROPOFF 25]
+Xe 5 (Capacity 38):
+  [PARCEL_PICKUP 150] -> [PARCEL_PICKUP 120] -> [PARCEL_DROPOFF 150] -> [PASSENGER 25] -> [PARCEL_DROPOFF 120]
+Xe 6 (Capacity 66):
+  [PARCEL_PICKUP 141] -> [PARCEL_PICKUP 11] -> [PARCEL_PICKUP 140] -> [PARCEL_DROPOFF 141] -> [PARCEL_DROPOFF 11] -> [PASSENGER 172] -> [PARCEL_DROPOFF 140] -> [PARCEL_PICKUP 31] -> [PARCEL_PICKUP 0] -> [PARCEL_PICKUP 154] -> [PARCEL_DROPOFF 31] -> [PARCEL_DROPOFF 154] -> [PARCEL_DROPOFF 0]
+Xe 7 (Capacity 48):
+  KHÔNG CHỞ
+Xe 8 (Capacity 50):
+  [PARCEL_PICKUP 82] -> [PARCEL_PICKUP 75] -> [PARCEL_DROPOFF 82] -> [PARCEL_DROPOFF 75]
+Xe 9 (Capacity 37):
+  [PASSENGER 134]
+Xe 10 (Capacity 50):
+  [PARCEL_PICKUP 119] -> [PARCEL_PICKUP 9] -> [PARCEL_DROPOFF 9] -> [PARCEL_DROPOFF 119]
+Xe 11 (Capacity 49):
+  [PASSENGER 29] -> [PARCEL_PICKUP 45] -> [PASSENGER 195] -> [PARCEL_DROPOFF 45] -> [PARCEL_PICKUP 21] -> [PARCEL_PICKUP 164] -> [PARCEL_PICKUP 124] -> [PARCEL_DROPOFF 164] -> [PARCEL_PICKUP 117] -> [PARCEL_PICKUP 165] -> [PARCEL_PICKUP 158] -> [PARCEL_DROPOFF 165] -> [PARCEL_DROPOFF 124] -> [PARCEL_DROPOFF 21] -> [PARCEL_DROPOFF 158] -> [PARCEL_DROPOFF 117]
+Xe 12 (Capacity 63):
+  [PASSENGER 106] -> [PASSENGER 141]
+Xe 13 (Capacity 63):
+  [PARCEL_PICKUP 8] -> [PARCEL_PICKUP 152] -> [PARCEL_DROPOFF 8] -> [PARCEL_DROPOFF 152] -> [PARCEL_PICKUP 67] -> [PARCEL_PICKUP 83] -> [PARCEL_PICKUP 166] -> [PARCEL_PICKUP 90] -> [PARCEL_DROPOFF 166] -> [PARCEL_DROPOFF 67] -> [PARCEL_DROPOFF 83] -> [PARCEL_PICKUP 10] -> [PASSENGER 20] -> [PARCEL_DROPOFF 90] -> [PARCEL_DROPOFF 10]
+Xe 14 (Capacity 51):
+  [PASSENGER 26]
+Xe 15 (Capacity 43):
+  [PASSENGER 102] -> [PARCEL_PICKUP 111] -> [PARCEL_DROPOFF 111] -> [PASSENGER 174]
+Xe 16 (Capacity 45):
+  [PARCEL_PICKUP 28] -> [PARCEL_PICKUP 122] -> [PARCEL_DROPOFF 28] -> [PARCEL_DROPOFF 122] -> [PARCEL_PICKUP 167] -> [PASSENGER 120] -> [PARCEL_PICKUP 135] -> [PARCEL_PICKUP 157] -> [PARCEL_PICKUP 126] -> [PARCEL_DROPOFF 157] -> [PARCEL_DROPOFF 126] -> [PARCEL_DROPOFF 167] -> [PARCEL_DROPOFF 135] -> [PARCEL_PICKUP 159] -> [PASSENGER 61] -> [PASSENGER 51] -> [PARCEL_DROPOFF 159]
+Xe 17 (Capacity 49):
+  [PARCEL_PICKUP 18] -> [PASSENGER 47] -> [PARCEL_DROPOFF 18] -> [PASSENGER 55] -> [PASSENGER 94]
+Xe 18 (Capacity 30):
+  [PASSENGER 161] -> [PARCEL_PICKUP 136] -> [PARCEL_PICKUP 132] -> [PASSENGER 199] -> [PARCEL_DROPOFF 136] -> [PARCEL_DROPOFF 132]
+Xe 19 (Capacity 46):
+  [PASSENGER 129]
+Xe 20 (Capacity 55):
+  [PARCEL_PICKUP 168] -> [PARCEL_DROPOFF 168] -> [PASSENGER 6]
+Xe 21 (Capacity 47):
+  [PARCEL_PICKUP 127] -> [PASSENGER 27] -> [PARCEL_DROPOFF 127]
+Xe 22 (Capacity 58):
+  [PARCEL_PICKUP 52] -> [PARCEL_DROPOFF 52] -> [PARCEL_PICKUP 51] -> [PARCEL_PICKUP 6] -> [PARCEL_PICKUP 171] -> [PARCEL_PICKUP 161] -> [PARCEL_DROPOFF 6] -> [PARCEL_DROPOFF 171] -> [PARCEL_DROPOFF 51] -> [PARCEL_DROPOFF 161]
+Xe 23 (Capacity 50):
+  [PASSENGER 68] -> [PARCEL_PICKUP 148] -> [PARCEL_PICKUP 15] -> [PASSENGER 171] -> [PARCEL_DROPOFF 15] -> [PARCEL_DROPOFF 148]
+Xe 24 (Capacity 46):
+  [PASSENGER 196] -> [PASSENGER 41] -> [PARCEL_PICKUP 104] -> [PARCEL_PICKUP 7] -> [PARCEL_DROPOFF 104] -> [PARCEL_PICKUP 16] -> [PARCEL_DROPOFF 7] -> [PARCEL_DROPOFF 16]
+Xe 25 (Capacity 58):
+  [PARCEL_PICKUP 17] -> [PARCEL_PICKUP 14] -> [PASSENGER 37] -> [PARCEL_DROPOFF 14] -> [PARCEL_DROPOFF 17]
+Xe 26 (Capacity 44):
+  [PARCEL_PICKUP 112] -> [PARCEL_DROPOFF 112]
+Xe 27 (Capacity 52):
+  [PARCEL_PICKUP 144] -> [PARCEL_DROPOFF 144]
+Xe 28 (Capacity 27):
+  [PARCEL_PICKUP 183] -> [PASSENGER 137] -> [PASSENGER 154] -> [PARCEL_DROPOFF 183] -> [PASSENGER 35]
+Xe 29 (Capacity 41):
+  [PARCEL_PICKUP 46] -> [PARCEL_DROPOFF 46] -> [PASSENGER 197] -> [PASSENGER 48] -> [PASSENGER 192] -> [PARCEL_PICKUP 187] -> [PARCEL_PICKUP 49] -> [PARCEL_PICKUP 48] -> [PARCEL_DROPOFF 187] -> [PARCEL_DROPOFF 49] -> [PARCEL_PICKUP 138] -> [PARCEL_DROPOFF 48] -> [PARCEL_DROPOFF 138] -> [PARCEL_PICKUP 33] -> [PARCEL_DROPOFF 33]
+Xe 30 (Capacity 67):
+  [PASSENGER 14] -> [PASSENGER 179] -> [PARCEL_PICKUP 128] -> [PASSENGER 87] -> [PARCEL_DROPOFF 128]
+Xe 31 (Capacity 50):
+  [PARCEL_PICKUP 50] -> [PARCEL_DROPOFF 50]
+Xe 32 (Capacity 47):
+  [PARCEL_PICKUP 42] -> [PARCEL_PICKUP 170] -> [PARCEL_DROPOFF 170] -> [PARCEL_DROPOFF 42] -> [PARCEL_PICKUP 97] -> [PARCEL_PICKUP 26] -> [PARCEL_DROPOFF 26] -> [PARCEL_DROPOFF 97] -> [PASSENGER 163]
+Xe 33 (Capacity 37):
+  [PARCEL_PICKUP 70] -> [PARCEL_DROPOFF 70] -> [PARCEL_PICKUP 40] -> [PARCEL_PICKUP 65] -> [PARCEL_PICKUP 69] -> [PARCEL_DROPOFF 40] -> [PARCEL_DROPOFF 69] -> [PARCEL_DROPOFF 65]
+Xe 34 (Capacity 49):
+  KHÔNG CHỞ
+Xe 35 (Capacity 65):
+  [PASSENGER 57]
+Xe 36 (Capacity 34):
+  [PARCEL_PICKUP 35] -> [PARCEL_PICKUP 12] -> [PARCEL_PICKUP 84] -> [PARCEL_PICKUP 196] -> [PARCEL_DROPOFF 84] -> [PARCEL_DROPOFF 35] -> [PARCEL_DROPOFF 12] -> [PARCEL_PICKUP 181] -> [PARCEL_DROPOFF 196] -> [PARCEL_PICKUP 131] -> [PARCEL_DROPOFF 181] -> [PARCEL_DROPOFF 131]
+Xe 37 (Capacity 43):
+  [PASSENGER 150] -> [PARCEL_PICKUP 47] -> [PARCEL_DROPOFF 47] -> [PASSENGER 0]
+Xe 38 (Capacity 42):
+  [PASSENGER 168] -> [PARCEL_PICKUP 155] -> [PARCEL_PICKUP 19] -> [PARCEL_PICKUP 38] -> [PARCEL_DROPOFF 19] -> [PARCEL_DROPOFF 38] -> [PARCEL_DROPOFF 155]
+Xe 39 (Capacity 52):
+  [PASSENGER 17] -> [PARCEL_PICKUP 130] -> [PASSENGER 109] -> [PARCEL_DROPOFF 130]
+Xe 40 (Capacity 59):
+  [PARCEL_PICKUP 116] -> [PARCEL_DROPOFF 116]
+Xe 41 (Capacity 45):
+  [PASSENGER 125]
+Xe 42 (Capacity 39):
+  [PARCEL_PICKUP 145] -> [PARCEL_PICKUP 62] -> [PARCEL_PICKUP 41] -> [PASSENGER 38] -> [PARCEL_DROPOFF 41] -> [PARCEL_DROPOFF 145] -> [PARCEL_PICKUP 89] -> [PARCEL_DROPOFF 62] -> [PARCEL_PICKUP 101] -> [PARCEL_DROPOFF 89] -> [PARCEL_DROPOFF 101]
+Xe 43 (Capacity 57):
+  [PARCEL_PICKUP 22] -> [PASSENGER 12] -> [PARCEL_DROPOFF 22] -> [PARCEL_PICKUP 110] -> [PARCEL_PICKUP 180] -> [PARCEL_PICKUP 29] -> [PASSENGER 169] -> [PARCEL_DROPOFF 110] -> [PARCEL_DROPOFF 29] -> [PARCEL_DROPOFF 180]
+Xe 44 (Capacity 57):
+  [PARCEL_PICKUP 188] -> [PARCEL_PICKUP 85] -> [PARCEL_DROPOFF 188] -> [PARCEL_DROPOFF 85] -> [PARCEL_PICKUP 178] -> [PARCEL_DROPOFF 178]
+Xe 45 (Capacity 50):
+  [PARCEL_PICKUP 53] -> [PARCEL_PICKUP 93] -> [PARCEL_DROPOFF 53] -> [PARCEL_PICKUP 58] -> [PARCEL_DROPOFF 58] -> [PARCEL_DROPOFF 93]
+Xe 46 (Capacity 46):
+  KHÔNG CHỞ
+Xe 47 (Capacity 52):
+  [PASSENGER 180] -> [PARCEL_PICKUP 189] -> [PARCEL_DROPOFF 189] -> [PARCEL_PICKUP 80] -> [PARCEL_PICKUP 3] -> [PARCEL_PICKUP 24] -> [PARCEL_DROPOFF 80] -> [PARCEL_DROPOFF 3] -> [PARCEL_PICKUP 23] -> [PARCEL_DROPOFF 24] -> [PARCEL_DROPOFF 23]
+Xe 48 (Capacity 46):
+  [PASSENGER 50]
+Xe 49 (Capacity 48):
+  [PASSENGER 146] -> [PARCEL_PICKUP 185] -> [PARCEL_PICKUP 78] -> [PARCEL_PICKUP 193] -> [PARCEL_PICKUP 27] -> [PARCEL_DROPOFF 185] -> [PARCEL_DROPOFF 27] -> [PARCEL_DROPOFF 193] -> [PARCEL_DROPOFF 78] -> [PASSENGER 98] -> [PARCEL_PICKUP 192] -> [PARCEL_PICKUP 142] -> [PARCEL_DROPOFF 142] -> [PARCEL_PICKUP 129] -> [PARCEL_PICKUP 182] -> [PARCEL_DROPOFF 192] -> [PARCEL_DROPOFF 129] -> [PASSENGER 113] -> [PARCEL_PICKUP 88] -> [PARCEL_PICKUP 4] -> [PARCEL_DROPOFF 182] -> [PARCEL_PICKUP 139] -> [PARCEL_DROPOFF 4] -> [PARCEL_DROPOFF 139] -> [PARCEL_DROPOFF 88]
+Xe 50 (Capacity 50):
+  [PASSENGER 67]
+Xe 51 (Capacity 58):
+  [PASSENGER 39]
+Xe 52 (Capacity 49):
+  [PARCEL_PICKUP 73] -> [PARCEL_PICKUP 194] -> [PARCEL_DROPOFF 73] -> [PASSENGER 79] -> [PASSENGER 91] -> [PARCEL_DROPOFF 194] -> [PARCEL_PICKUP 92] -> [PASSENGER 21] -> [PARCEL_PICKUP 133] -> [PARCEL_DROPOFF 92] -> [PARCEL_DROPOFF 133]
+Xe 53 (Capacity 44):
+  KHÔNG CHỞ
+Xe 54 (Capacity 50):
+  [PASSENGER 107] -> [PARCEL_PICKUP 134] -> [PASSENGER 143] -> [PARCEL_DROPOFF 134]
+Xe 55 (Capacity 32):
+  [PARCEL_PICKUP 2] -> [PARCEL_PICKUP 100] -> [PARCEL_DROPOFF 2] -> [PASSENGER 158] -> [PARCEL_DROPOFF 100]
+Xe 56 (Capacity 31):
+  KHÔNG CHỞ
+Xe 57 (Capacity 37):
+  [PASSENGER 164] -> [PARCEL_PICKUP 146] -> [PARCEL_PICKUP 149] -> [PARCEL_DROPOFF 146] -> [PASSENGER 11] -> [PARCEL_DROPOFF 149] -> [PASSENGER 70] -> [PASSENGER 105] -> [PARCEL_PICKUP 160] -> [PARCEL_PICKUP 96] -> [PARCEL_PICKUP 30] -> [PARCEL_DROPOFF 160] -> [PARCEL_DROPOFF 30] -> [PARCEL_DROPOFF 96]
+Xe 58 (Capacity 37):
+  [PARCEL_PICKUP 71] -> [PARCEL_PICKUP 121] -> [PARCEL_DROPOFF 71] -> [PARCEL_PICKUP 44] -> [PARCEL_DROPOFF 121] -> [PARCEL_PICKUP 179] -> [PARCEL_DROPOFF 44] -> [PARCEL_PICKUP 173] -> [PARCEL_DROPOFF 179] -> [PARCEL_DROPOFF 173] -> [PASSENGER 112] -> [PASSENGER 101]
+Xe 59 (Capacity 58):
+  [PARCEL_PICKUP 34] -> [PARCEL_DROPOFF 34] -> [PASSENGER 185]
+Xe 60 (Capacity 54):
+  [PARCEL_PICKUP 108] -> [PARCEL_DROPOFF 108] -> [PARCEL_PICKUP 123] -> [PARCEL_DROPOFF 123] -> [PASSENGER 23]
+Xe 61 (Capacity 43):
+  [PARCEL_PICKUP 60] -> [PASSENGER 191] -> [PARCEL_DROPOFF 60] -> [PARCEL_PICKUP 118] -> [PARCEL_PICKUP 151] -> [PARCEL_PICKUP 36] -> [PARCEL_DROPOFF 151] -> [PARCEL_PICKUP 77] -> [PASSENGER 31] -> [PARCEL_PICKUP 68] -> [PARCEL_DROPOFF 36] -> [PARCEL_DROPOFF 118] -> [PARCEL_DROPOFF 68] -> [PARCEL_DROPOFF 77]
+Xe 62 (Capacity 57):
+  [PARCEL_PICKUP 55] -> [PARCEL_PICKUP 195] -> [PARCEL_DROPOFF 195] -> [PARCEL_DROPOFF 55] -> [PASSENGER 188]
+Xe 63 (Capacity 57):
+  [PASSENGER 166] -> [PARCEL_PICKUP 54] -> [PASSENGER 89] -> [PARCEL_DROPOFF 54]
+Xe 64 (Capacity 50):
+  [PASSENGER 63] -> [PARCEL_PICKUP 186] -> [PARCEL_PICKUP 102] -> [PARCEL_PICKUP 109] -> [PARCEL_DROPOFF 102] -> [PARCEL_DROPOFF 186] -> [PARCEL_DROPOFF 109]
+Xe 65 (Capacity 53):
+  [PASSENGER 73]
+Xe 66 (Capacity 45):
+  [PASSENGER 49]
+Xe 67 (Capacity 49):
+  [PARCEL_PICKUP 199] -> [PARCEL_DROPOFF 199]
+Xe 68 (Capacity 46):
+  [PARCEL_PICKUP 105] -> [PARCEL_DROPOFF 105] -> [PARCEL_PICKUP 72] -> [PASSENGER 90] -> [PARCEL_DROPOFF 72] -> [PARCEL_PICKUP 114] -> [PARCEL_DROPOFF 114] -> [PASSENGER 130]
+Xe 69 (Capacity 39):
+  [PARCEL_PICKUP 99] -> [PARCEL_PICKUP 107] -> [PASSENGER 74] -> [PARCEL_PICKUP 172] -> [PARCEL_DROPOFF 99] -> [PARCEL_DROPOFF 172] -> [PARCEL_DROPOFF 107]
+# [INIT] Nạp tour từ file: sweep_tour_133657.txt
+# [INIT] Benefit nạp từ file: 133657
+# 
+--- BẮT ĐẦU ILS (200 ITERS VỚI TABU SEARCH) ---
+# 
+# --- Iter 000 --- (Active Tabu Edges: 0)
+#   [LS Profile] OrOpt: 0.012s | Remove: 0.002s | Insert: 0.011s
+# [Iter 000] Local Opt : 133657 (Best: 133657) | OrOpt:  0, Rem:  0, Ins:  0 | Ben: 133657 -> 133657 | Unserved: 10
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 001 --- (Active Tabu Edges: 20)
+#   [LS Profile] OrOpt: 0.004s | Remove: 0.002s | Insert: 0.005s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.001s
+# [Iter 001] Local Opt : 129117 (Best: 133657) | OrOpt:  1, Rem: 11, Ins:  0 | Ben: 126660 -> 129117 | Unserved: 11
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 002 --- (Active Tabu Edges: 41)
+#   [LS Profile] OrOpt: 0.003s | Remove: 0.002s | Insert: 0.005s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.001s
+# [Iter 002] Local Opt : 128815 (Best: 133657) | OrOpt:  0, Rem: 12, Ins:  1 | Ben: 125883 -> 128815 | Unserved: 11
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 003 --- (Active Tabu Edges: 64)
+#   [LS Profile] OrOpt: 0.005s | Remove: 0.001s | Insert: 0.003s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.000s
+# [Iter 003] Local Opt : 130768 (Best: 133657) | OrOpt:  1, Rem: 11, Ins:  1 | Ben: 127391 -> 130768 | Unserved: 10
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 004 --- (Active Tabu Edges: 79)
+#   [LS Profile] OrOpt: 0.003s | Remove: 0.002s | Insert: 0.006s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.001s
+# [Iter 004] Local Opt : 130359 (Best: 133657) | OrOpt:  1, Rem: 11, Ins:  1 | Ben: 127283 -> 130359 | Unserved: 10
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 005 --- (Active Tabu Edges: 97)
+#   [LS Profile] OrOpt: 0.002s | Remove: 0.001s | Insert: 0.001s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.000s
+# [Iter 005] Local Opt : 128212 (Best: 133657) | OrOpt:  1, Rem:  7, Ins:  0 | Ben: 126089 -> 128212 | Unserved:  7
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 006 --- (Active Tabu Edges: 96)
+#   [LS Profile] OrOpt: 0.003s | Remove: 0.001s | Insert: 0.004s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.001s
+# [Iter 006] Local Opt : 130725 (Best: 133657) | OrOpt:  1, Rem: 12, Ins:  1 | Ben: 127837 -> 130725 | Unserved: 11
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 007 --- (Active Tabu Edges: 91)
+#   [LS Profile] OrOpt: 0.002s | Remove: 0.001s | Insert: 0.002s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.001s
+# [Iter 007] Local Opt : 130630 (Best: 133657) | OrOpt:  0, Rem: 11, Ins:  1 | Ben: 127874 -> 130630 | Unserved: 10
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 008 --- (Active Tabu Edges: 98)
+#   [LS Profile] OrOpt: 0.003s | Remove: 0.001s | Insert: 0.003s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.000s
+# [Iter 008] Local Opt : 130672 (Best: 133657) | OrOpt:  1, Rem: 13, Ins:  1 | Ben: 126593 -> 130672 | Unserved: 12
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 009 --- (Active Tabu Edges: 89)
+#   [LS Profile] OrOpt: 0.002s | Remove: 0.001s | Insert: 0.003s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.000s
+# [Iter 009] Local Opt : 129717 (Best: 133657) | OrOpt:  1, Rem: 12, Ins:  2 | Ben: 126372 -> 129717 | Unserved: 10
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 010 --- (Active Tabu Edges: 95)
+#   [LS Profile] OrOpt: 0.003s | Remove: 0.002s | Insert: 0.004s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.001s
+# [Iter 010] Local Opt : 127443 (Best: 133657) | OrOpt:  0, Rem: 11, Ins:  2 | Ben: 123842 -> 127443 | Unserved: 10
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 011 --- (Active Tabu Edges: 91)
+#   [LS Profile] OrOpt: 0.003s | Remove: 0.001s | Insert: 0.003s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.000s
+# [Iter 011] Local Opt : 130638 (Best: 133657) | OrOpt:  1, Rem: 11, Ins:  1 | Ben: 127671 -> 130638 | Unserved: 10
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 012 --- (Active Tabu Edges: 91)
+#   [LS Profile] OrOpt: 0.004s | Remove: 0.002s | Insert: 0.004s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.001s
+# [Iter 012] Local Opt : 130889 (Best: 133657) | OrOpt:  1, Rem: 13, Ins:  0 | Ben: 126633 -> 130889 | Unserved: 13
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 013 --- (Active Tabu Edges: 92)
+#   [LS Profile] OrOpt: 0.003s | Remove: 0.001s | Insert: 0.004s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.001s
+# [Iter 013] Local Opt : 131084 (Best: 133657) | OrOpt:  1, Rem: 11, Ins:  1 | Ben: 127680 -> 131084 | Unserved: 10
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 014 --- (Active Tabu Edges: 94)
+#   [LS Profile] OrOpt: 0.002s | Remove: 0.001s | Insert: 0.005s
+#   [LS Profile] OrOpt: 0.001s | Remove: 0.000s | Insert: 0.001s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.000s
+# [Iter 014] Local Opt : 131625 (Best: 133657) | OrOpt:  2, Rem: 14, Ins:  2 | Ben: 127427 -> 131625 | Unserved: 12
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 015 --- (Active Tabu Edges: 98)
+#   [LS Profile] OrOpt: 0.003s | Remove: 0.001s | Insert: 0.002s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.000s
+# [Iter 015] Local Opt : 130978 (Best: 133657) | OrOpt:  1, Rem: 13, Ins:  1 | Ben: 126943 -> 130978 | Unserved: 12
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 016 --- (Active Tabu Edges: 104)
+#   [LS Profile] OrOpt: 0.002s | Remove: 0.001s | Insert: 0.001s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.000s
+# [Iter 016] Local Opt : 129646 (Best: 133657) | OrOpt:  1, Rem:  8, Ins:  0 | Ben: 127573 -> 129646 | Unserved:  8
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 017 --- (Active Tabu Edges: 98)
+#   [LS Profile] OrOpt: 0.002s | Remove: 0.001s | Insert: 0.002s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.001s
+# [Iter 017] Local Opt : 128143 (Best: 133657) | OrOpt:  1, Rem: 11, Ins:  0 | Ben: 125780 -> 128143 | Unserved: 12
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 018 --- (Active Tabu Edges: 96)
+#   [LS Profile] OrOpt: 0.003s | Remove: 0.002s | Insert: 0.004s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.000s
+# [Iter 018] Local Opt : 132294 (Best: 133657) | OrOpt:  1, Rem: 14, Ins:  2 | Ben: 127301 -> 132294 | Unserved: 12
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 019 --- (Active Tabu Edges: 99)
+#   [LS Profile] OrOpt: 0.003s | Remove: 0.002s | Insert: 0.002s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.000s
+# [Iter 019] Local Opt : 131035 (Best: 133657) | OrOpt:  1, Rem: 11, Ins:  0 | Ben: 127741 -> 131035 | Unserved: 11
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 020 --- (Active Tabu Edges: 91)
+#   [LS Profile] OrOpt: 0.003s | Remove: 0.002s | Insert: 0.002s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.000s
+# [Iter 020] Local Opt : 130338 (Best: 133657) | OrOpt:  0, Rem: 12, Ins:  2 | Ben: 127155 -> 130338 | Unserved: 10
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 021 --- (Active Tabu Edges: 83)
+#   [LS Profile] OrOpt: 0.003s | Remove: 0.002s | Insert: 0.005s
+#   [LS Profile] OrOpt: 0.001s | Remove: 0.000s | Insert: 0.001s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.001s
+# [Iter 021] Local Opt : 131748 (Best: 133657) | OrOpt:  2, Rem: 17, Ins:  2 | Ben: 126023 -> 131748 | Unserved: 15
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 022 --- (Active Tabu Edges: 95)
+#   [LS Profile] OrOpt: 0.004s | Remove: 0.001s | Insert: 0.004s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.001s
+# [Iter 022] Local Opt : 131761 (Best: 133657) | OrOpt:  1, Rem: 13, Ins:  0 | Ben: 127359 -> 131761 | Unserved: 13
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 023 --- (Active Tabu Edges: 102)
+#   [LS Profile] OrOpt: 0.003s | Remove: 0.001s | Insert: 0.003s
+#   [LS Profile] OrOpt: 0.001s | Remove: 0.000s | Insert: 0.000s
+# [Iter 023] Local Opt : 127749 (Best: 133657) | OrOpt:  1, Rem: 10, Ins:  2 | Ben: 124862 -> 127749 | Unserved:  8
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 024 --- (Active Tabu Edges: 107)
+#   [LS Profile] OrOpt: 0.001s | Remove: 0.001s | Insert: 0.002s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.000s
+# [Iter 024] Local Opt : 130376 (Best: 133657) | OrOpt:  1, Rem: 13, Ins:  0 | Ben: 126025 -> 130376 | Unserved: 13
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 025 --- (Active Tabu Edges: 102)
+#   [LS Profile] OrOpt: 0.001s | Remove: 0.001s | Insert: 0.003s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.001s
+# [Iter 025] Local Opt : 130396 (Best: 133657) | OrOpt:  0, Rem: 12, Ins:  1 | Ben: 126966 -> 130396 | Unserved: 11
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 026 --- (Active Tabu Edges: 108)
+#   [LS Profile] OrOpt: 0.002s | Remove: 0.001s | Insert: 0.002s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.000s
+# [Iter 026] Local Opt : 130290 (Best: 133657) | OrOpt:  1, Rem: 13, Ins:  1 | Ben: 127244 -> 130290 | Unserved: 12
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 027 --- (Active Tabu Edges: 104)
+#   [LS Profile] OrOpt: 0.004s | Remove: 0.001s | Insert: 0.002s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.000s
+# [Iter 027] Local Opt : 129464 (Best: 133657) | OrOpt:  1, Rem: 10, Ins:  0 | Ben: 125498 -> 129464 | Unserved: 10
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 028 --- (Active Tabu Edges: 97)
+#   [LS Profile] OrOpt: 0.004s | Remove: 0.001s | Insert: 0.003s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.001s
+# [Iter 028] Local Opt : 130717 (Best: 133657) | OrOpt:  1, Rem: 11, Ins:  0 | Ben: 128112 -> 130717 | Unserved: 11
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 029 --- (Active Tabu Edges: 90)
+#   [LS Profile] OrOpt: 0.002s | Remove: 0.001s | Insert: 0.003s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.000s
+# [Iter 029] Local Opt : 130254 (Best: 133657) | OrOpt:  1, Rem: 12, Ins:  1 | Ben: 126725 -> 130254 | Unserved: 11
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 030 --- (Active Tabu Edges: 85)
+#   [LS Profile] OrOpt: 0.003s | Remove: 0.001s | Insert: 0.004s
+#   [LS Profile] OrOpt: 0.001s | Remove: 0.000s | Insert: 0.000s
+# [Iter 030] Local Opt : 129895 (Best: 133657) | OrOpt:  1, Rem: 12, Ins:  3 | Ben: 126045 -> 129895 | Unserved:  9
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 031 --- (Active Tabu Edges: 98)
+#   [LS Profile] OrOpt: 0.003s | Remove: 0.001s | Insert: 0.005s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.001s
+# [Iter 031] Local Opt : 131320 (Best: 133657) | OrOpt:  1, Rem: 18, Ins:  3 | Ben: 125690 -> 131320 | Unserved: 15
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 032 --- (Active Tabu Edges: 96)
+#   [LS Profile] OrOpt: 0.002s | Remove: 0.001s | Insert: 0.001s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.001s
+# [Iter 032] Local Opt : 128458 (Best: 133657) | OrOpt:  1, Rem:  9, Ins:  0 | Ben: 126218 -> 128458 | Unserved:  9
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 033 --- (Active Tabu Edges: 98)
+#   [LS Profile] OrOpt: 0.002s | Remove: 0.001s | Insert: 0.003s
+#   [LS Profile] OrOpt: 0.001s | Remove: 0.000s | Insert: 0.000s
+# [Iter 033] Local Opt : 128800 (Best: 133657) | OrOpt:  1, Rem: 14, Ins:  2 | Ben: 123739 -> 128800 | Unserved: 12
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 034 --- (Active Tabu Edges: 104)
+#   [LS Profile] OrOpt: 0.004s | Remove: 0.001s | Insert: 0.001s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.001s
+# [Iter 034] Local Opt : 130247 (Best: 133657) | OrOpt:  1, Rem: 10, Ins:  0 | Ben: 126214 -> 130247 | Unserved: 10
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 035 --- (Active Tabu Edges: 104)
+#   [LS Profile] OrOpt: 0.004s | Remove: 0.001s | Insert: 0.004s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.001s
+# [Iter 035] Local Opt : 131520 (Best: 133657) | OrOpt:  1, Rem: 16, Ins:  3 | Ben: 127055 -> 131520 | Unserved: 13
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 036 --- (Active Tabu Edges: 103)
+#   [LS Profile] OrOpt: 0.003s | Remove: 0.003s | Insert: 0.006s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.001s
+# [Iter 036] Local Opt : 130518 (Best: 133657) | OrOpt:  0, Rem: 14, Ins:  1 | Ben: 127060 -> 130518 | Unserved: 13
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 037 --- (Active Tabu Edges: 106)
+#   [LS Profile] OrOpt: 0.003s | Remove: 0.001s | Insert: 0.005s
+#   [LS Profile] OrOpt: 0.001s | Remove: 0.000s | Insert: 0.001s
+# [Iter 037] Local Opt : 130427 (Best: 133657) | OrOpt:  1, Rem: 13, Ins:  2 | Ben: 126370 -> 130427 | Unserved: 11
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 038 --- (Active Tabu Edges: 100)
+#   [LS Profile] OrOpt: 0.004s | Remove: 0.001s | Insert: 0.003s
+#   [LS Profile] OrOpt: 0.001s | Remove: 0.000s | Insert: 0.001s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.000s
+# [Iter 038] Local Opt : 130010 (Best: 133657) | OrOpt:  1, Rem: 12, Ins:  2 | Ben: 126475 -> 130010 | Unserved: 10
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 039 --- (Active Tabu Edges: 93)
+#   [LS Profile] OrOpt: 0.003s | Remove: 0.001s | Insert: 0.002s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.000s
+# [Iter 039] Local Opt : 129410 (Best: 133657) | OrOpt:  1, Rem: 12, Ins:  1 | Ben: 126310 -> 129410 | Unserved: 11
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 040 --- (Active Tabu Edges: 95)
+#   [LS Profile] OrOpt: 0.002s | Remove: 0.001s | Insert: 0.004s
+#   [LS Profile] OrOpt: 0.001s | Remove: 0.000s | Insert: 0.001s
+# [Iter 040] Local Opt : 130064 (Best: 133657) | OrOpt:  1, Rem: 14, Ins:  2 | Ben: 126076 -> 130064 | Unserved: 12
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 041 --- (Active Tabu Edges: 88)
+#   [LS Profile] OrOpt: 0.002s | Remove: 0.001s | Insert: 0.002s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.000s
+# [Iter 041] Local Opt : 131491 (Best: 133657) | OrOpt:  1, Rem:  9, Ins:  1 | Ben: 128705 -> 131491 | Unserved:  8
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 042 --- (Active Tabu Edges: 92)
+#   [LS Profile] OrOpt: 0.003s | Remove: 0.001s | Insert: 0.003s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.001s
+# [Iter 042] Local Opt : 130095 (Best: 133657) | OrOpt:  1, Rem: 14, Ins:  1 | Ben: 126374 -> 130095 | Unserved: 13
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 043 --- (Active Tabu Edges: 92)
+#   [LS Profile] OrOpt: 0.004s | Remove: 0.001s | Insert: 0.001s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.000s
+# [Iter 043] Local Opt : 131203 (Best: 133657) | OrOpt:  1, Rem:  8, Ins:  0 | Ben: 128527 -> 131203 | Unserved:  8
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 044 --- (Active Tabu Edges: 93)
+#   [LS Profile] OrOpt: 0.002s | Remove: 0.001s | Insert: 0.004s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.001s
+# [Iter 044] Local Opt : 131561 (Best: 133657) | OrOpt:  1, Rem: 13, Ins:  1 | Ben: 127889 -> 131561 | Unserved: 12
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 045 --- (Active Tabu Edges: 83)
+#   [LS Profile] OrOpt: 0.003s | Remove: 0.001s | Insert: 0.002s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.001s
+# [Iter 045] Local Opt : 128253 (Best: 133657) | OrOpt:  1, Rem: 10, Ins:  0 | Ben: 124947 -> 128253 | Unserved: 10
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 046 --- (Active Tabu Edges: 93)
+#   [LS Profile] OrOpt: 0.002s | Remove: 0.001s | Insert: 0.001s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.000s
+# [Iter 046] Local Opt : 129256 (Best: 133657) | OrOpt:  1, Rem:  9, Ins:  0 | Ben: 127339 -> 129256 | Unserved:  9
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 047 --- (Active Tabu Edges: 94)
+#   [LS Profile] OrOpt: 0.003s | Remove: 0.001s | Insert: 0.002s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.000s
+# [Iter 047] Local Opt : 130567 (Best: 133657) | OrOpt:  1, Rem: 10, Ins:  1 | Ben: 126835 -> 130567 | Unserved:  9
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 048 --- (Active Tabu Edges: 87)
+#   [LS Profile] OrOpt: 0.004s | Remove: 0.001s | Insert: 0.003s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.001s
+# [Iter 048] Local Opt : 130715 (Best: 133657) | OrOpt:  1, Rem: 13, Ins:  2 | Ben: 126197 -> 130715 | Unserved: 11
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 049 --- (Active Tabu Edges: 89)
+#   [LS Profile] OrOpt: 0.002s | Remove: 0.001s | Insert: 0.002s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.000s
+# [Iter 049] Local Opt : 130873 (Best: 133657) | OrOpt:  1, Rem: 11, Ins:  1 | Ben: 127367 -> 130873 | Unserved: 10
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 050 --- (Active Tabu Edges: 91)
+#   [LS Profile] OrOpt: 0.005s | Remove: 0.002s | Insert: 0.001s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.000s
+# [Iter 050] Local Opt : 128175 (Best: 133657) | OrOpt:  1, Rem: 10, Ins:  0 | Ben: 124601 -> 128175 | Unserved: 10
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 051 --- (Active Tabu Edges: 91)
+#   [LS Profile] OrOpt: 0.003s | Remove: 0.001s | Insert: 0.004s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.001s
+# [Iter 051] Local Opt : 129154 (Best: 133657) | OrOpt:  1, Rem: 13, Ins:  1 | Ben: 125616 -> 129154 | Unserved: 12
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 052 --- (Active Tabu Edges: 97)
+#   [LS Profile] OrOpt: 0.003s | Remove: 0.001s | Insert: 0.002s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.000s
+# [Iter 052] Local Opt : 130490 (Best: 133657) | OrOpt:  1, Rem: 11, Ins:  0 | Ben: 126235 -> 130490 | Unserved: 11
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 053 --- (Active Tabu Edges: 92)
+#   [LS Profile] OrOpt: 0.003s | Remove: 0.001s | Insert: 0.002s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.000s
+# [Iter 053] Local Opt : 130052 (Best: 133657) | OrOpt:  1, Rem: 11, Ins:  1 | Ben: 126848 -> 130052 | Unserved: 10
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 054 --- (Active Tabu Edges: 99)
+#   [LS Profile] OrOpt: 0.002s | Remove: 0.001s | Insert: 0.003s
+#   [LS Profile] OrOpt: 0.001s | Remove: 0.000s | Insert: 0.000s
+# [Iter 054] Local Opt : 130564 (Best: 133657) | OrOpt:  1, Rem: 13, Ins:  3 | Ben: 124778 -> 130564 | Unserved: 10
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 055 --- (Active Tabu Edges: 103)
+#   [LS Profile] OrOpt: 0.002s | Remove: 0.001s | Insert: 0.001s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.000s
+# [Iter 055] Local Opt : 128816 (Best: 133657) | OrOpt:  1, Rem:  8, Ins:  0 | Ben: 126809 -> 128816 | Unserved:  8
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 056 --- (Active Tabu Edges: 96)
+#   [LS Profile] OrOpt: 0.003s | Remove: 0.001s | Insert: 0.003s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.001s
+# [Iter 056] Local Opt : 129819 (Best: 133657) | OrOpt:  1, Rem: 13, Ins:  1 | Ben: 125661 -> 129819 | Unserved: 12
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 057 --- (Active Tabu Edges: 87)
+#   [LS Profile] OrOpt: 0.002s | Remove: 0.001s | Insert: 0.002s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.001s
+# [Iter 057] Local Opt : 129061 (Best: 133657) | OrOpt:  1, Rem: 11, Ins:  0 | Ben: 126205 -> 129061 | Unserved: 11
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 058 --- (Active Tabu Edges: 95)
+#   [LS Profile] OrOpt: 0.002s | Remove: 0.001s | Insert: 0.001s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.001s
+# [Iter 058] Local Opt : 127173 (Best: 133657) | OrOpt:  1, Rem: 10, Ins:  0 | Ben: 124762 -> 127173 | Unserved: 11
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 059 --- (Active Tabu Edges: 86)
+#   [LS Profile] OrOpt: 0.002s | Remove: 0.001s | Insert: 0.005s
+#   [LS Profile] OrOpt: 0.001s | Remove: 0.000s | Insert: 0.001s
+# [Iter 059] Local Opt : 129514 (Best: 133657) | OrOpt:  1, Rem: 15, Ins:  2 | Ben: 125282 -> 129514 | Unserved: 13
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 060 --- (Active Tabu Edges: 82)
+#   [LS Profile] OrOpt: 0.003s | Remove: 0.001s | Insert: 0.002s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.001s
+# [Iter 060] Local Opt : 129147 (Best: 133657) | OrOpt:  1, Rem: 10, Ins:  0 | Ben: 126745 -> 129147 | Unserved: 10
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 061 --- (Active Tabu Edges: 84)
+#   [LS Profile] OrOpt: 0.002s | Remove: 0.001s | Insert: 0.001s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.000s
+# [Iter 061] Local Opt : 131045 (Best: 133657) | OrOpt:  0, Rem: 10, Ins:  0 | Ben: 128325 -> 131045 | Unserved: 10
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 062 --- (Active Tabu Edges: 92)
+#   [LS Profile] OrOpt: 0.002s | Remove: 0.001s | Insert: 0.002s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.001s
+# [Iter 062] Local Opt : 128479 (Best: 133657) | OrOpt:  1, Rem: 10, Ins:  0 | Ben: 125535 -> 128479 | Unserved: 10
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 063 --- (Active Tabu Edges: 92)
+#   [LS Profile] OrOpt: 0.003s | Remove: 0.001s | Insert: 0.002s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.000s
+# [Iter 063] Local Opt : 128465 (Best: 133657) | OrOpt:  1, Rem: 10, Ins:  1 | Ben: 123861 -> 128465 | Unserved:  9
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 064 --- (Active Tabu Edges: 93)
+#   [LS Profile] OrOpt: 0.003s | Remove: 0.001s | Insert: 0.003s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.001s
+# [Iter 064] Local Opt : 130240 (Best: 133657) | OrOpt:  1, Rem: 14, Ins:  1 | Ben: 126587 -> 130240 | Unserved: 13
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 065 --- (Active Tabu Edges: 97)
+#   [LS Profile] OrOpt: 0.004s | Remove: 0.003s | Insert: 0.002s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.001s
+# [Iter 065] Local Opt : 129861 (Best: 133657) | OrOpt:  1, Rem:  7, Ins:  0 | Ben: 127370 -> 129861 | Unserved:  7
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 066 --- (Active Tabu Edges: 106)
+#   [LS Profile] OrOpt: 0.002s | Remove: 0.001s | Insert: 0.001s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.001s
+# [Iter 066] Local Opt : 127308 (Best: 133657) | OrOpt:  1, Rem:  8, Ins:  0 | Ben: 123947 -> 127308 | Unserved:  9
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 067 --- (Active Tabu Edges: 108)
+#   [LS Profile] OrOpt: 0.004s | Remove: 0.002s | Insert: 0.002s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.000s
+# [Iter 067] Local Opt : 128283 (Best: 133657) | OrOpt:  1, Rem: 11, Ins:  0 | Ben: 124345 -> 128283 | Unserved: 11
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 068 --- (Active Tabu Edges: 113)
+#   [LS Profile] OrOpt: 0.003s | Remove: 0.001s | Insert: 0.002s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.000s
+# [Iter 068] Local Opt : 129594 (Best: 133657) | OrOpt:  1, Rem: 11, Ins:  0 | Ben: 126529 -> 129594 | Unserved: 11
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 069 --- (Active Tabu Edges: 104)
+#   [LS Profile] OrOpt: 0.003s | Remove: 0.001s | Insert: 0.003s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.000s
+# [Iter 069] Local Opt : 128901 (Best: 133657) | OrOpt:  1, Rem: 11, Ins:  0 | Ben: 125477 -> 128901 | Unserved: 11
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 070 --- (Active Tabu Edges: 97)
+#   [LS Profile] OrOpt: 0.004s | Remove: 0.001s | Insert: 0.003s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.000s
+# [Iter 070] Local Opt : 131949 (Best: 133657) | OrOpt:  1, Rem: 12, Ins:  1 | Ben: 128322 -> 131949 | Unserved: 11
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 071 --- (Active Tabu Edges: 89)
+#   [LS Profile] OrOpt: 0.003s | Remove: 0.001s | Insert: 0.002s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.000s
+# [Iter 071] Local Opt : 130355 (Best: 133657) | OrOpt:  1, Rem: 11, Ins:  0 | Ben: 126308 -> 130355 | Unserved: 11
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 072 --- (Active Tabu Edges: 92)
+#   [LS Profile] OrOpt: 0.004s | Remove: 0.001s | Insert: 0.003s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.000s
+# [Iter 072] Local Opt : 130913 (Best: 133657) | OrOpt:  1, Rem: 12, Ins:  1 | Ben: 126909 -> 130913 | Unserved: 11
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 073 --- (Active Tabu Edges: 91)
+#   [LS Profile] OrOpt: 0.001s | Remove: 0.001s | Insert: 0.001s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.001s
+# [Iter 073] Local Opt : 128201 (Best: 133657) | OrOpt:  1, Rem: 12, Ins:  0 | Ben: 124951 -> 128201 | Unserved: 12
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 074 --- (Active Tabu Edges: 88)
+#   [LS Profile] OrOpt: 0.002s | Remove: 0.001s | Insert: 0.001s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.000s
+# [Iter 074] Local Opt : 128646 (Best: 133657) | OrOpt:  1, Rem:  7, Ins:  0 | Ben: 126325 -> 128646 | Unserved:  7
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 075 --- (Active Tabu Edges: 90)
+#   [LS Profile] OrOpt: 0.002s | Remove: 0.001s | Insert: 0.002s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.000s
+# [Iter 075] Local Opt : 129521 (Best: 133657) | OrOpt:  1, Rem: 10, Ins:  0 | Ben: 126661 -> 129521 | Unserved: 10
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 076 --- (Active Tabu Edges: 89)
+#   [LS Profile] OrOpt: 0.002s | Remove: 0.001s | Insert: 0.002s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.001s
+# [Iter 076] Local Opt : 131163 (Best: 133657) | OrOpt:  1, Rem: 11, Ins:  1 | Ben: 127494 -> 131163 | Unserved: 10
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 077 --- (Active Tabu Edges: 88)
+#   [LS Profile] OrOpt: 0.003s | Remove: 0.001s | Insert: 0.003s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.001s
+# [Iter 077] Local Opt : 131364 (Best: 133657) | OrOpt:  1, Rem: 14, Ins:  1 | Ben: 125823 -> 131364 | Unserved: 13
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 078 --- (Active Tabu Edges: 92)
+#   [LS Profile] OrOpt: 0.004s | Remove: 0.001s | Insert: 0.002s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.001s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.000s
+# [Iter 078] Local Opt : 130176 (Best: 133657) | OrOpt:  2, Rem: 13, Ins:  1 | Ben: 125698 -> 130176 | Unserved: 12
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 079 --- (Active Tabu Edges: 92)
+#   [LS Profile] OrOpt: 0.002s | Remove: 0.001s | Insert: 0.001s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.000s
+# [Iter 079] Local Opt : 130699 (Best: 133657) | OrOpt:  1, Rem:  9, Ins:  0 | Ben: 128128 -> 130699 | Unserved:  9
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 080 --- (Active Tabu Edges: 90)
+#   [LS Profile] OrOpt: 0.002s | Remove: 0.001s | Insert: 0.002s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.000s
+# [Iter 080] Local Opt : 128912 (Best: 133657) | OrOpt:  1, Rem: 12, Ins:  1 | Ben: 125086 -> 128912 | Unserved: 11
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 081 --- (Active Tabu Edges: 94)
+#   [LS Profile] OrOpt: 0.003s | Remove: 0.001s | Insert: 0.001s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.000s
+# [Iter 081] Local Opt : 129096 (Best: 133657) | OrOpt:  1, Rem:  7, Ins:  1 | Ben: 126457 -> 129096 | Unserved:  6
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 082 --- (Active Tabu Edges: 99)
+#   [LS Profile] OrOpt: 0.003s | Remove: 0.001s | Insert: 0.002s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.001s
+# [Iter 082] Local Opt : 130367 (Best: 133657) | OrOpt:  1, Rem:  9, Ins:  0 | Ben: 127489 -> 130367 | Unserved:  9
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 083 --- (Active Tabu Edges: 91)
+#   [LS Profile] OrOpt: 0.003s | Remove: 0.001s | Insert: 0.003s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.001s
+# [Iter 083] Local Opt : 131576 (Best: 133657) | OrOpt:  1, Rem: 12, Ins:  0 | Ben: 128031 -> 131576 | Unserved: 12
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 084 --- (Active Tabu Edges: 88)
+#   [LS Profile] OrOpt: 0.002s | Remove: 0.001s | Insert: 0.001s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.000s
+# [Iter 084] Local Opt : 129938 (Best: 133657) | OrOpt:  1, Rem:  5, Ins:  0 | Ben: 128638 -> 129938 | Unserved:  5
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 085 --- (Active Tabu Edges: 92)
+#   [LS Profile] OrOpt: 0.002s | Remove: 0.001s | Insert: 0.001s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.000s
+# [Iter 085] Local Opt : 129939 (Best: 133657) | OrOpt:  1, Rem:  8, Ins:  0 | Ben: 127256 -> 129939 | Unserved:  8
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 086 --- (Active Tabu Edges: 89)
+#   [LS Profile] OrOpt: 0.003s | Remove: 0.001s | Insert: 0.001s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.000s
+# [Iter 086] Local Opt : 131015 (Best: 133657) | OrOpt:  1, Rem: 10, Ins:  0 | Ben: 128486 -> 131015 | Unserved: 10
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 087 --- (Active Tabu Edges: 81)
+#   [LS Profile] OrOpt: 0.002s | Remove: 0.001s | Insert: 0.001s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.000s
+# [Iter 087] Local Opt : 130653 (Best: 133657) | OrOpt:  1, Rem: 10, Ins:  0 | Ben: 127873 -> 130653 | Unserved: 10
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 088 --- (Active Tabu Edges: 92)
+#   [LS Profile] OrOpt: 0.004s | Remove: 0.001s | Insert: 0.003s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.001s
+# [Iter 088] Local Opt : 131565 (Best: 133657) | OrOpt:  1, Rem: 11, Ins:  0 | Ben: 127741 -> 131565 | Unserved: 11
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 089 --- (Active Tabu Edges: 93)
+#   [LS Profile] OrOpt: 0.003s | Remove: 0.001s | Insert: 0.002s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.000s
+# [Iter 089] Local Opt : 129352 (Best: 133657) | OrOpt:  1, Rem: 11, Ins:  1 | Ben: 127165 -> 129352 | Unserved: 10
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 090 --- (Active Tabu Edges: 96)
+#   [LS Profile] OrOpt: 0.004s | Remove: 0.001s | Insert: 0.001s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.000s
+# [Iter 090] Local Opt : 130181 (Best: 133657) | OrOpt:  1, Rem:  9, Ins:  0 | Ben: 126833 -> 130181 | Unserved:  9
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 091 --- (Active Tabu Edges: 90)
+#   [LS Profile] OrOpt: 0.002s | Remove: 0.001s | Insert: 0.003s
+#   [LS Profile] OrOpt: 0.001s | Remove: 0.000s | Insert: 0.001s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.000s
+# [Iter 091] Local Opt : 128405 (Best: 133657) | OrOpt:  2, Rem: 11, Ins:  2 | Ben: 125024 -> 128405 | Unserved:  9
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 092 --- (Active Tabu Edges: 98)
+#   [LS Profile] OrOpt: 0.002s | Remove: 0.001s | Insert: 0.002s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.001s
+# [Iter 092] Local Opt : 128175 (Best: 133657) | OrOpt:  1, Rem: 12, Ins:  0 | Ben: 125559 -> 128175 | Unserved: 12
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 093 --- (Active Tabu Edges: 97)
+#   [LS Profile] OrOpt: 0.002s | Remove: 0.001s | Insert: 0.002s
+#   [LS Profile] OrOpt: 0.001s | Remove: 0.000s | Insert: 0.001s
+# [Iter 093] Local Opt : 131688 (Best: 133657) | OrOpt:  0, Rem: 11, Ins:  1 | Ben: 128449 -> 131688 | Unserved: 10
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 094 --- (Active Tabu Edges: 95)
+#   [LS Profile] OrOpt: 0.002s | Remove: 0.001s | Insert: 0.002s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.001s
+# [Iter 094] Local Opt : 130445 (Best: 133657) | OrOpt:  0, Rem: 12, Ins:  0 | Ben: 127634 -> 130445 | Unserved: 12
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 095 --- (Active Tabu Edges: 100)
+#   [LS Profile] OrOpt: 0.002s | Remove: 0.001s | Insert: 0.003s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.001s
+# [Iter 095] Local Opt : 127865 (Best: 133657) | OrOpt:  0, Rem: 13, Ins:  0 | Ben: 124461 -> 127865 | Unserved: 14
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 096 --- (Active Tabu Edges: 105)
+#   [LS Profile] OrOpt: 0.002s | Remove: 0.001s | Insert: 0.001s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.001s
+# [Iter 096] Local Opt : 129511 (Best: 133657) | OrOpt:  1, Rem: 11, Ins:  0 | Ben: 124519 -> 129511 | Unserved: 11
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 097 --- (Active Tabu Edges: 103)
+#   [LS Profile] OrOpt: 0.002s | Remove: 0.001s | Insert: 0.002s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.000s
+# [Iter 097] Local Opt : 131418 (Best: 133657) | OrOpt:  1, Rem: 11, Ins:  1 | Ben: 128261 -> 131418 | Unserved: 10
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 098 --- (Active Tabu Edges: 115)
+#   [LS Profile] OrOpt: 0.003s | Remove: 0.001s | Insert: 0.001s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.001s
+# [Iter 098] Local Opt : 128902 (Best: 133657) | OrOpt:  1, Rem: 10, Ins:  0 | Ben: 125226 -> 128902 | Unserved: 10
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 099 --- (Active Tabu Edges: 112)
+#   [LS Profile] OrOpt: 0.004s | Remove: 0.001s | Insert: 0.002s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.000s
+# [Iter 099] Local Opt : 129468 (Best: 133657) | OrOpt:  1, Rem: 11, Ins:  0 | Ben: 126126 -> 129468 | Unserved: 11
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 100 --- (Active Tabu Edges: 113)
+#   [LS Profile] OrOpt: 0.002s | Remove: 0.001s | Insert: 0.003s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.001s
+# [Iter 100] Local Opt : 129642 (Best: 133657) | OrOpt:  0, Rem: 11, Ins:  1 | Ben: 126816 -> 129642 | Unserved: 10
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 101 --- (Active Tabu Edges: 106)
+#   [LS Profile] OrOpt: 0.003s | Remove: 0.001s | Insert: 0.002s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.000s
+# [Iter 101] Local Opt : 131284 (Best: 133657) | OrOpt:  0, Rem: 12, Ins:  1 | Ben: 127895 -> 131284 | Unserved: 11
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 102 --- (Active Tabu Edges: 95)
+#   [LS Profile] OrOpt: 0.004s | Remove: 0.001s | Insert: 0.004s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.001s
+# [Iter 102] Local Opt : 130312 (Best: 133657) | OrOpt:  1, Rem: 16, Ins:  2 | Ben: 125879 -> 130312 | Unserved: 14
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 103 --- (Active Tabu Edges: 88)
+#   [LS Profile] OrOpt: 0.002s | Remove: 0.001s | Insert: 0.003s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.001s
+# [Iter 103] Local Opt : 127890 (Best: 133657) | OrOpt:  0, Rem: 11, Ins:  0 | Ben: 125426 -> 127890 | Unserved: 11
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 104 --- (Active Tabu Edges: 92)
+#   [LS Profile] OrOpt: 0.002s | Remove: 0.001s | Insert: 0.004s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.001s
+# [Iter 104] Local Opt : 127456 (Best: 133657) | OrOpt:  0, Rem: 12, Ins:  3 | Ben: 125290 -> 127456 | Unserved: 10
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 105 --- (Active Tabu Edges: 91)
+#   [LS Profile] OrOpt: 0.003s | Remove: 0.001s | Insert: 0.003s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.001s
+# [Iter 105] Local Opt : 130753 (Best: 133657) | OrOpt:  1, Rem: 15, Ins:  2 | Ben: 126688 -> 130753 | Unserved: 13
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 106 --- (Active Tabu Edges: 98)
+#   [LS Profile] OrOpt: 0.003s | Remove: 0.001s | Insert: 0.003s
+#   [LS Profile] OrOpt: 0.001s | Remove: 0.000s | Insert: 0.001s
+# [Iter 106] Local Opt : 127044 (Best: 133657) | OrOpt:  1, Rem: 10, Ins:  1 | Ben: 123952 -> 127044 | Unserved: 10
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 107 --- (Active Tabu Edges: 101)
+#   [LS Profile] OrOpt: 0.004s | Remove: 0.001s | Insert: 0.002s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.001s
+# [Iter 107] Local Opt : 129505 (Best: 133657) | OrOpt:  1, Rem: 10, Ins:  1 | Ben: 126233 -> 129505 | Unserved:  9
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 108 --- (Active Tabu Edges: 95)
+#   [LS Profile] OrOpt: 0.002s | Remove: 0.001s | Insert: 0.001s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.000s
+# [Iter 108] Local Opt : 130430 (Best: 133657) | OrOpt:  1, Rem:  7, Ins:  0 | Ben: 128336 -> 130430 | Unserved:  7
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 109 --- (Active Tabu Edges: 93)
+#   [LS Profile] OrOpt: 0.002s | Remove: 0.001s | Insert: 0.002s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.001s
+# [Iter 109] Local Opt : 129992 (Best: 133657) | OrOpt:  0, Rem: 11, Ins:  0 | Ben: 127346 -> 129992 | Unserved: 11
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 110 --- (Active Tabu Edges: 90)
+#   [LS Profile] OrOpt: 0.004s | Remove: 0.001s | Insert: 0.004s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.001s
+# [Iter 110] Local Opt : 128140 (Best: 133657) | OrOpt:  1, Rem: 12, Ins:  1 | Ben: 125237 -> 128140 | Unserved: 12
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 111 --- (Active Tabu Edges: 88)
+#   [LS Profile] OrOpt: 0.003s | Remove: 0.001s | Insert: 0.002s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.001s
+# [Iter 111] Local Opt : 130427 (Best: 133657) | OrOpt:  1, Rem: 12, Ins:  0 | Ben: 126353 -> 130427 | Unserved: 12
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 112 --- (Active Tabu Edges: 93)
+#   [LS Profile] OrOpt: 0.003s | Remove: 0.002s | Insert: 0.005s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.001s
+# [Iter 112] Local Opt : 130261 (Best: 133657) | OrOpt:  1, Rem: 17, Ins:  2 | Ben: 126038 -> 130261 | Unserved: 15
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 113 --- (Active Tabu Edges: 102)
+#   [LS Profile] OrOpt: 0.003s | Remove: 0.001s | Insert: 0.006s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.000s
+# [Iter 113] Local Opt : 131724 (Best: 133657) | OrOpt:  1, Rem: 14, Ins:  4 | Ben: 127817 -> 131724 | Unserved: 10
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 114 --- (Active Tabu Edges: 102)
+#   [LS Profile] OrOpt: 0.001s | Remove: 0.001s | Insert: 0.001s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.001s
+# [Iter 114] Local Opt : 129660 (Best: 133657) | OrOpt:  0, Rem: 10, Ins:  0 | Ben: 127608 -> 129660 | Unserved: 10
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 115 --- (Active Tabu Edges: 102)
+#   [LS Profile] OrOpt: 0.003s | Remove: 0.001s | Insert: 0.001s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.000s
+# [Iter 115] Local Opt : 130650 (Best: 133657) | OrOpt:  0, Rem:  9, Ins:  0 | Ben: 128800 -> 130650 | Unserved:  9
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 116 --- (Active Tabu Edges: 99)
+#   [LS Profile] OrOpt: 0.004s | Remove: 0.001s | Insert: 0.009s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.002s
+# [Iter 116] Local Opt : 129354 (Best: 133657) | OrOpt:  1, Rem: 17, Ins:  3 | Ben: 124876 -> 129354 | Unserved: 14
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 117 --- (Active Tabu Edges: 91)
+#   [LS Profile] OrOpt: 0.002s | Remove: 0.001s | Insert: 0.002s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.000s
+# [Iter 117] Local Opt : 129838 (Best: 133657) | OrOpt:  1, Rem:  8, Ins:  0 | Ben: 127967 -> 129838 | Unserved:  8
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 118 --- (Active Tabu Edges: 88)
+#   [LS Profile] OrOpt: 0.002s | Remove: 0.001s | Insert: 0.002s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.001s
+# [Iter 118] Local Opt : 129589 (Best: 133657) | OrOpt:  1, Rem: 12, Ins:  1 | Ben: 126064 -> 129589 | Unserved: 11
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 119 --- (Active Tabu Edges: 90)
+#   [LS Profile] OrOpt: 0.006s | Remove: 0.001s | Insert: 0.004s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.001s
+# [Iter 119] Local Opt : 130633 (Best: 133657) | OrOpt:  1, Rem: 10, Ins:  0 | Ben: 127131 -> 130633 | Unserved: 10
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 120 --- (Active Tabu Edges: 97)
+#   [LS Profile] OrOpt: 0.004s | Remove: 0.001s | Insert: 0.006s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.000s
+# [Iter 120] Local Opt : 130531 (Best: 133657) | OrOpt:  1, Rem: 14, Ins:  2 | Ben: 126237 -> 130531 | Unserved: 12
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 121 --- (Active Tabu Edges: 88)
+#   [LS Profile] OrOpt: 0.004s | Remove: 0.001s | Insert: 0.005s
+#   [LS Profile] OrOpt: 0.001s | Remove: 0.000s | Insert: 0.001s
+# [Iter 121] Local Opt : 131160 (Best: 133657) | OrOpt:  1, Rem: 14, Ins:  2 | Ben: 127114 -> 131160 | Unserved: 12
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 122 --- (Active Tabu Edges: 91)
+#   [LS Profile] OrOpt: 0.002s | Remove: 0.001s | Insert: 0.001s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.001s
+# [Iter 122] Local Opt : 130696 (Best: 133657) | OrOpt:  1, Rem:  8, Ins:  0 | Ben: 128526 -> 130696 | Unserved:  8
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 123 --- (Active Tabu Edges: 85)
+#   [LS Profile] OrOpt: 0.004s | Remove: 0.001s | Insert: 0.003s
+#   [LS Profile] OrOpt: 0.001s | Remove: 0.000s | Insert: 0.001s
+# [Iter 123] Local Opt : 130854 (Best: 133657) | OrOpt:  0, Rem: 14, Ins:  2 | Ben: 126826 -> 130854 | Unserved: 12
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 124 --- (Active Tabu Edges: 87)
+#   [LS Profile] OrOpt: 0.003s | Remove: 0.001s | Insert: 0.003s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.000s
+# [Iter 124] Local Opt : 129290 (Best: 133657) | OrOpt:  1, Rem: 10, Ins:  1 | Ben: 126197 -> 129290 | Unserved:  9
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 125 --- (Active Tabu Edges: 91)
+#   [LS Profile] OrOpt: 0.002s | Remove: 0.001s | Insert: 0.004s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.001s
+# [Iter 125] Local Opt : 129405 (Best: 133657) | OrOpt:  1, Rem: 11, Ins:  1 | Ben: 125693 -> 129405 | Unserved: 10
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 126 --- (Active Tabu Edges: 89)
+#   [LS Profile] OrOpt: 0.003s | Remove: 0.001s | Insert: 0.003s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.000s
+# [Iter 126] Local Opt : 130799 (Best: 133657) | OrOpt:  1, Rem: 12, Ins:  0 | Ben: 126559 -> 130799 | Unserved: 12
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 127 --- (Active Tabu Edges: 89)
+#   [LS Profile] OrOpt: 0.002s | Remove: 0.001s | Insert: 0.002s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.000s
+# [Iter 127] Local Opt : 129249 (Best: 133657) | OrOpt:  0, Rem: 11, Ins:  1 | Ben: 126300 -> 129249 | Unserved: 10
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 128 --- (Active Tabu Edges: 85)
+#   [LS Profile] OrOpt: 0.003s | Remove: 0.001s | Insert: 0.002s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.001s
+# [Iter 128] Local Opt : 131292 (Best: 133657) | OrOpt:  1, Rem: 12, Ins:  1 | Ben: 127937 -> 131292 | Unserved: 11
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 129 --- (Active Tabu Edges: 86)
+#   [LS Profile] OrOpt: 0.003s | Remove: 0.001s | Insert: 0.002s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.001s
+# [Iter 129] Local Opt : 129086 (Best: 133657) | OrOpt:  1, Rem: 12, Ins:  0 | Ben: 126029 -> 129086 | Unserved: 12
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 130 --- (Active Tabu Edges: 89)
+#   [LS Profile] OrOpt: 0.004s | Remove: 0.001s | Insert: 0.006s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.001s
+# [Iter 130] Local Opt : 130901 (Best: 133657) | OrOpt:  1, Rem: 13, Ins:  2 | Ben: 126378 -> 130901 | Unserved: 11
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 131 --- (Active Tabu Edges: 89)
+#   [LS Profile] OrOpt: 0.002s | Remove: 0.001s | Insert: 0.001s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.000s
+# [Iter 131] Local Opt : 130846 (Best: 133657) | OrOpt:  1, Rem: 11, Ins:  0 | Ben: 128395 -> 130846 | Unserved: 11
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 132 --- (Active Tabu Edges: 99)
+#   [LS Profile] OrOpt: 0.002s | Remove: 0.001s | Insert: 0.002s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.000s
+# [Iter 132] Local Opt : 130500 (Best: 133657) | OrOpt:  0, Rem: 12, Ins:  1 | Ben: 126940 -> 130500 | Unserved: 11
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 133 --- (Active Tabu Edges: 105)
+#   [LS Profile] OrOpt: 0.004s | Remove: 0.001s | Insert: 0.002s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.000s
+# [Iter 133] Local Opt : 130961 (Best: 133657) | OrOpt:  1, Rem: 12, Ins:  1 | Ben: 126734 -> 130961 | Unserved: 11
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 134 --- (Active Tabu Edges: 99)
+#   [LS Profile] OrOpt: 0.002s | Remove: 0.001s | Insert: 0.001s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.000s
+# [Iter 134] Local Opt : 130795 (Best: 133657) | OrOpt:  1, Rem:  8, Ins:  0 | Ben: 128066 -> 130795 | Unserved:  8
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 135 --- (Active Tabu Edges: 96)
+#   [LS Profile] OrOpt: 0.002s | Remove: 0.001s | Insert: 0.003s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.000s
+# [Iter 135] Local Opt : 131409 (Best: 133657) | OrOpt:  0, Rem: 13, Ins:  1 | Ben: 128338 -> 131409 | Unserved: 12
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 136 --- (Active Tabu Edges: 93)
+#   [LS Profile] OrOpt: 0.005s | Remove: 0.001s | Insert: 0.002s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.000s
+# [Iter 136] Local Opt : 131893 (Best: 133657) | OrOpt:  1, Rem:  9, Ins:  0 | Ben: 126852 -> 131893 | Unserved:  9
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 137 --- (Active Tabu Edges: 89)
+#   [LS Profile] OrOpt: 0.003s | Remove: 0.001s | Insert: 0.002s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.001s
+# [Iter 137] Local Opt : 130419 (Best: 133657) | OrOpt:  1, Rem: 12, Ins:  0 | Ben: 126000 -> 130419 | Unserved: 12
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 138 --- (Active Tabu Edges: 86)
+#   [LS Profile] OrOpt: 0.003s | Remove: 0.002s | Insert: 0.004s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.001s
+# [Iter 138] Local Opt : 130715 (Best: 133657) | OrOpt:  0, Rem: 14, Ins:  1 | Ben: 127040 -> 130715 | Unserved: 13
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 139 --- (Active Tabu Edges: 87)
+#   [LS Profile] OrOpt: 0.004s | Remove: 0.001s | Insert: 0.002s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.000s
+# [Iter 139] Local Opt : 132439 (Best: 133657) | OrOpt:  1, Rem: 11, Ins:  0 | Ben: 129315 -> 132439 | Unserved: 11
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 140 --- (Active Tabu Edges: 94)
+#   [LS Profile] OrOpt: 0.001s | Remove: 0.001s | Insert: 0.001s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.000s
+# [Iter 140] Local Opt : 130045 (Best: 133657) | OrOpt:  0, Rem: 10, Ins:  0 | Ben: 127140 -> 130045 | Unserved: 10
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 141 --- (Active Tabu Edges: 93)
+#   [LS Profile] OrOpt: 0.002s | Remove: 0.001s | Insert: 0.001s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.000s
+# [Iter 141] Local Opt : 130467 (Best: 133657) | OrOpt:  0, Rem: 11, Ins:  0 | Ben: 128067 -> 130467 | Unserved: 11
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 142 --- (Active Tabu Edges: 97)
+#   [LS Profile] OrOpt: 0.003s | Remove: 0.001s | Insert: 0.003s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.000s
+# [Iter 142] Local Opt : 131206 (Best: 133657) | OrOpt:  1, Rem: 13, Ins:  1 | Ben: 127638 -> 131206 | Unserved: 12
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 143 --- (Active Tabu Edges: 90)
+#   [LS Profile] OrOpt: 0.003s | Remove: 0.001s | Insert: 0.002s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.001s
+# [Iter 143] Local Opt : 129123 (Best: 133657) | OrOpt:  0, Rem: 11, Ins:  0 | Ben: 126920 -> 129123 | Unserved: 11
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 144 --- (Active Tabu Edges: 90)
+#   [LS Profile] OrOpt: 0.007s | Remove: 0.002s | Insert: 0.013s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.004s
+# [Iter 144] Local Opt : 128250 (Best: 133657) | OrOpt:  1, Rem: 17, Ins:  2 | Ben: 123224 -> 128250 | Unserved: 16
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 145 --- (Active Tabu Edges: 87)
+#   [LS Profile] OrOpt: 0.005s | Remove: 0.002s | Insert: 0.009s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.001s
+# [Iter 145] Local Opt : 131386 (Best: 133657) | OrOpt:  1, Rem: 12, Ins:  1 | Ben: 128201 -> 131386 | Unserved: 11
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 146 --- (Active Tabu Edges: 91)
+#   [LS Profile] OrOpt: 0.003s | Remove: 0.001s | Insert: 0.001s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.000s
+# [Iter 146] Local Opt : 130245 (Best: 133657) | OrOpt:  1, Rem: 11, Ins:  0 | Ben: 127358 -> 130245 | Unserved: 11
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 147 --- (Active Tabu Edges: 89)
+#   [LS Profile] OrOpt: 0.004s | Remove: 0.001s | Insert: 0.003s
+#   [LS Profile] OrOpt: 0.001s | Remove: 0.000s | Insert: 0.000s
+# [Iter 147] Local Opt : 130953 (Best: 133657) | OrOpt:  1, Rem: 11, Ins:  1 | Ben: 126488 -> 130953 | Unserved: 10
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 148 --- (Active Tabu Edges: 84)
+#   [LS Profile] OrOpt: 0.002s | Remove: 0.001s | Insert: 0.001s
+#   [LS Profile] OrOpt: 0.001s | Remove: 0.000s | Insert: 0.001s
+# [Iter 148] Local Opt : 131367 (Best: 133657) | OrOpt:  0, Rem: 11, Ins:  1 | Ben: 128845 -> 131367 | Unserved: 10
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 149 --- (Active Tabu Edges: 90)
+#   [LS Profile] OrOpt: 0.003s | Remove: 0.001s | Insert: 0.004s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.000s
+# [Iter 149] Local Opt : 129778 (Best: 133657) | OrOpt:  1, Rem: 12, Ins:  1 | Ben: 124989 -> 129778 | Unserved: 11
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 150 --- (Active Tabu Edges: 87)
+#   [LS Profile] OrOpt: 0.003s | Remove: 0.001s | Insert: 0.003s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.001s
+# [Iter 150] Local Opt : 130822 (Best: 133657) | OrOpt:  0, Rem: 13, Ins:  0 | Ben: 126909 -> 130822 | Unserved: 13
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 151 --- (Active Tabu Edges: 82)
+#   [LS Profile] OrOpt: 0.002s | Remove: 0.001s | Insert: 0.002s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.002s
+# [Iter 151] Local Opt : 128262 (Best: 133657) | OrOpt:  0, Rem: 12, Ins:  0 | Ben: 125700 -> 128262 | Unserved: 13
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 152 --- (Active Tabu Edges: 86)
+#   [LS Profile] OrOpt: 0.002s | Remove: 0.001s | Insert: 0.003s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.000s
+# [Iter 152] Local Opt : 129556 (Best: 133657) | OrOpt:  1, Rem: 13, Ins:  1 | Ben: 126643 -> 129556 | Unserved: 12
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 153 --- (Active Tabu Edges: 86)
+#   [LS Profile] OrOpt: 0.003s | Remove: 0.002s | Insert: 0.003s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.000s
+# [Iter 153] Local Opt : 130645 (Best: 133657) | OrOpt:  1, Rem: 12, Ins:  0 | Ben: 127047 -> 130645 | Unserved: 12
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 154 --- (Active Tabu Edges: 86)
+#   [LS Profile] OrOpt: 0.005s | Remove: 0.002s | Insert: 0.007s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.002s
+# [Iter 154] Local Opt : 129848 (Best: 133657) | OrOpt:  1, Rem: 14, Ins:  1 | Ben: 125517 -> 129848 | Unserved: 13
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 155 --- (Active Tabu Edges: 98)
+#   [LS Profile] OrOpt: 0.002s | Remove: 0.001s | Insert: 0.003s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.000s
+# [Iter 155] Local Opt : 129723 (Best: 133657) | OrOpt:  1, Rem: 10, Ins:  1 | Ben: 125809 -> 129723 | Unserved:  9
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 156 --- (Active Tabu Edges: 98)
+#   [LS Profile] OrOpt: 0.003s | Remove: 0.001s | Insert: 0.003s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.001s
+# [Iter 156] Local Opt : 131105 (Best: 133657) | OrOpt:  1, Rem: 14, Ins:  1 | Ben: 127135 -> 131105 | Unserved: 13
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 157 --- (Active Tabu Edges: 102)
+#   [LS Profile] OrOpt: 0.004s | Remove: 0.001s | Insert: 0.003s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.001s
+# [Iter 157] Local Opt : 128768 (Best: 133657) | OrOpt:  1, Rem: 12, Ins:  1 | Ben: 125245 -> 128768 | Unserved: 11
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 158 --- (Active Tabu Edges: 104)
+#   [LS Profile] OrOpt: 0.002s | Remove: 0.001s | Insert: 0.004s
+#   [LS Profile] OrOpt: 0.001s | Remove: 0.000s | Insert: 0.001s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.001s
+# [Iter 158] Local Opt : 128291 (Best: 133657) | OrOpt:  2, Rem: 10, Ins:  1 | Ben: 125209 -> 128291 | Unserved:  9
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 159 --- (Active Tabu Edges: 102)
+#   [LS Profile] OrOpt: 0.004s | Remove: 0.001s | Insert: 0.002s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.000s
+# [Iter 159] Local Opt : 129086 (Best: 133657) | OrOpt:  1, Rem: 11, Ins:  0 | Ben: 125649 -> 129086 | Unserved: 11
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 160 --- (Active Tabu Edges: 105)
+#   [LS Profile] OrOpt: 0.002s | Remove: 0.001s | Insert: 0.002s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.000s
+# [Iter 160] Local Opt : 129171 (Best: 133657) | OrOpt:  0, Rem: 13, Ins:  1 | Ben: 125538 -> 129171 | Unserved: 12
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 161 --- (Active Tabu Edges: 112)
+#   [LS Profile] OrOpt: 0.004s | Remove: 0.001s | Insert: 0.003s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.001s
+# [Iter 161] Local Opt : 130938 (Best: 133657) | OrOpt:  1, Rem: 13, Ins:  0 | Ben: 126913 -> 130938 | Unserved: 13
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 162 --- (Active Tabu Edges: 111)
+#   [LS Profile] OrOpt: 0.004s | Remove: 0.001s | Insert: 0.002s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.001s
+# [Iter 162] Local Opt : 129790 (Best: 133657) | OrOpt:  1, Rem: 12, Ins:  0 | Ben: 125859 -> 129790 | Unserved: 12
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 163 --- (Active Tabu Edges: 102)
+#   [LS Profile] OrOpt: 0.003s | Remove: 0.001s | Insert: 0.002s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.001s
+# [Iter 163] Local Opt : 126925 (Best: 133657) | OrOpt:  1, Rem: 11, Ins:  0 | Ben: 122748 -> 126925 | Unserved: 12
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 164 --- (Active Tabu Edges: 90)
+#   [LS Profile] OrOpt: 0.002s | Remove: 0.001s | Insert: 0.002s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.000s
+# [Iter 164] Local Opt : 130067 (Best: 133657) | OrOpt:  1, Rem: 10, Ins:  1 | Ben: 127460 -> 130067 | Unserved:  9
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 165 --- (Active Tabu Edges: 83)
+#   [LS Profile] OrOpt: 0.002s | Remove: 0.001s | Insert: 0.002s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.000s
+# [Iter 165] Local Opt : 129897 (Best: 133657) | OrOpt:  1, Rem: 10, Ins:  0 | Ben: 127288 -> 129897 | Unserved: 10
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 166 --- (Active Tabu Edges: 85)
+#   [LS Profile] OrOpt: 0.004s | Remove: 0.001s | Insert: 0.003s
+#   [LS Profile] OrOpt: 0.001s | Remove: 0.000s | Insert: 0.001s
+# [Iter 166] Local Opt : 129233 (Best: 133657) | OrOpt:  1, Rem: 11, Ins:  1 | Ben: 126594 -> 129233 | Unserved: 10
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 167 --- (Active Tabu Edges: 93)
+#   [LS Profile] OrOpt: 0.004s | Remove: 0.003s | Insert: 0.007s
+#   [LS Profile] OrOpt: 0.001s | Remove: 0.000s | Insert: 0.001s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.000s
+# [Iter 167] Local Opt : 129966 (Best: 133657) | OrOpt:  2, Rem: 14, Ins:  2 | Ben: 124544 -> 129966 | Unserved: 12
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 168 --- (Active Tabu Edges: 87)
+#   [LS Profile] OrOpt: 0.002s | Remove: 0.001s | Insert: 0.002s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.000s
+# [Iter 168] Local Opt : 131388 (Best: 133657) | OrOpt:  0, Rem: 12, Ins:  1 | Ben: 128357 -> 131388 | Unserved: 11
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 169 --- (Active Tabu Edges: 93)
+#   [LS Profile] OrOpt: 0.003s | Remove: 0.002s | Insert: 0.006s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.001s
+# [Iter 169] Local Opt : 130782 (Best: 133657) | OrOpt:  1, Rem: 12, Ins:  2 | Ben: 126600 -> 130782 | Unserved: 10
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 170 --- (Active Tabu Edges: 100)
+#   [LS Profile] OrOpt: 0.003s | Remove: 0.001s | Insert: 0.002s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.000s
+# [Iter 170] Local Opt : 129597 (Best: 133657) | OrOpt:  1, Rem: 11, Ins:  1 | Ben: 126178 -> 129597 | Unserved: 10
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 171 --- (Active Tabu Edges: 96)
+#   [LS Profile] OrOpt: 0.003s | Remove: 0.001s | Insert: 0.002s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.001s
+# [Iter 171] Local Opt : 129616 (Best: 133657) | OrOpt:  1, Rem:  9, Ins:  0 | Ben: 127160 -> 129616 | Unserved:  9
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 172 --- (Active Tabu Edges: 94)
+#   [LS Profile] OrOpt: 0.002s | Remove: 0.001s | Insert: 0.002s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.000s
+# [Iter 172] Local Opt : 129595 (Best: 133657) | OrOpt:  1, Rem: 12, Ins:  1 | Ben: 126176 -> 129595 | Unserved: 11
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 173 --- (Active Tabu Edges: 100)
+#   [LS Profile] OrOpt: 0.003s | Remove: 0.001s | Insert: 0.003s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.001s
+# [Iter 173] Local Opt : 127648 (Best: 133657) | OrOpt:  1, Rem: 13, Ins:  1 | Ben: 124122 -> 127648 | Unserved: 13
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 174 --- (Active Tabu Edges: 95)
+#   [LS Profile] OrOpt: 0.001s | Remove: 0.001s | Insert: 0.002s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.001s
+# [Iter 174] Local Opt : 130188 (Best: 133657) | OrOpt:  0, Rem: 13, Ins:  0 | Ben: 126886 -> 130188 | Unserved: 13
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 175 --- (Active Tabu Edges: 100)
+#   [LS Profile] OrOpt: 0.003s | Remove: 0.001s | Insert: 0.004s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.001s
+# [Iter 175] Local Opt : 131977 (Best: 133657) | OrOpt:  1, Rem: 15, Ins:  2 | Ben: 127714 -> 131977 | Unserved: 13
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 176 --- (Active Tabu Edges: 105)
+#   [LS Profile] OrOpt: 0.002s | Remove: 0.001s | Insert: 0.001s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.000s
+# [Iter 176] Local Opt : 129531 (Best: 133657) | OrOpt:  1, Rem:  9, Ins:  0 | Ben: 127737 -> 129531 | Unserved:  9
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 177 --- (Active Tabu Edges: 110)
+#   [LS Profile] OrOpt: 0.005s | Remove: 0.001s | Insert: 0.003s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.001s
+# [Iter 177] Local Opt : 130105 (Best: 133657) | OrOpt:  1, Rem: 12, Ins:  0 | Ben: 126009 -> 130105 | Unserved: 12
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 178 --- (Active Tabu Edges: 109)
+#   [LS Profile] OrOpt: 0.004s | Remove: 0.001s | Insert: 0.003s
+#   [LS Profile] OrOpt: 0.001s | Remove: 0.000s | Insert: 0.000s
+# [Iter 178] Local Opt : 130736 (Best: 133657) | OrOpt:  1, Rem: 12, Ins:  2 | Ben: 126439 -> 130736 | Unserved: 10
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 179 --- (Active Tabu Edges: 105)
+#   [LS Profile] OrOpt: 0.004s | Remove: 0.001s | Insert: 0.002s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.001s
+# [Iter 179] Local Opt : 130594 (Best: 133657) | OrOpt:  1, Rem: 11, Ins:  1 | Ben: 125791 -> 130594 | Unserved: 10
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 180 --- (Active Tabu Edges: 101)
+#   [LS Profile] OrOpt: 0.003s | Remove: 0.001s | Insert: 0.002s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.000s
+# [Iter 180] Local Opt : 128984 (Best: 133657) | OrOpt:  1, Rem: 10, Ins:  0 | Ben: 125932 -> 128984 | Unserved: 10
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 181 --- (Active Tabu Edges: 106)
+#   [LS Profile] OrOpt: 0.001s | Remove: 0.001s | Insert: 0.001s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.000s
+# [Iter 181] Local Opt : 128922 (Best: 133657) | OrOpt:  0, Rem: 11, Ins:  0 | Ben: 126380 -> 128922 | Unserved: 11
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 182 --- (Active Tabu Edges: 96)
+#   [LS Profile] OrOpt: 0.004s | Remove: 0.002s | Insert: 0.003s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.000s
+# [Iter 182] Local Opt : 130565 (Best: 133657) | OrOpt:  1, Rem: 13, Ins:  2 | Ben: 126755 -> 130565 | Unserved: 11
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 183 --- (Active Tabu Edges: 99)
+#   [LS Profile] OrOpt: 0.002s | Remove: 0.001s | Insert: 0.002s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.001s
+# [Iter 183] Local Opt : 130233 (Best: 133657) | OrOpt:  0, Rem: 12, Ins:  1 | Ben: 126928 -> 130233 | Unserved: 11
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 184 --- (Active Tabu Edges: 106)
+#   [LS Profile] OrOpt: 0.003s | Remove: 0.001s | Insert: 0.002s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.000s
+# [Iter 184] Local Opt : 131402 (Best: 133657) | OrOpt:  1, Rem: 11, Ins:  1 | Ben: 128186 -> 131402 | Unserved: 10
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 185 --- (Active Tabu Edges: 102)
+#   [LS Profile] OrOpt: 0.002s | Remove: 0.001s | Insert: 0.003s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.002s
+# [Iter 185] Local Opt : 131271 (Best: 133657) | OrOpt:  0, Rem: 13, Ins:  0 | Ben: 127757 -> 131271 | Unserved: 13
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 186 --- (Active Tabu Edges: 94)
+#   [LS Profile] OrOpt: 0.002s | Remove: 0.002s | Insert: 0.003s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.001s
+# [Iter 186] Local Opt : 130874 (Best: 133657) | OrOpt:  0, Rem: 13, Ins:  0 | Ben: 127452 -> 130874 | Unserved: 13
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 187 --- (Active Tabu Edges: 97)
+#   [LS Profile] OrOpt: 0.002s | Remove: 0.001s | Insert: 0.001s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.000s
+# [Iter 187] Local Opt : 129598 (Best: 133657) | OrOpt:  1, Rem: 11, Ins:  0 | Ben: 126061 -> 129598 | Unserved: 11
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 188 --- (Active Tabu Edges: 91)
+#   [LS Profile] OrOpt: 0.003s | Remove: 0.001s | Insert: 0.003s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.001s
+# [Iter 188] Local Opt : 130710 (Best: 133657) | OrOpt:  1, Rem: 11, Ins:  0 | Ben: 127570 -> 130710 | Unserved: 11
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 189 --- (Active Tabu Edges: 80)
+#   [LS Profile] OrOpt: 0.003s | Remove: 0.001s | Insert: 0.004s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.001s
+# [Iter 189] Local Opt : 131390 (Best: 133657) | OrOpt:  1, Rem: 13, Ins:  0 | Ben: 127773 -> 131390 | Unserved: 13
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 190 --- (Active Tabu Edges: 98)
+#   [LS Profile] OrOpt: 0.005s | Remove: 0.001s | Insert: 0.003s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.001s
+# [Iter 190] Local Opt : 130672 (Best: 133657) | OrOpt:  1, Rem: 10, Ins:  1 | Ben: 127545 -> 130672 | Unserved:  9
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 191 --- (Active Tabu Edges: 95)
+#   [LS Profile] OrOpt: 0.003s | Remove: 0.001s | Insert: 0.004s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.001s
+# [Iter 191] Local Opt : 129551 (Best: 133657) | OrOpt:  1, Rem: 14, Ins:  1 | Ben: 125689 -> 129551 | Unserved: 13
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 192 --- (Active Tabu Edges: 96)
+#   [LS Profile] OrOpt: 0.003s | Remove: 0.002s | Insert: 0.004s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.001s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.001s
+# [Iter 192] Local Opt : 130708 (Best: 133657) | OrOpt:  1, Rem: 13, Ins:  2 | Ben: 125991 -> 130708 | Unserved: 11
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 193 --- (Active Tabu Edges: 97)
+#   [LS Profile] OrOpt: 0.004s | Remove: 0.001s | Insert: 0.003s
+#   [LS Profile] OrOpt: 0.001s | Remove: 0.000s | Insert: 0.001s
+# [Iter 193] Local Opt : 131084 (Best: 133657) | OrOpt:  1, Rem: 13, Ins:  2 | Ben: 126124 -> 131084 | Unserved: 11
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 194 --- (Active Tabu Edges: 96)
+#   [LS Profile] OrOpt: 0.002s | Remove: 0.001s | Insert: 0.002s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.001s
+# [Iter 194] Local Opt : 130120 (Best: 133657) | OrOpt:  1, Rem: 12, Ins:  0 | Ben: 126887 -> 130120 | Unserved: 12
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 195 --- (Active Tabu Edges: 82)
+#   [LS Profile] OrOpt: 0.004s | Remove: 0.001s | Insert: 0.005s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.002s
+# [Iter 195] Local Opt : 130691 (Best: 133657) | OrOpt:  1, Rem: 13, Ins:  2 | Ben: 126185 -> 130691 | Unserved: 11
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 196 --- (Active Tabu Edges: 85)
+#   [LS Profile] OrOpt: 0.003s | Remove: 0.001s | Insert: 0.003s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.001s
+# [Iter 196] Local Opt : 129762 (Best: 133657) | OrOpt:  1, Rem: 14, Ins:  1 | Ben: 126008 -> 129762 | Unserved: 13
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 197 --- (Active Tabu Edges: 82)
+#   [LS Profile] OrOpt: 0.002s | Remove: 0.001s | Insert: 0.002s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.000s
+# [Iter 197] Local Opt : 129105 (Best: 133657) | OrOpt:  1, Rem:  9, Ins:  1 | Ben: 126140 -> 129105 | Unserved:  8
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 198 --- (Active Tabu Edges: 91)
+#   [LS Profile] OrOpt: 0.002s | Remove: 0.001s | Insert: 0.002s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.001s
+# [Iter 198] Local Opt : 131070 (Best: 133657) | OrOpt:  0, Rem: 12, Ins:  1 | Ben: 127933 -> 131070 | Unserved: 11
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# 
+# --- Iter 199 --- (Active Tabu Edges: 94)
+#   [LS Profile] OrOpt: 0.004s | Remove: 0.001s | Insert: 0.003s
+#   [LS Profile] OrOpt: 0.000s | Remove: 0.000s | Insert: 0.001s
+# [Iter 199] Local Opt : 131157 (Best: 133657) | OrOpt:  1, Rem: 14, Ins:  1 | Ben: 127086 -> 131157 | Unserved: 13
+# # [Perturbation] Đã xóa 5 requests và Rebuild bằng Best Insert.
+# --- KẾT QUẢ CUỐI CÙNG ---
+# Tổng Benefit Tối Đa: 133657
+# Tổng Thời Gian Chạy: 4.61s

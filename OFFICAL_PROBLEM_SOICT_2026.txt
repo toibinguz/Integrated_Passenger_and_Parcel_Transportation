@@ -1,0 +1,126 @@
+# ==============================================================================
+# SOICT 2026 Student Contest - Integrated Passenger and Parcel Transportation
+# Input Format Template and Specification
+# ==============================================================================
+# Total vertices in the network: V = 2*N + 2*M + K
+# Vertices are 1-indexed: 1, 2, ..., V
+#
+# Line 1:
+#   K N M
+#     K : Number of taxis
+#     N : Number of passenger requests
+#     M : Number of parcel requests
+#
+# Next K lines (Taxis: k = 1..K):
+#   O_k Q_k
+#     O_k : Initial depot / location vertex of taxi k (available at time 0)
+#     Q_k : Parcel capacity of taxi k
+#
+# Next N lines (Passenger requests: i = 1..N):
+#   P_i D_i E_i L_i S_i T_i
+#     P_i : Pickup vertex
+#     D_i : Drop-off vertex
+#     E_i : Earliest pickup time (pickup window [E_i, L_i])
+#     L_i : Latest pickup time
+#     S_i : Service duration for both pickup and drop-off
+#     T_i : Revenue for serving this passenger
+#     (Note: taxi must travel directly from P_i to D_i with no other stops)
+#
+# Next M lines (Parcel requests: j = 1..M):
+#   P_j D_j w_j Ep_j Lp_j Ed_j Ld_j S_j T_j
+#     P_j   : Pickup vertex
+#     D_j   : Drop-off vertex
+#     w_j   : Parcel weight (must not exceed taxi remaining capacity)
+#     Ep_j  : Earliest pickup time (pickup window [Ep_j, Lp_j])
+#     Lp_j  : Latest pickup time
+#     Ed_j  : Earliest drop-off time (delivery window [Ed_j, Ld_j])
+#     Ld_j  : Latest drop-off time
+#     S_j   : Service duration for both pickup and drop-off
+#     T_j   : Revenue for serving this parcel
+#
+# Next V lines (Travel time matrix t(u, v), V rows x V columns):
+#   Row u contains t(u, 1), t(u, 2), ..., t(u, V)
+#
+# Next V lines (Travel cost matrix c(u, v), V rows x V columns):
+#   Row u contains c(u, 1), c(u, 2), ..., c(u, V)
+# ==============================================================================
+
+# Example instance: K=2, N=2, M=2 => V = 2*2 + 2*2 + 2 = 10 vertices
+2 2 2
+
+# Taxis (O_k, Q_k):
+1 20
+2 25
+
+# Passenger requests (P_i, D_i, E_i, L_i, S_i, T_i):
+3 4 0 20 5 100
+5 6 0 25 5 120
+
+# Parcel requests (P_j, D_j, w_j, Ep_j, Lp_j, Ed_j, Ld_j, S_j, T_j):
+7 8 10 10 45 20 60 3 80
+9 10 12 15 50 25 70 3 90
+
+# Travel time matrix t(u, v) [10x10]:
+0 42 7 16 33 30 22 29 26 23
+42 0 35 27 10 18 22 15 17 25
+7 35 0 9 26 25 14 22 19 18
+16 27 9 0 18 20 6 13 12 16
+33 10 26 18 0 11 13 8 7 16
+30 18 25 20 11 0 17 17 9 8
+22 22 14 6 13 17 0 7 8 16
+29 15 22 13 8 17 7 0 9 19
+26 17 19 12 7 9 8 9 0 10
+23 25 18 16 16 8 16 19 10 0
+
+# Travel cost matrix c(u, v) [10x10]:
+0 106 18 40 81 76 54 72 64 57
+106 0 88 68 25 45 54 38 43 63
+18 88 0 22 64 62 36 54 47 45
+40 68 22 0 46 51 14 32 31 40
+81 25 64 46 0 28 32 20 17 41
+76 45 62 51 28 0 42 43 23 21
+54 54 36 14 32 42 0 18 20 40
+72 38 54 32 20 43 18 0 22 47
+64 43 47 31 17 23 20 22 0 25
+57 63 45 40 41 21 40 47 25 0
+
+# ==============================================================================
+# SOICT 2026 Student Contest - Integrated Passenger and Parcel Transportation
+# Output Format Template and Specification
+# ==============================================================================
+# Line 1:
+#   Benefit
+#     The total net revenue / objective value calculated by the participant:
+#     Benefit = sum(passenger revenues) + sum(parcel revenues) - sum(travel costs)
+#
+# Next K lines (Route for Taxi 1, Taxi 2, ..., Taxi K):
+#   m_k v^k_1 v^k_2 ... v^k_{m_k}
+#
+# Where:
+#   - m_k : Number of service points visited by taxi k (m_k >= 0) (not including initial depot)
+#   - v^k_1, ..., v^k_{m_k} : The ordered sequence of visited service vertices
+#     (Each taxi implicitly starts at its initial depot O_k at time 0).
+#   - If taxi k is not used, simply output: 0
+#
+# Constraints to satisfy:
+#   1. Passenger direct trip: For any served passenger i, drop-off D_i^n must
+#      immediately follow pickup P_i^n in the same route.
+#   2. Parcel pickup before delivery: For any served parcel j, pickup P_j^h must
+#      appear before drop-off D_j^h in the same taxi's route.
+#   3. Taxi parcel capacity: Current load at any point cannot exceed Q_k.
+#   4. Time windows:
+#      - Passenger pickup: arr(P_i^n) <= L_i^n
+#      - Parcel pickup: arr(P_j^h) <= L_j^{h,p}
+#      - Parcel delivery: arr(D_j^h) <= L_j^{h,d}
+#   5. Every served request is assigned to at most one taxi (partial service not allowed).
+# ==============================================================================
+
+# Example for K = 2 taxis (corresponding to example_input.txt):
+# Line 1: Total Benefit / Net Revenue
+217
+
+# Taxi 1 visits 4 points: P1^n(3) -> D1^n(4) -> P1^h(7) -> D1^h(8)
+4 3 4 7 8
+
+# Taxi 2 visits 4 points: P2^n(5) -> D2^n(6) -> P2^h(9) -> D2^h(10)
+4 5 6 9 10

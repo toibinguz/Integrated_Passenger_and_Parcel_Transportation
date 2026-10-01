@@ -63,7 +63,7 @@ class Data:
             L = int(tokens[idx+3])
             S = int(tokens[idx+4])
             T = int(tokens[idx+5])
-            passengers_raw.append((T, E, L, S, P_i - 1, D_i - 1))
+            passengers_raw.append((T, E, L, S))
             idx += 6
             
         parcels_raw = []
@@ -77,12 +77,17 @@ class Data:
             Ld = int(tokens[idx+6])
             S = int(tokens[idx+7])
             T = int(tokens[idx+8])
-            parcels_raw.append((T, Ep, Lp, Ed, Ld, S, w, P_j - 1, D_j - 1))
+            parcels_raw.append((T, Ep, Lp, Ed, Ld, S, w))
             idx += 9
             
         orig_time = []
         for _ in range(V):
             orig_time.append([int(x) for x in tokens[idx:idx+V]])
+            idx += V
+            
+        orig_cost = []
+        for _ in range(V):
+            orig_cost.append([int(x) for x in tokens[idx:idx+V]])
             idx += V
             
         orig_cost = []
@@ -107,9 +112,12 @@ class Data:
             macro_id += 1
         
         # 2. Hành khách
-        for i, (rev, E, L, S, in_idx, out_idx) in enumerate(passengers_raw):
+        for i, (rev, E, L, S) in enumerate(passengers_raw):
+            in_idx = self.K + i
+            out_idx = self.K + self.N + i
             
             # Gộp cost(P, D) vào Revenue
+            print("len(tokens)=", len(tokens), "idx=", idx)
             adj_rev = rev - orig_cost[in_idx][out_idx]
             
             # GARBAGE COLLECTOR: Bỏ qua khách hàng tự thân lỗ vốn
@@ -128,7 +136,9 @@ class Data:
             macro_id += 1
             
         # 3. Hàng hóa
-        for j, (rev, Ep, Lp, Ed, Ld, S, w, p_idx, d_idx) in enumerate(parcels_raw):
+        for j, (rev, Ep, Lp, Ed, Ld, S, w) in enumerate(parcels_raw):
+            p_idx = self.K + 2*self.N + j
+            d_idx = self.K + 2*self.N + self.M + j
             
             pick = GenericNode(macro_id, 'PARCEL_PICKUP', self.N + j, 0, Ep, Lp, S, w)
             pick.physical_in = p_idx; pick.physical_out = p_idx

@@ -7,48 +7,44 @@ from models import GenericNode, Data, Route, Evaluator
 
 # --- CÁC THAM SỐ ĐIỀU KHIỂN (CONTROL PARAMETERS) ---
 # Heuristic Parameters
+TIME_LIMIT = 280.0               # Th?i gian ch?y t?i da (giy)
 TABU_TENURE = 10                 # Thời gian cấm (iterations) cho Tabu Search
 MUTATION_RATE = 0.05            # Tỉ lệ phá hủy ngẫu nhiên (5%)
 GRAVITY_ALPHA = 100.0           # Trọng số mật độ (Gravity) trong best_insert
 
-# Tham số MILP
-MILP_WARMUP_ITERS = 200         # Tắt MILP trong N iter đầu để Heuristic chạy nhanh
-INTER_MILP_ATTEMPTS = 20        # Số lần gieo xúc xắc hoán đổi
-INTER_MILP_TIMEOUT_MS = 20000    # Quỹ thời gian / lần (SCIP)
+
 
 
 def load_tour(data, tour_filename):
     routes = [Route(i, data.capacities[i], data.depots[i]) for i in range(data.K)]
     
     with open(tour_filename, 'r', encoding='utf-8') as f:
-        lines = f.readlines()
+        lines = [l.strip() for l in f.readlines() if l.strip() and not l.startswith('#')]
         
-    current_vehicle = -1
-    for line in lines:
-        line = line.strip()
-        if line.startswith("Xe "):
-            parts = line.split()
-            current_vehicle = int(parts[1])
-        elif line.startswith("[") and current_vehicle != -1:
-            tokens = line.split(" -> ")
-            for token in tokens:
-                token = token.strip("[]")
-                type_str, job_id_str = token.split()
-                job_id = int(job_id_str)
-                
+    for current_vehicle in range(data.K):
+        # Skip Benefit line
+        line = lines[current_vehicle + 1]
+        parts = line.split()
+        m_k = int(parts[0])
+        if m_k > 0:
+            for v_str in parts[1:]:
+                v = int(v_str) - 1
                 matched_node = None
-                for n in data.nodes:
-                    if n.type == type_str and n.job_id == job_id:
-                        matched_node = n
-                        break
-                        
-                # Fallback cho OLD tour (Parcel ch?a du?c c?ng N)
-                if matched_node is None and "PARCEL" in type_str:
+                
+                if data.K <= v < data.K + data.N:
                     for n in data.nodes:
-                        if n.type == type_str and n.job_id == job_id + data.N:
+                        if n.type == 'PASSENGER' and n.physical_in == v:
                             matched_node = n
                             break
-                
+                elif data.K + data.N <= v < data.K + 2*data.N:
+                    # Ignore passenger dropoff since it is handled by the passenger supernode
+                    continue
+                else:
+                    for n in data.nodes:
+                        if n.type != 'DEPOT' and n.type != 'PASSENGER' and n.physical_in == v:
+                            matched_node = n
+                            break
+                            
                 if matched_node:
                     routes[current_vehicle].nodes.insert(-1, matched_node)
                     
@@ -198,37 +194,6 @@ class LSSolver:
                 break
                 
         return inserted_count
-
-    def intra_route_milp_ls(self, routes, data):
-        """
-        Sử dụng SCIP MILP để sắp xếp lại chuỗi trong CÙNG MỘT XE.
-        Hàm này chạy thay thế hoặc song song với Or-opt k=1.
-        """
-        from intra_milp import optimize_route_milp
-        improved_total = False
-        
-        if not hasattr(self, 'milp_cache'):
-            self.milp_cache = {}
-        
-        for r_idx, route in enumerate(routes):
-            if len(route.nodes) <= 3:
-                continue
-                
-            # Kiểm tra Cache
-            if route.veh_id in self.milp_cache and self.milp_cache[route.veh_id] == route.ver_id:
-                continue
-                
-            improved, new_nodes = optimize_route_milp(route, data, time_limit_ms=2000)
-            if improved:
-                route.nodes = new_nodes
-                route.update_states(data)
-                improved_total = True
-                self.log_and_print(f"  [MILP] Tối ưu thành công xe {route.veh_id} (Giảm cost nội tuyến)")
-            
-            # Cập nhật Cache. (Ngay cả khi có improved, version bên trong update_states đã nhảy số)
-            self.milp_cache[route.veh_id] = route.ver_id
-                
-        return improved_total
 
     def _delta_cost_remove(self, route, i, data):
         n = len(route.nodes)
@@ -506,6 +471,10 @@ class LSSolver:
         tabu_tenure = TABU_TENURE
         
         for it in range(max_iterations):
+            if time.time() - self.t_solve_start > TIME_LIMIT:
+                self.log_and_print(f"\n[TIME LIMIT] D?ng d?t ng?t do v??t qu {TIME_LIMIT}s t?i Iter {it}")
+                break
+                
             local_improved = True
             # --- Cập nhật danh sách Tabu khả dụng ---
             # Xóa các cạnh đã hết hạn khỏi dictionary để tránh rò rỉ bộ nhớ
@@ -553,41 +522,14 @@ class LSSolver:
             current_benefit = sum(r.total_benefit for r in routes)
             
             # CHỈ gọi MILP khi chạm mốc kỷ lục và đã qua giai đoạn Warm-up
-            if current_benefit > self.best_benefit and it >= MILP_WARMUP_ITERS:
-                # 1. INTRA-ROUTE MILP (Tối ưu nội tuyến)
-                t_m_start = time.time()
-                if self.intra_route_milp_ls(routes, self.data):
-                    old_ben = current_benefit
-                    current_benefit = sum(r.total_benefit for r in routes)
-                    self.log_and_print(f"  [INTRA-MILP] Kích hoạt lúc tiệm cận đỉnh! Lãi thêm: {current_benefit - old_ben:.0f} điểm (Time: {time.time()-t_m_start:.2f}s)")
-                else:
-                    self.log_and_print(f"  [INTRA-MILP] Đã quét qua nhưng 100% các xe đều Optimal (Time: {time.time()-t_m_start:.2f}s)")
-                    
-                # 2. INTER-ROUTE MILP (Giao phấn chéo)
-                if len(routes) >= 2:
-                    from inter_route_milp import optimize_2_routes_milp
-                    import random
-                    t_inter_start = time.time()
-                    inter_success = 0
-                    
-                    for _ in range(INTER_MILP_ATTEMPTS):
-                        rA, rB = random.sample(routes, 2)
-                        improved, _, _ = optimize_2_routes_milp(rA, rB, [], self.data, time_limit_ms=INTER_MILP_TIMEOUT_MS)
-                        if improved:
-                            inter_success += 1
-                            
-                    if inter_success > 0:
-                        old_ben_inter = current_benefit
-                        current_benefit = sum(r.total_benefit for r in routes)
-                        self.log_and_print(f"  [INTER-MILP] Giao phấn thành công {inter_success} lần! Lãi thêm: {current_benefit - old_ben_inter:.0f} điểm (Time: {time.time()-t_inter_start:.2f}s)")
-            
+                          
             stats_str = f"OrOpt: {or_opt_count:2d}, Rem: {remove_count:2d}, Ins: {insert_count:2d} | Ben: {start_ben:5.0f} -> {current_benefit:5.0f}"
             if current_benefit > self.best_benefit:
                 self.best_benefit = current_benefit
                 self.best_routes = [r.clone() for r in routes]
-                self.log_and_print(f"[Iter {it:03d}] KỶ LỤC MỚI: {self.best_benefit:6.0f} | {stats_str} | Unserved: {len(unserved_pass)+len(unserved_parc):2d}")
+                self.log_and_print(f"[Iter {it:03d}] KỶ LỤC MỚI: {self.best_benefit:6.0f} | {stats_str} | Curr Unserved: {len(unserved_pass)+len(unserved_parc):2d} | Best Unserved: {getattr(self, "best_unserved", 0):2d}")
             else:
-                self.log_and_print(f"[Iter {it:03d}] Local Opt : {current_benefit:6.0f} (Best: {self.best_benefit:6.0f}) | {stats_str} | Unserved: {len(unserved_pass)+len(unserved_parc):2d}")
+                self.log_and_print(f"[Iter {it:03d}] Local Opt : {current_benefit:6.0f} (Best: {self.best_benefit:6.0f}) | {stats_str} | Curr Unserved: {len(unserved_pass)+len(unserved_parc):2d} | Best Unserved: {getattr(self, "best_unserved", 0):2d}")
                 
             # --- PERTURBATION (PHÁ HỦY NGẪU NHIÊN 5% + ÁP DỤNG TABU) ---
             routes = [r.clone() for r in self.best_routes]
@@ -607,44 +549,6 @@ class LSSolver:
             
             self.log_history.append(f"# [Perturbation] Đã xóa {num_removed} requests và Rebuild bằng Best Insert.")
 
-        # --- PHA VDLS ---
-        # self.log_and_print("==================================================")
-        # self.log_and_print("=== BẮT ĐẦU PHA VDLS (CHUYÊN BIỆT TỐI ƯU CẤU TRÚC K-OPT) ===")
-        # self.log_and_print("==================================================")
-        # 
-        # routes = copy.deepcopy(self.best_routes)
-        # vdls_iter = 1
-        # while True:
-        #     from vdls import run_vdls
-        #     t0 = time.time()
-        #     found, cycle_gain, cycle_depth, cycle_path = run_vdls(self, routes, self.data)
-        #     t_vdls = time.time() - t0
-        #     
-        #     if not found:
-        #         self.log_and_print(f"[VDLS] Không tìm thêm được cycle nào. Đã hội tụ hoàn toàn!")
-        #         break
-        #         
-        #     # Chạy OrOpt để tái phân bổ lại các xe bị ảnh hưởng
-        #     t_or0 = time.time()
-        #     self.or_opt_k1(routes, self.data)
-        #     t_or = time.time() - t_or0
-        #     
-        #     current_benefit = sum(r.total_benefit for r in routes)
-        #     if current_benefit > self.best_benefit:
-        #         self.best_benefit = current_benefit
-        #         self.best_routes = copy.deepcopy(routes)
-        #         self.log_and_print(f"[VDLS Iter {vdls_iter:03d}] KỶ LỤC MỚI: {self.best_benefit:6.0f} | Thời gian: VDLS {t_vdls:.3f}s, OrOpt {t_or:.3f}s")
-        #     else:
-        #         self.log_and_print(f"[VDLS Iter {vdls_iter:03d}] Cải thiện cục bộ: {current_benefit:6.0f} (Best: {self.best_benefit:6.0f}) | Thời gian: VDLS {t_vdls:.3f}s, OrOpt {t_or:.3f}s")
-        #     
-        #     # Log chi tiết chain
-        #     self.log_and_print(f"  > CHUỖI ĐỔI (Gain: {cycle_gain:.0f}, Depth: {cycle_depth}):")
-        #     self.log_and_print(f"  > {cycle_path}")
-        #     
-        #     vdls_iter += 1
-        #     if vdls_iter > 5000:
-        #         self.log_and_print("[VDLS] Đạt giới hạn an toàn 5000 iters. Dừng VDLS.")
-        #         break
 
         import time
         self.total_time = time.time() - getattr(self, 't_solve_start', time.time())
@@ -652,38 +556,58 @@ class LSSolver:
         self.log_and_print(f"Tổng Benefit Tối Đa: {self.best_benefit}")
         self.log_and_print(f"Tổng Thời Gian Chạy: {self.total_time:.2f}s")
         
-        timestamp = time.strftime("%H%M%S")
+        from datetime import datetime
+        import os
+        
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         input_filename = getattr(self.data, 'filename', 'unknown')
         if hasattr(self.data, 'filename'):
-            import os
             base = os.path.basename(self.data.filename)
             name_part = os.path.splitext(base)[0]
         else:
             name_part = "tour"
             
-        out_filename = f"ls_tour_{timestamp}_{name_part}.txt"
+        run_name = f"ls_tour_{timestamp}_{name_part}"
+        out_dir = os.path.join("output", run_name)
+        os.makedirs(out_dir, exist_ok=True)
         
-        with open(out_filename, 'w', encoding='utf-8') as f:
-            f.write(f"Total Benefit: {self.best_benefit}\n")
+        out_tour_filename = os.path.join(out_dir, f"{run_name}_tour.txt")
+        out_log_filename = os.path.join(out_dir, f"{run_name}.log")
+        out_report_filename = os.path.join(out_dir, f"{run_name}_report.txt")
+          
+        total_in_best = sum(len(r.nodes)-2 for r in self.best_routes)
+        self.log_and_print(f"DEBUG: Total nodes in best_routes[1:-1] = {total_in_best}")
+        with open(out_tour_filename, 'w', encoding='utf-8') as f:
+            f.write(f"{self.best_benefit}\n")
             for r in self.best_routes:
-                f.write(f"Xe {r.veh_id} (Capacity {r.capacity}):\n")
                 if len(r.nodes) <= 2:
-                    f.write("  KHÔNG CHỞ\n")
-                    continue
-                path_str = " -> ".join([f"[{'PASSENGER' if n.type == 'PASSENGER' else n.type} {n.job_id}]" for n in r.nodes[1:-1]])
-                f.write(f"  {path_str}\n")
-                
-            for msg in self.log_history:
-                f.write(f"# {msg}\n")
-                
-        self.log_and_print(f"\nĐã xuất kết quả ra {out_filename}")
-        self.log_and_print("-" * 30)
+                      f.write("0\n")
+                else:
+                    path = []
+                    for n in r.nodes[1:-1]:
+                        path.append(str(n.physical_in + 1))
+                        if n.type == 'PASSENGER':
+                            path.append(str(n.physical_out + 1))
+                    f.write(f"{len(path)} {' '.join(path)}\n")
+                    
         
+        debug_lines = []
+        for i, r in enumerate(self.best_routes):
+            debug_lines.append(f"Xe {i}: {len(r.nodes)-2} internal nodes")
+        self.log_and_print("\n".join(debug_lines))
+        
+        with open(out_log_filename, 'w', encoding='utf-8') as f:
+            f.write("\n".join(self.log_history))
+                      
+        self.log_and_print(f"\nDa xuat ket qua vao thu muc: {out_dir}")
+        self.log_and_print("-" * 30)
+          
         if hasattr(self.data, 'filename'):
-            validate_tour(self.data.filename, out_filename)
+            validate_tour(self.data.filename, out_tour_filename, out_report_filename)
         return self.best_benefit
-
+  
 if __name__ == "__main__":
+    import sys
     if len(sys.argv) < 2:
         print("Usage: python solver_ls.py <testcase_file>")
         sys.exit(1)
@@ -696,4 +620,4 @@ if __name__ == "__main__":
     data = Data(filename)
     data.filename = filename
     solver = LSSolver(data)
-    solver.solve(max_iterations= 1000, init_fraction= 0.95, initial_tour_file=initial_tour)
+    solver.solve(max_iterations= 10000 , initial_tour_file=initial_tour)

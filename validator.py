@@ -2,7 +2,7 @@ import sys
 
 sys.stdout.reconfigure(encoding='utf-8')
 
-def validate_tour(input_file, tour_file):
+def validate_tour(input_file, tour_file, report_filename=None):
     print(f"=== VALIDATING {tour_file} AGAINST {input_file} ===")
     
     # 1. PARSE INPUT FILE
@@ -19,27 +19,41 @@ def validate_tour(input_file, tour_file):
     
     capacities = []
     for _ in range(K):
-        capacities.append(int(tokens[idx]))
-        idx += 1
+        o_k = int(tokens[idx]); idx += 1
+        q_k = int(tokens[idx]); idx += 1
+        capacities.append(q_k)
         
     requests = {}
     total_available_revenue = 0
     
     for i in range(N):
-        u = K + i; v = K + N + i
-        T = int(tokens[idx]); idx += 1; E = int(tokens[idx]); idx += 1
-        L = int(tokens[idx]); idx += 1; S = int(tokens[idx]); idx += 1
+        P_i = int(tokens[idx]); idx += 1
+        D_i = int(tokens[idx]); idx += 1
+        E = int(tokens[idx]); idx += 1
+        L = int(tokens[idx]); idx += 1
+        S = int(tokens[idx]); idx += 1
+        T = int(tokens[idx]); idx += 1
+        
+        u = P_i - 1
+        v = D_i - 1
         requests[f"PASSENGER {i}"] = {
             'in': u, 'out': v, 'rev': T, 'e': E, 'l': L, 'dur': S+S, 'w': 0, 'job_id': i, 'type': 'PASSENGER'
         }
         total_available_revenue += T
         
     for j in range(M):
-        u = K + 2*N + j; v = K + 2*N + M + j
-        T = int(tokens[idx]); idx += 1; Ep = int(tokens[idx]); idx += 1
-        Lp = int(tokens[idx]); idx += 1; Ed = int(tokens[idx]); idx += 1
-        Ld = int(tokens[idx]); idx += 1; S = int(tokens[idx]); idx += 1
+        P_j = int(tokens[idx]); idx += 1
+        D_j = int(tokens[idx]); idx += 1
         w = int(tokens[idx]); idx += 1
+        Ep = int(tokens[idx]); idx += 1
+        Lp = int(tokens[idx]); idx += 1
+        Ed = int(tokens[idx]); idx += 1
+        Ld = int(tokens[idx]); idx += 1
+        S = int(tokens[idx]); idx += 1
+        T = int(tokens[idx]); idx += 1
+        
+        u = P_j - 1
+        v = D_j - 1
         
         requests[f"PARCEL_PICKUP {N+j}"] = {
             'in': u, 'out': u, 'rev': T, 'e': Ep, 'l': Lp, 'dur': S, 'w': w, 'job_id': N+j, 'type': 'PARCEL_PICKUP'
@@ -69,40 +83,47 @@ def validate_tour(input_file, tour_file):
 
     # 2. PARSE TOUR FILE
     with open(tour_file, 'r', encoding='utf-8') as f:
-        tour_lines = [line.strip() for line in f.readlines() if line.strip()]
+        tour_lines = [line.strip() for line in f.readlines() if line.strip() and not line.startswith('#')]
         
-    claimed_benefit = int(tour_lines[0].split(":")[1].strip())
+    claimed_benefit = int(tour_lines[0].split()[0])
     
     routes = {}
-    current_vehicle = -1
-    for line in tour_lines[1:]:
-        if line.startswith("Xe"):
-            # Xe 0 (Capacity 90):
-            current_vehicle = int(line.split()[1])
-            routes[current_vehicle] = []
-        elif line.startswith("[") or line.startswith("KHÔNG"):
-            if "KHÔNG CHỞ" in line:
-                continue
-            # [PASSENGER 4] -> [PARCEL_PICKUP 0]
-            nodes = line.split(" -> ")
-            for node_str in nodes:
-                # Bỏ dấu ngoặc []
-                node_str = node_str.strip("[]")
-                routes[current_vehicle].append(node_str)
-
-    # 3. VALIDATE LOGIC & REPORTING
-    total_cost = 0
-    total_revenue_served = 0
-    served_set = set()
-    
-    # Chuẩn bị dữ liệu báo cáo
+    for v_id in range(K):
+        routes[v_id] = []
+        line = tour_lines[v_id + 1]
+        parts = line.split()
+        m_k = int(parts[0])
+        if m_k > 0:
+            for v_str in parts[1:]:
+                v_id_num = int(v_str) - 1 # 0-indexed node_id
+                
+                # Reverse mapping: Find which request this node belongs to
+                node_name = None
+                for req_name, req_data in requests.items():
+                    if req_data['in'] == v_id_num or req_data['out'] == v_id_num:
+                        if req_data['type'] == 'PASSENGER' and v_id_num == req_data['in']:
+                            node_name = req_name
+                            break
+                        if req_data['type'] == 'PARCEL_PICKUP' and v_id_num == req_data['in']:
+                            node_name = req_name
+                            break
+                        if req_data['type'] == 'PARCEL_DROPOFF' and v_id_num == req_data['in']:
+                            node_name = req_name
+                            break
+                if node_name:
+                    routes[v_id].append(node_name)
+                    
     report_lines = []
     report_lines.append(f"=== BÁO CÁO CHI TIẾT CHO TOUR: {tour_file} ===")
     report_lines.append(f"Dữ liệu gốc: {input_file}\n")
     report_lines.append("--- CHI TIẾT HÀNH TRÌNH TỪNG XE ---")
     
     is_valid = True
+    served_set = set()
     
+    total_cost = 0
+    total_revenue_served = 0
+    actual_benefit = 0
     for v_id, route in routes.items():
         curr_time = 0
         curr_load = 0
@@ -226,9 +247,10 @@ def validate_tour(input_file, tour_file):
     report_lines.append(f"Lợi nhuận cuối cùng       : {actual_benefit}")
     
     # Xuất ra file txt
-    report_filename = tour_file.replace('.txt', '_detailed_report.txt')
-    if report_filename == tour_file:
-        report_filename = tour_file + "_detailed_report.txt"
+    if report_filename is None:
+        report_filename = tour_file.replace('.txt', '_detailed_report.txt')
+        if report_filename == tour_file:
+            report_filename = tour_file + "_detailed_report.txt"
         
     with open(report_filename, 'w', encoding='utf-8') as f:
         f.write('\n'.join(report_lines))

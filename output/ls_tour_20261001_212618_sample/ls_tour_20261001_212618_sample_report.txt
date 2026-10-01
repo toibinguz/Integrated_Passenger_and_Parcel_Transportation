@@ -1,0 +1,26 @@
+=== BÁO CÁO CHI TIẾT CHO TOUR: output\ls_tour_20261001_212618_sample\ls_tour_20261001_212618_sample_tour.txt ===
+Dữ liệu gốc: testcases/sample.txt
+
+--- CHI TIẾT HÀNH TRÌNH TỪNG XE ---
+
+[Xe 0] (Tải trọng tối đa: 20)
+  01. PASSENGER 0      | Tải trọng:   0/20 | TW: [0-20]       | Tới:      7 | Chờ:    0 | Bắt đầu:      7 | Dịch vụ:   19 | Xong:     26 | Doanh thu:   100 | Chi phí chặng:    40
+  02. PARCEL_PICKUP 2  | Tải trọng:  10/20 | TW: [10-45]      | Tới:     32 | Chờ:    0 | Bắt đầu:     32 | Dịch vụ:    3 | Xong:     35 | Doanh thu:    80 | Chi phí chặng:    14
+  03. PARCEL_DROPOFF 2 | Tải trọng:   0/20 | TW: [20-60]      | Tới:     42 | Chờ:    0 | Bắt đầu:     42 | Dịch vụ:    3 | Xong:     45 | Doanh thu:     0 | Chi phí chặng:    18
+
+[Xe 1] (Tải trọng tối đa: 25)
+  01. PASSENGER 1      | Tải trọng:   0/25 | TW: [0-25]       | Tới:     10 | Chờ:    0 | Bắt đầu:     10 | Dịch vụ:   21 | Xong:     31 | Doanh thu:   120 | Chi phí chặng:    53
+  02. PARCEL_PICKUP 3  | Tải trọng:  12/25 | TW: [15-50]      | Tới:     40 | Chờ:    0 | Bắt đầu:     40 | Dịch vụ:    3 | Xong:     43 | Doanh thu:    90 | Chi phí chặng:    23
+  03. PARCEL_DROPOFF 3 | Tải trọng:   0/25 | TW: [25-70]      | Tới:     53 | Chờ:    0 | Bắt đầu:     53 | Dịch vụ:    3 | Xong:     56 | Doanh thu:     0 | Chi phí chặng:    25
+
+--- THỐNG KÊ PHỤC VỤ ---
+Tổng hành khách đã phục vụ: 2 / 2
+Tổng hàng hóa đã phục vụ  : 2 / 2
+Tổng hành khách BỎ QUA    : 0
+Tổng hàng hóa BỎ QUA      : 0
+
+--- TỔNG KẾT TÀI CHÍNH ---
+Tổng doanh thu tối đa có thể: 390
+Doanh thu đạt được        : 390
+Chi phí vận hành          : 173
+Lợi nhuận cuối cùng       : 217

@@ -6,7 +6,7 @@ def validate_tour(input_file, tour_file):
     print(f"=== VALIDATING {tour_file} AGAINST {input_file} ===")
     
     # 1. PARSE INPUT FILE
-    with open(input_file, 'r') as f:
+    with open(input_file, 'r', encoding='utf-8') as f:
         lines = [line.strip() for line in f.readlines() if line.strip()]
     tokens = []
     for line in lines: tokens.extend(line.split())
@@ -30,7 +30,7 @@ def validate_tour(input_file, tour_file):
         T = int(tokens[idx]); idx += 1; E = int(tokens[idx]); idx += 1
         L = int(tokens[idx]); idx += 1; S = int(tokens[idx]); idx += 1
         requests[f"PASSENGER {i}"] = {
-            'in': u, 'out': v, 'rev': T, 'e': E, 'l': L, 'dur': S+S, 'w': 0, 'req_id': i
+            'in': u, 'out': v, 'rev': T, 'e': E, 'l': L, 'dur': S+S, 'w': 0, 'req_id': i, 'type': 'PASSENGER'
         }
         total_available_revenue += T
         
@@ -42,10 +42,10 @@ def validate_tour(input_file, tour_file):
         w = int(tokens[idx]); idx += 1
         
         requests[f"PARCEL_PICKUP {j}"] = {
-            'in': u, 'out': u, 'rev': T, 'e': Ep, 'l': Lp, 'dur': S, 'w': w, 'req_id': j
+            'in': u, 'out': u, 'rev': T, 'e': Ep, 'l': Lp, 'dur': S, 'w': w, 'req_id': j, 'type': 'PARCEL_PICKUP'
         }
         requests[f"PARCEL_DROPOFF {j}"] = {
-            'in': v, 'out': v, 'rev': 0, 'e': Ed, 'l': Ld, 'dur': S, 'w': -w, 'req_id': j
+            'in': v, 'out': v, 'rev': 0, 'e': Ed, 'l': Ld, 'dur': S, 'w': -w, 'req_id': j, 'type': 'PARCEL_DROPOFF'
         }
         total_available_revenue += T
         
@@ -90,10 +90,18 @@ def validate_tour(input_file, tour_file):
                 node_str = node_str.strip("[]")
                 routes[current_vehicle].append(node_str)
 
-    # 3. VALIDATE LOGIC
+    # 3. VALIDATE LOGIC & REPORTING
     total_cost = 0
     total_revenue_served = 0
     served_set = set()
+    
+    # Chuẩn bị dữ liệu báo cáo
+    report_lines = []
+    report_lines.append(f"=== BÁO CÁO CHI TIẾT CHO TOUR: {tour_file} ===")
+    report_lines.append(f"Dữ liệu gốc: {input_file}\n")
+    report_lines.append("--- CHI TIẾT HÀNH TRÌNH TỪNG XE ---")
+    
+    is_valid = True
     
     for v_id, route in routes.items():
         curr_time = 0
@@ -102,11 +110,19 @@ def validate_tour(input_file, tour_file):
         cap = capacities[v_id]
         
         picked_parcels = set()
+        report_lines.append(f"\n[Xe {v_id}] (Tải trọng tối đa: {cap})")
         
+        if not route:
+            report_lines.append("  Không chở hàng.")
+            continue
+            
         for step, node_name in enumerate(route):
             if node_name not in requests:
-                print(f"[ERROR] Xe {v_id}: Không tìm thấy node {node_name}")
-                return False
+                msg = f"[ERROR] Xe {v_id}: Không tìm thấy node {node_name}"
+                print(msg)
+                report_lines.append("  " + msg)
+                is_valid = False
+                break
                 
             req = requests[node_name]
             
@@ -115,13 +131,17 @@ def validate_tour(input_file, tour_file):
                 picked_parcels.add(req['req_id'])
             elif node_name.startswith("PARCEL_DROPOFF"):
                 if req['req_id'] not in picked_parcels:
-                    print(f"[ERROR] Xe {v_id}: Thả hàng {req['req_id']} khi chưa lấy!")
-                    return False
+                    msg = f"[ERROR] Xe {v_id}: Thả hàng {req['req_id']} khi chưa lấy!"
+                    print(msg)
+                    report_lines.append("  " + msg)
+                    is_valid = False
                 picked_parcels.remove(req['req_id'])
                 
             if node_name in served_set:
-                print(f"[ERROR] Xe {v_id}: Node {node_name} bị phục vụ 2 lần!")
-                return False
+                msg = f"[ERROR] Xe {v_id}: Node {node_name} bị phục vụ 2 lần!"
+                print(msg)
+                report_lines.append("  " + msg)
+                is_valid = False
             served_set.add(node_name)
             
             # Tính toán di chuyển
@@ -134,15 +154,23 @@ def validate_tour(input_file, tour_file):
             
             # Thời gian kiểm tra Time Window
             if start_time > req['l']:
-                print(f"[ERROR] Xe {v_id}, Node {node_name}: VI PHẠM TIME WINDOW! (start={start_time} > l={req['l']})")
-                return False
+                msg = f"[ERROR] Xe {v_id}, Node {node_name}: VI PHẠM TIME WINDOW! (start={start_time} > l={req['l']})"
+                print(msg)
+                report_lines.append("  " + msg)
+                is_valid = False
                 
             # Kiểm tra tải trọng
             curr_load += req['w']
             if curr_load > cap or curr_load < 0:
-                print(f"[ERROR] Xe {v_id}, Node {node_name}: VI PHẠM TẢI TRỌNG! (load={curr_load} > cap={cap})")
-                return False
+                msg = f"[ERROR] Xe {v_id}, Node {node_name}: VI PHẠM TẢI TRỌNG! (load={curr_load} > cap={cap})"
+                print(msg)
+                report_lines.append("  " + msg)
+                is_valid = False
                 
+            # Ghi báo cáo bước này
+            tw_str = f"[{req['e']}-{req['l']}]"
+            report_lines.append(f"  {step+1:02d}. {node_name:<16} | Tải trọng: {curr_load:3d}/{cap} | TW: {tw_str:<12} | Tới: {arr_time:6d} | Chờ: {wait:4d} | Bắt đầu: {start_time:6d} | Dịch vụ: {req['dur']:4d} | Xong: {start_time + req['dur']:6d} | Doanh thu: {req['rev']:5d} | Chi phí chặng: {c_travel + req['int_cost']:5d}")
+            
             # Cập nhật state
             total_cost += c_travel + req['int_cost']
             total_revenue_served += req['rev']
@@ -150,12 +178,18 @@ def validate_tour(input_file, tour_file):
             curr_loc = req['out']
             
         if len(picked_parcels) > 0:
-            print(f"[ERROR] Xe {v_id}: Kết thúc chuyến nhưng chưa giao hàng {picked_parcels}!")
-            return False
+            msg = f"[ERROR] Xe {v_id}: Kết thúc chuyến nhưng chưa giao hàng {picked_parcels}!"
+            print(msg)
+            report_lines.append("  " + msg)
+            is_valid = False
 
     actual_benefit = total_revenue_served - total_cost
     
-    print("[SUCCESS] Tất cả ràng buộc Tải trọng, Thời gian, Thứ tự hàng hóa đều HỢP LỆ!")
+    if is_valid:
+        print("[SUCCESS] Tất cả ràng buộc Tải trọng, Thời gian, Thứ tự hàng hóa đều HỢP LỆ!")
+    else:
+        print("[FAILED] Tour có vi phạm ràng buộc!")
+        
     print(f"  + Tổng doanh thu : {total_revenue_served}")
     print(f"  - Tổng chi phí   : {total_cost}")
     print(f"  = Lợi nhuận thực : {actual_benefit}")
@@ -163,9 +197,45 @@ def validate_tour(input_file, tour_file):
     
     if actual_benefit != claimed_benefit:
         print("[WARNING] Lợi nhuận thực tế KHÁC với lợi nhuận được báo cáo trong file!")
-        return False
+        is_valid = False
         
-    return True
+    # Thống kê Served / Unserved
+    all_passengers = [f"PASSENGER {i}" for i in range(N)]
+    all_parcels = [f"PARCEL_PICKUP {j}" for j in range(M)] # Chỉ đếm pickup là đủ đại diện cho kiện hàng
+    
+    served_passengers = [p for p in all_passengers if p in served_set]
+    unserved_passengers = [p for p in all_passengers if p not in served_set]
+    
+    served_parcels = [p for p in all_parcels if p in served_set]
+    unserved_parcels = [p for p in all_parcels if p not in served_set]
+    
+    report_lines.append("\n--- THỐNG KÊ PHỤC VỤ ---")
+    report_lines.append(f"Tổng hành khách đã phục vụ: {len(served_passengers)} / {N}")
+    report_lines.append(f"Tổng hàng hóa đã phục vụ  : {len(served_parcels)} / {M}")
+    report_lines.append(f"Tổng hành khách BỎ QUA    : {len(unserved_passengers)}")
+    if unserved_passengers:
+        report_lines.append(f"  Danh sách: {', '.join(unserved_passengers)}")
+    report_lines.append(f"Tổng hàng hóa BỎ QUA      : {len(unserved_parcels)}")
+    if unserved_parcels:
+        report_lines.append(f"  Danh sách: {', '.join([p.replace('_PICKUP', '') for p in unserved_parcels])}")
+        
+    report_lines.append("\n--- TỔNG KẾT TÀI CHÍNH ---")
+    report_lines.append(f"Tổng doanh thu tối đa có thể: {total_available_revenue}")
+    report_lines.append(f"Doanh thu đạt được        : {total_revenue_served}")
+    report_lines.append(f"Chi phí vận hành          : {total_cost}")
+    report_lines.append(f"Lợi nhuận cuối cùng       : {actual_benefit}")
+    
+    # Xuất ra file txt
+    report_filename = tour_file.replace('.txt', '_detailed_report.txt')
+    if report_filename == tour_file:
+        report_filename = tour_file + "_detailed_report.txt"
+        
+    with open(report_filename, 'w', encoding='utf-8') as f:
+        f.write('\n'.join(report_lines))
+        
+    print(f"\nĐã xuất báo cáo chi tiết ra file: {report_filename}")
+        
+    return is_valid
 
 if __name__ == '__main__':
     input_f = sys.argv[1] if len(sys.argv) > 1 else 'test_1.txt'

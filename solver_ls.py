@@ -689,4 +689,4 @@ if __name__ == "__main__":
     data = Data(filename)
     data.filename = filename
     solver = LSSolver(data)
-    solver.solve(max_iterations= 10000, init_fraction= 0.95, initial_tour_file=initial_tour)
+    solver.solve(max_iterations= 10, init_fraction= 0.95, initial_tour_file=initial_tour)

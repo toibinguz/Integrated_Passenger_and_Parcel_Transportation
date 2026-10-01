@@ -1,4 +1,6 @@
 ﻿import sys
+
+RELEASE_MODE = True
 import math
 import random
 import time
@@ -32,10 +34,14 @@ class GenericNode:
         self.int_cost = 0
 
 class Data:
-    def __init__(self, filename):
+    def __init__(self, filename=None):
         self.filename = filename
-        with open(filename, 'r') as f:
-            lines = [l.strip() for l in f.readlines() if l.strip()]
+        import sys
+        if globals().get('RELEASE_MODE', False):
+            lines = [l.strip() for l in sys.stdin.read().splitlines() if l.strip()]
+        else:
+            with open(filename, 'r') as f:
+                lines = [l.strip() for l in f.readlines() if l.strip()]
         
         tokens = []
         for line in lines:

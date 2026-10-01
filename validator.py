@@ -1,9 +1,17 @@
 import sys
 
+RELEASE_MODE = True
+
+def vprint(*args, **kwargs):
+    if not RELEASE_MODE:
+        import builtins
+        builtins.print(*args, **kwargs)
+
+
 sys.stdout.reconfigure(encoding='utf-8')
 
 def validate_tour(input_file, tour_file, report_filename=None):
-    print(f"=== VALIDATING {tour_file} AGAINST {input_file} ===")
+    vprint(f"=== VALIDATING {tour_file} AGAINST {input_file} ===")
     
     # 1. PARSE INPUT FILE
     with open(input_file, 'r', encoding='utf-8') as f:
@@ -140,7 +148,7 @@ def validate_tour(input_file, tour_file, report_filename=None):
         for step, node_name in enumerate(route):
             if node_name not in requests:
                 msg = f"[ERROR] Xe {v_id}: Không tìm thấy node {node_name}"
-                print(msg)
+                vprint(msg)
                 report_lines.append("  " + msg)
                 is_valid = False
                 break
@@ -153,14 +161,14 @@ def validate_tour(input_file, tour_file, report_filename=None):
             elif node_name.startswith("PARCEL_DROPOFF"):
                 if req['job_id'] not in picked_parcels:
                     msg = f"[ERROR] Xe {v_id}: Thả hàng {req['job_id']} khi chưa lấy!"
-                    print(msg)
+                    vprint(msg)
                     report_lines.append("  " + msg)
                     is_valid = False
                 picked_parcels.remove(req['job_id'])
                 
             if node_name in served_set:
                 msg = f"[ERROR] Xe {v_id}: Node {node_name} bị phục vụ 2 lần!"
-                print(msg)
+                vprint(msg)
                 report_lines.append("  " + msg)
                 is_valid = False
             served_set.add(node_name)
@@ -176,7 +184,7 @@ def validate_tour(input_file, tour_file, report_filename=None):
             # Thời gian kiểm tra Time Window
             if start_time > req['l']:
                 msg = f"[ERROR] Xe {v_id}, Node {node_name}: VI PHẠM TIME WINDOW! (start={start_time} > l={req['l']})"
-                print(msg)
+                vprint(msg)
                 report_lines.append("  " + msg)
                 is_valid = False
                 
@@ -184,7 +192,7 @@ def validate_tour(input_file, tour_file, report_filename=None):
             curr_load += req['w']
             if curr_load > cap or curr_load < 0:
                 msg = f"[ERROR] Xe {v_id}, Node {node_name}: VI PHẠM TẢI TRỌNG! (load={curr_load} > cap={cap})"
-                print(msg)
+                vprint(msg)
                 report_lines.append("  " + msg)
                 is_valid = False
                 
@@ -200,24 +208,24 @@ def validate_tour(input_file, tour_file, report_filename=None):
             
         if len(picked_parcels) > 0:
             msg = f"[ERROR] Xe {v_id}: Kết thúc chuyến nhưng chưa giao hàng {picked_parcels}!"
-            print(msg)
+            vprint(msg)
             report_lines.append("  " + msg)
             is_valid = False
 
     actual_benefit = total_revenue_served - total_cost
     
     if is_valid:
-        print("[SUCCESS] Tất cả ràng buộc Tải trọng, Thời gian, Thứ tự hàng hóa đều HỢP LỆ!")
+        vprint("[SUCCESS] Tất cả ràng buộc Tải trọng, Thời gian, Thứ tự hàng hóa đều HỢP LỆ!")
     else:
-        print("[FAILED] Tour có vi phạm ràng buộc!")
+        vprint("[FAILED] Tour có vi phạm ràng buộc!")
         
-    print(f"  + Tổng doanh thu : {total_revenue_served}")
-    print(f"  - Tổng chi phí   : {total_cost}")
-    print(f"  = Lợi nhuận thực : {actual_benefit}")
-    print(f"  (Lợi nhuận file báo cáo: {claimed_benefit})")
+    vprint(f"  + Tổng doanh thu : {total_revenue_served}")
+    vprint(f"  - Tổng chi phí   : {total_cost}")
+    vprint(f"  = Lợi nhuận thực : {actual_benefit}")
+    vprint(f"  (Lợi nhuận file báo cáo: {claimed_benefit})")
     
     if actual_benefit != claimed_benefit:
-        print("[WARNING] Lợi nhuận thực tế KHÁC với lợi nhuận được báo cáo trong file!")
+        vprint("[WARNING] Lợi nhuận thực tế KHÁC với lợi nhuận được báo cáo trong file!")
         is_valid = False
         
     # Thống kê Served / Unserved
@@ -255,7 +263,7 @@ def validate_tour(input_file, tour_file, report_filename=None):
     with open(report_filename, 'w', encoding='utf-8') as f:
         f.write('\n'.join(report_lines))
         
-    print(f"\nĐã xuất báo cáo chi tiết ra file: {report_filename}")
+    vprint(f"\nĐã xuất báo cáo chi tiết ra file: {report_filename}")
         
     return is_valid
 

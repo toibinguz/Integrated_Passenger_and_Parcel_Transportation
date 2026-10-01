@@ -1,4 +1,4 @@
-import sys
+﻿import sys
 import time
 import copy
 from models import Data, Route
@@ -24,15 +24,22 @@ def load_tour(data, tour_filename):
             tokens = line.split(" -> ")
             for token in tokens:
                 token = token.strip("[]")
-                type_str, req_id_str = token.split()
-                req_id = int(req_id_str)
+                type_str, job_id_str = token.split()
+                job_id = int(job_id_str)
                 
                 # Tìm node tương ứng trong data.nodes
                 matched_node = None
                 for n in data.nodes:
-                    if n.type == type_str and n.request_id == req_id:
+                    if n.type == type_str and n.job_id == job_id:
                         matched_node = n
                         break
+                        
+                # Fallback cho OLD tour (Parcel chua duoc cong N)
+                if matched_node is None and "PARCEL" in type_str:
+                    for n in data.nodes:
+                        if n.type == type_str and n.job_id == job_id + data.N:
+                            matched_node = n
+                            break
                 
                 if matched_node:
                     # Chèn vào trước điểm END_DEPOT
@@ -53,7 +60,7 @@ def write_tour(routes, filename):
             if len(r.nodes) <= 2:
                 f.write("  KHONG CHAY\n")
             else:
-                path_str = " -> ".join([f"[{'PASSENGER' if n.type == 'PASSENGER' else n.type} {n.request_id}]" for n in r.nodes[1:-1]])
+                path_str = " -> ".join([f"[{'PASSENGER' if n.type == 'PASSENGER' else n.type} {n.job_id}]" for n in r.nodes[1:-1]])
                 f.write(f"  {path_str}\n")
     print(f"--- Đã xuất file tour mới: {filename} (Benefit: {total_benefit}) ---")
 
@@ -66,7 +73,7 @@ def exhaustive_sweep(data, routes, time_limit_ms=30000):
     for r in routes:
         if len(r.nodes) > 2:
             max_load = max(r.current_load) if r.current_load else 0
-            print(f"  Xe {r.vehicle_id:02d} | Nodes: {len(r.nodes):02d} | Benefit: {r.total_benefit} | Max Load: {max_load}/{r.capacity}")
+            print(f"  Xe {r.veh_id:02d} | Nodes: {len(r.nodes):02d} | Benefit: {r.total_benefit} | Max Load: {max_load}/{r.capacity}")
     print("---------------------------------------")
     
     improved = True
@@ -91,12 +98,12 @@ def exhaustive_sweep(data, routes, time_limit_ms=30000):
                     continue
                     
                 # Kiểm tra Cache
-                pair_key = tuple(sorted((rA.version, rB.version)))
+                pair_key = tuple(sorted((rA.ver_id, rB.ver_id)))
                 if pair_key in evaluated_pairs:
                     continue
                 
                 # Gọi MILP vắt kiệt
-                print(f"  [Đang chạy] Xe {i:02d} (Nodes: {len(rA.nodes):02d}, Ben: {rA.total_benefit}) vs Xe {j:02d} (Nodes: {len(rB.nodes):02d}, Ben: {rB.total_benefit}) | Ver: {rA.version}, {rB.version}", flush=True)
+                print(f"  [Đang chạy] Xe {i:02d} (Nodes: {len(rA.nodes):02d}, Ben: {rA.total_benefit}) vs Xe {j:02d} (Nodes: {len(rB.nodes):02d}, Ben: {rB.total_benefit}) | Ver: {rA.ver_id}, {rB.ver_id}", flush=True)
                 
                 # Nhớ lưu lại old_ben TRƯỚC KHI gọi hàm vì hàm này update in-place rA, rB
                 old_ben = rA.total_benefit + rB.total_benefit

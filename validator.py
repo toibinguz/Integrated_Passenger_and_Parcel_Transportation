@@ -30,7 +30,7 @@ def validate_tour(input_file, tour_file):
         T = int(tokens[idx]); idx += 1; E = int(tokens[idx]); idx += 1
         L = int(tokens[idx]); idx += 1; S = int(tokens[idx]); idx += 1
         requests[f"PASSENGER {i}"] = {
-            'in': u, 'out': v, 'rev': T, 'e': E, 'l': L, 'dur': S+S, 'w': 0, 'req_id': i, 'type': 'PASSENGER'
+            'in': u, 'out': v, 'rev': T, 'e': E, 'l': L, 'dur': S+S, 'w': 0, 'job_id': i, 'type': 'PASSENGER'
         }
         total_available_revenue += T
         
@@ -41,11 +41,11 @@ def validate_tour(input_file, tour_file):
         Ld = int(tokens[idx]); idx += 1; S = int(tokens[idx]); idx += 1
         w = int(tokens[idx]); idx += 1
         
-        requests[f"PARCEL_PICKUP {j}"] = {
-            'in': u, 'out': u, 'rev': T, 'e': Ep, 'l': Lp, 'dur': S, 'w': w, 'req_id': j, 'type': 'PARCEL_PICKUP'
+        requests[f"PARCEL_PICKUP {N+j}"] = {
+            'in': u, 'out': u, 'rev': T, 'e': Ep, 'l': Lp, 'dur': S, 'w': w, 'job_id': N+j, 'type': 'PARCEL_PICKUP'
         }
-        requests[f"PARCEL_DROPOFF {j}"] = {
-            'in': v, 'out': v, 'rev': 0, 'e': Ed, 'l': Ld, 'dur': S, 'w': -w, 'req_id': j, 'type': 'PARCEL_DROPOFF'
+        requests[f"PARCEL_DROPOFF {N+j}"] = {
+            'in': v, 'out': v, 'rev': 0, 'e': Ed, 'l': Ld, 'dur': S, 'w': -w, 'job_id': N+j, 'type': 'PARCEL_DROPOFF'
         }
         total_available_revenue += T
         
@@ -128,14 +128,14 @@ def validate_tour(input_file, tour_file):
             
             # Kiểm tra Pick-Drop logic
             if node_name.startswith("PARCEL_PICKUP"):
-                picked_parcels.add(req['req_id'])
+                picked_parcels.add(req['job_id'])
             elif node_name.startswith("PARCEL_DROPOFF"):
-                if req['req_id'] not in picked_parcels:
-                    msg = f"[ERROR] Xe {v_id}: Thả hàng {req['req_id']} khi chưa lấy!"
+                if req['job_id'] not in picked_parcels:
+                    msg = f"[ERROR] Xe {v_id}: Thả hàng {req['job_id']} khi chưa lấy!"
                     print(msg)
                     report_lines.append("  " + msg)
                     is_valid = False
-                picked_parcels.remove(req['req_id'])
+                picked_parcels.remove(req['job_id'])
                 
             if node_name in served_set:
                 msg = f"[ERROR] Xe {v_id}: Node {node_name} bị phục vụ 2 lần!"
@@ -201,7 +201,7 @@ def validate_tour(input_file, tour_file):
         
     # Thống kê Served / Unserved
     all_passengers = [f"PASSENGER {i}" for i in range(N)]
-    all_parcels = [f"PARCEL_PICKUP {j}" for j in range(M)] # Chỉ đếm pickup là đủ đại diện cho kiện hàng
+    all_parcels = [f"PARCEL_PICKUP {N+j}" for j in range(M)] # Chỉ đếm pickup là đủ đại diện cho kiện hàng
     
     served_passengers = [p for p in all_passengers if p in served_set]
     unserved_passengers = [p for p in all_passengers if p not in served_set]

@@ -5,7 +5,7 @@ from ortools.linear_solver import pywraplp
 
 class SuperNode:
     def __init__(self, id_index, nodes, data):
-        self.id = id_index
+        self.node_id = id_index
         self.nodes = nodes
         self.is_single = (len(nodes) == 1)
         self.weight = sum(n.weight for n in nodes)
@@ -21,9 +21,9 @@ class SuperNode:
         self.dropoffs = []
         for n in nodes:
             if n.type == 'PARCEL_PICKUP':
-                self.pickups.append(n.request_id)
+                self.pickups.append(n.job_id)
             elif n.type == 'PARCEL_DROPOFF':
-                self.dropoffs.append(n.request_id)
+                self.dropoffs.append(n.job_id)
         
         if len(nodes) == 0:
             self.E, self.L, self.duration = 0, 999999, 0
@@ -32,14 +32,14 @@ class SuperNode:
             self.L = nodes[0].l
             self.duration = nodes[0].duration
             for i in range(1, len(nodes)):
-                t_ij = data.time_matrix[nodes[i-1].id][nodes[i].id]
+                t_ij = data.time_matrix[nodes[i-1].node_id][nodes[i].node_id]
                 delta_t = self.duration + t_ij
                 self.E = max(self.E, nodes[i].e - delta_t)
                 self.L = min(self.L, nodes[i].l - delta_t)
                 self.duration = delta_t + nodes[i].duration
                 
-        self.first_id = nodes[0].id if nodes else -1
-        self.last_id = nodes[-1].id if nodes else -1
+        self.first_id = nodes[0].node_id if nodes else -1
+        self.last_id = nodes[-1].node_id if nodes else -1
         
     def cost_to(self, other, data):
         if self.last_id == -1 or other.first_id == -1: return 0
@@ -210,7 +210,7 @@ def optimize_2_routes_milp(routeA, routeB, unserved_items, data, time_limit_ms=3
                 if j == END_A or j == END_B: continue
                 
                 if i == start:
-                    t_ij = data.time_matrix[DepotNode[v].id][V[j].first_id]
+                    t_ij = data.time_matrix[DepotNode[v].node_id][V[j].first_id]
                     dur_i = 0
                     w_j = V[j].weight
                     peak_j = V[j].peak_weight
@@ -254,7 +254,7 @@ def optimize_2_routes_milp(routeA, routeB, unserved_items, data, time_limit_ms=3
         for i in x[v]:
             for j in x[v][i]:
                 if j == end: cost = 0
-                elif i == start: cost = data.cost_matrix[DepotNode[v].id][V[j].first_id]
+                elif i == start: cost = data.cost_matrix[DepotNode[v].node_id][V[j].first_id]
                 else: cost = V[i].cost_to(V[j], data)
                 objective.SetCoefficient(x[v][i][j], float(cost))
                 

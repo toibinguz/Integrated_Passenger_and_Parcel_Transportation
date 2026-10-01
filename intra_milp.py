@@ -44,12 +44,12 @@ def _optimize_exact(nodes, data, capacity, initial_load, time_limit_ms=2000):
             if j == START: continue
             if i == j: continue
 
-            arr_time_min = V[i].e + V[i].duration + data.time_matrix[V[i].id][V[j].id]
+            arr_time_min = V[i].e + V[i].duration + data.time_matrix[V[i].node_id][V[j].node_id]
             if arr_time_min > V[j].l:
                 continue 
 
             if V[i].type.startswith('PARCEL_DROPOFF') and V[j].type.startswith('PARCEL_PICKUP'):
-                if V[i].request_id == V[j].request_id:
+                if V[i].job_id == V[j].job_id:
                     continue
 
             x[i][j] = solver.IntVar(0, 1, f'x_{i}_{j}')
@@ -70,7 +70,7 @@ def _optimize_exact(nodes, data, capacity, initial_load, time_limit_ms=2000):
     for i in range(n):
         if i not in x: continue
         for j in x[i]:
-            t_ij = data.time_matrix[V[i].id][V[j].id]
+            t_ij = data.time_matrix[V[i].node_id][V[j].node_id]
             dur_i = V[i].duration
             
             M_ij = V[i].l + dur_i + t_ij - V[j].e
@@ -92,14 +92,14 @@ def _optimize_exact(nodes, data, capacity, initial_load, time_limit_ms=2000):
         solver.Add(L[i] <= Q)
         solver.Add(L[i] >= 0)
 
-    pickup_nodes = {v.request_id: idx for idx, v in enumerate(V) if v.type == 'PARCEL_PICKUP'}
-    dropoff_nodes = {v.request_id: idx for idx, v in enumerate(V) if v.type == 'PARCEL_DROPOFF'}
+    pickup_nodes = {v.job_id: idx for idx, v in enumerate(V) if v.type == 'PARCEL_PICKUP'}
+    dropoff_nodes = {v.job_id: idx for idx, v in enumerate(V) if v.type == 'PARCEL_DROPOFF'}
     
-    for req_id in pickup_nodes:
-        if req_id in dropoff_nodes:
-            p_idx = pickup_nodes[req_id]
-            d_idx = dropoff_nodes[req_id]
-            t_PD = data.time_matrix[V[p_idx].id][V[d_idx].id]
+    for job_id in pickup_nodes:
+        if job_id in dropoff_nodes:
+            p_idx = pickup_nodes[job_id]
+            d_idx = dropoff_nodes[job_id]
+            t_PD = data.time_matrix[V[p_idx].node_id][V[d_idx].node_id]
             solver.Add(T[d_idx] >= T[p_idx] + V[p_idx].duration + t_PD)
 
     objective = solver.Objective()
@@ -109,7 +109,7 @@ def _optimize_exact(nodes, data, capacity, initial_load, time_limit_ms=2000):
             if V[j].type == 'DEPOT':
                 cost = 0
             else:
-                cost = data.cost_matrix[V[i].id][V[j].id]
+                cost = data.cost_matrix[V[i].node_id][V[j].node_id]
             objective.SetCoefficient(x[i][j], float(cost))
             
     objective.SetMinimization()
@@ -141,14 +141,14 @@ def _optimize_exact(nodes, data, capacity, initial_load, time_limit_ms=2000):
             prev = nodes[i-1]
             cur = nodes[i]
             if cur.type != 'DEPOT':
-                old_cost += data.cost_matrix[prev.id][cur.id]
+                old_cost += data.cost_matrix[prev.node_id][cur.node_id]
                 
         new_cost = 0
         for i in range(1, n):
             prev = new_nodes[i-1]
             cur = new_nodes[i]
             if cur.type != 'DEPOT':
-                new_cost += data.cost_matrix[prev.id][cur.id]
+                new_cost += data.cost_matrix[prev.node_id][cur.node_id]
                 
         if new_cost < old_cost - 1e-4:
             return True, new_nodes
@@ -190,13 +190,13 @@ def optimize_route_milp(route, data, time_limit_ms=2000):
         chunk_reqs = set()
         for i in range(start_idx, start_idx + W):
             if current_nodes[i].type != 'PASSENGER' and current_nodes[i].type != 'DEPOT':
-                chunk_reqs.add(current_nodes[i].request_id)
+                chunk_reqs.add(current_nodes[i].job_id)
                 
-        for req_id in chunk_reqs:
+        for job_id in chunk_reqs:
             p_idx = -1
             d_idx = -1
             for i in range(len(current_nodes)):
-                if current_nodes[i].request_id == req_id:
+                if current_nodes[i].job_id == job_id:
                     if current_nodes[i].type == 'PARCEL_PICKUP': p_idx = i
                     elif current_nodes[i].type == 'PARCEL_DROPOFF': d_idx = i
             

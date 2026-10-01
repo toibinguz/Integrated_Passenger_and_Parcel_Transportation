@@ -1,4 +1,4 @@
-import sys
+﻿import sys
 import copy
 import time
 import random
@@ -33,14 +33,21 @@ def load_tour(data, tour_filename):
             tokens = line.split(" -> ")
             for token in tokens:
                 token = token.strip("[]")
-                type_str, req_id_str = token.split()
-                req_id = int(req_id_str)
+                type_str, job_id_str = token.split()
+                job_id = int(job_id_str)
                 
                 matched_node = None
                 for n in data.nodes:
-                    if n.type == type_str and n.request_id == req_id:
+                    if n.type == type_str and n.job_id == job_id:
                         matched_node = n
                         break
+                        
+                # Fallback cho OLD tour (Parcel ch?a du?c c?ng N)
+                if matched_node is None and "PARCEL" in type_str:
+                    for n in data.nodes:
+                        if n.type == type_str and n.job_id == job_id + data.N:
+                            matched_node = n
+                            break
                 
                 if matched_node:
                     routes[current_vehicle].nodes.insert(-1, matched_node)
@@ -56,7 +63,7 @@ class LSSolver:
         self.best_routes = []
         self.best_benefit = -999999
         self.log_history = []
-        self.parcel_dict = {p.request_id: (p, d) for p, d in self.data.parcels}
+        self.parcel_dict = {p.job_id: (p, d) for p, d in self.data.parcels}
         
     def log_and_print(self, msg):
         print(msg)
@@ -76,30 +83,30 @@ class LSSolver:
             
             # --- PASSENGERS ---
             for idx, p_node in enumerate(unserved_passengers):
-                if p_node.id not in self.insert_cache: 
-                    self.insert_cache[p_node.id] = {}
+                if p_node.node_id not in self.insert_cache: 
+                    self.insert_cache[p_node.node_id] = {}
                 
                 for r_idx, route in enumerate(routes):
-                    cached = self.insert_cache[p_node.id].get(r_idx)
-                    if cached is None or cached[0] != route.version:
+                    cached = self.insert_cache[p_node.node_id].get(r_idx)
+                    if cached is None or cached[0] != route.ver_id:
                         # CACHE PURE BENEFIT (KHÔNG TABU)
                         ben, pos = Evaluator.evaluate_passenger(route, p_node, data, tabu_edges=None)
-                        self.insert_cache[p_node.id][r_idx] = (route.version, ben, pos)
+                        self.insert_cache[p_node.node_id][r_idx] = (route.ver_id, ben, pos)
                         
                 p_best_ben = -999999
                 p_best_pos = -1
                 p_best_rid = -1
                 
-                for r_idx, res in self.insert_cache[p_node.id].items():
-                    if r_idx < len(routes) and res[0] == routes[r_idx].version:
+                for r_idx, res in self.insert_cache[p_node.node_id].items():
+                    if r_idx < len(routes) and res[0] == routes[r_idx].ver_id:
                         ben = res[1]
                         pos = res[2]
                         
                         if ben > -999999 and active_tabu_edges:
                             # Kiểm tra Tabu trên kết quả cached
-                            prev_req = routes[r_idx].nodes[pos-1].request_id
-                            next_req = routes[r_idx].nodes[pos].request_id
-                            if (prev_req, p_node.request_id) in active_tabu_edges or (p_node.request_id, next_req) in active_tabu_edges:
+                            prev_req = routes[r_idx].nodes[pos-1].job_id
+                            next_req = routes[r_idx].nodes[pos].job_id
+                            if (prev_req, p_node.job_id) in active_tabu_edges or (p_node.job_id, next_req) in active_tabu_edges:
                                 ben, pos = Evaluator.evaluate_passenger(routes[r_idx], p_node, data, active_tabu_edges)
                                 
                         if ben > -999999 and use_gravity: 
@@ -118,37 +125,37 @@ class LSSolver:
                     
             # --- PARCELS ---
             for idx, (pick, drop) in enumerate(unserved_parcels):
-                if pick.id not in self.insert_cache: 
-                    self.insert_cache[pick.id] = {}
+                if pick.node_id not in self.insert_cache: 
+                    self.insert_cache[pick.node_id] = {}
                 
                 for r_idx, route in enumerate(routes):
-                    cached = self.insert_cache[pick.id].get(r_idx)
-                    if cached is None or cached[0] != route.version:
+                    cached = self.insert_cache[pick.node_id].get(r_idx)
+                    if cached is None or cached[0] != route.ver_id:
                         # CACHE PURE BENEFIT
                         ben, p_pos, d_pos = Evaluator.evaluate_parcel(route, pick, drop, data, tabu_edges=None)
-                        self.insert_cache[pick.id][r_idx] = (route.version, ben, p_pos, d_pos)
+                        self.insert_cache[pick.node_id][r_idx] = (route.ver_id, ben, p_pos, d_pos)
                         
                 p_best_ben = -999999
                 p_best_p_pos = -1
                 p_best_d_pos = -1
                 p_best_rid = -1
                 
-                for r_idx, res in self.insert_cache[pick.id].items():
-                    if r_idx < len(routes) and res[0] == routes[r_idx].version:
+                for r_idx, res in self.insert_cache[pick.node_id].items():
+                    if r_idx < len(routes) and res[0] == routes[r_idx].ver_id:
                         ben = res[1]
                         p_pos = res[2]
                         d_pos = res[3]
                         
                         if ben > -999999 and active_tabu_edges:
-                            prev_pick = routes[r_idx].nodes[p_pos-1].request_id
-                            next_pick = routes[r_idx].nodes[p_pos].request_id
-                            prev_drop = routes[r_idx].nodes[d_pos-1].request_id if d_pos > p_pos else pick.request_id
-                            next_drop = routes[r_idx].nodes[d_pos].request_id
+                            prev_pick = routes[r_idx].nodes[p_pos-1].job_id
+                            next_pick = routes[r_idx].nodes[p_pos].job_id
+                            prev_drop = routes[r_idx].nodes[d_pos-1].job_id if d_pos > p_pos else pick.job_id
+                            next_drop = routes[r_idx].nodes[d_pos].job_id
                             
-                            is_tabu = ((prev_pick, pick.request_id) in active_tabu_edges or
-                                       (pick.request_id, next_pick) in active_tabu_edges or
-                                       (prev_drop, drop.request_id) in active_tabu_edges or
-                                       (drop.request_id, next_drop) in active_tabu_edges)
+                            is_tabu = ((prev_pick, pick.job_id) in active_tabu_edges or
+                                       (pick.job_id, next_pick) in active_tabu_edges or
+                                       (prev_drop, drop.job_id) in active_tabu_edges or
+                                       (drop.job_id, next_drop) in active_tabu_edges)
                             
                             if is_tabu:
                                 ben, p_pos, d_pos = Evaluator.evaluate_parcel(routes[r_idx], pick, drop, data, active_tabu_edges)
@@ -208,7 +215,7 @@ class LSSolver:
                 continue
                 
             # Kiểm tra Cache
-            if route.vehicle_id in self.milp_cache and self.milp_cache[route.vehicle_id] == route.version:
+            if route.veh_id in self.milp_cache and self.milp_cache[route.veh_id] == route.ver_id:
                 continue
                 
             improved, new_nodes = optimize_route_milp(route, data, time_limit_ms=2000)
@@ -216,10 +223,10 @@ class LSSolver:
                 route.nodes = new_nodes
                 route.update_states(data)
                 improved_total = True
-                self.log_and_print(f"  [MILP] Tối ưu thành công xe {route.vehicle_id} (Giảm cost nội tuyến)")
+                self.log_and_print(f"  [MILP] Tối ưu thành công xe {route.veh_id} (Giảm cost nội tuyến)")
             
             # Cập nhật Cache. (Ngay cả khi có improved, version bên trong update_states đã nhảy số)
-            self.milp_cache[route.vehicle_id] = route.version
+            self.milp_cache[route.veh_id] = route.ver_id
                 
         return improved_total
 
@@ -229,10 +236,10 @@ class LSSolver:
         curr = route.nodes[i]
         nxt  = route.nodes[i + 1]
 
-        cost_remove = data.cost_matrix[prev.id][curr.id] + curr.int_cost
+        cost_remove = data.cost_matrix[prev.node_id][curr.node_id] + curr.int_cost
         if nxt.type != 'DEPOT':
-            cost_remove += data.cost_matrix[curr.id][nxt.id]
-            cost_save   = data.cost_matrix[prev.id][nxt.id]
+            cost_remove += data.cost_matrix[curr.node_id][nxt.node_id]
+            cost_save   = data.cost_matrix[prev.node_id][nxt.node_id]
         else:
             cost_save = 0
 
@@ -265,10 +272,10 @@ class LSSolver:
                         prev_s = route.nodes[src - 1]
                         next_s = route.nodes[src + 1]
 
-                        cost_remove = data.cost_matrix[prev_s.id][node.id] + node.int_cost
+                        cost_remove = data.cost_matrix[prev_s.node_id][node.node_id] + node.int_cost
                         if next_s.type != 'DEPOT':
-                            cost_remove += data.cost_matrix[node.id][next_s.id]
-                            cost_bridge  = data.cost_matrix[prev_s.id][next_s.id]
+                            cost_remove += data.cost_matrix[node.node_id][next_s.node_id]
+                            cost_bridge  = data.cost_matrix[prev_s.node_id][next_s.node_id]
                         else:
                             cost_bridge = 0
 
@@ -281,12 +288,12 @@ class LSSolver:
                             real_dst_next = route.nodes[dst] if dst <= src else route.nodes[dst + 1]
 
                             if real_dst_next.type == 'DEPOT':
-                                cost_insert = data.cost_matrix[real_dst_prev.id][node.id] + node.int_cost
+                                cost_insert = data.cost_matrix[real_dst_prev.node_id][node.node_id] + node.int_cost
                             else:
-                                cost_insert = (data.cost_matrix[real_dst_prev.id][node.id]
+                                cost_insert = (data.cost_matrix[real_dst_prev.node_id][node.node_id]
                                                + node.int_cost
-                                               + data.cost_matrix[node.id][real_dst_next.id]
-                                               - data.cost_matrix[real_dst_prev.id][real_dst_next.id])
+                                               + data.cost_matrix[node.node_id][real_dst_next.node_id]
+                                               - data.cost_matrix[real_dst_prev.node_id][real_dst_next.node_id])
 
                             delta = gain_remove - cost_insert
 
@@ -303,7 +310,7 @@ class LSSolver:
                                     best_move = (src, dst, False, test_nodes, test_route.total_benefit)
 
                     elif node.type == 'PARCEL_PICKUP':
-                        d_idx = next((j for j in range(src+1, n-1) if route.nodes[j].type == 'PARCEL_DROPOFF' and route.nodes[j].request_id == node.request_id), -1)
+                        d_idx = next((j for j in range(src+1, n-1) if route.nodes[j].type == 'PARCEL_DROPOFF' and route.nodes[j].job_id == node.job_id), -1)
                         if d_idx == -1: continue
 
                         drop = route.nodes[d_idx]
@@ -371,7 +378,7 @@ class LSSolver:
                     elif node.type == 'PARCEL_PICKUP':
                         d_idx = next((j for j in range(i+1, len(route.nodes)-1)
                                       if route.nodes[j].type == 'PARCEL_DROPOFF'
-                                      and route.nodes[j].request_id == node.request_id), -1)
+                                      and route.nodes[j].job_id == node.job_id), -1)
                         if d_idx != -1:
                             orig_ben = route.total_benefit
                             drop_node = route.nodes[d_idx]
@@ -384,7 +391,7 @@ class LSSolver:
                                 route.nodes = test_nodes
                                 route.update_states(data)
                                 for p, d in data.parcels:
-                                    if p.request_id == node.request_id:
+                                    if p.job_id == node.job_id:
                                         unserved_parc.append((p, d))
                                         break
                                 total_removed += 1
@@ -406,13 +413,13 @@ class LSSolver:
             new_nodes = []
             route_changed = False
             for n in r.nodes:
-                if n.type != 'DEPOT' and (n.type.split('_')[0], n.request_id) in to_remove_ids:
+                if n.type != 'DEPOT' and n.job_id in to_remove_ids:
                     route_changed = True
                     if n.type == 'PASSENGER':
                         unserved_pass.append(n)
                     elif n.type == 'PARCEL_PICKUP':
-                        if hasattr(self, 'parcel_dict') and n.request_id in self.parcel_dict:
-                            unserved_parc.append(self.parcel_dict[n.request_id])
+                        if hasattr(self, 'parcel_dict') and n.job_id in self.parcel_dict:
+                            unserved_parc.append(self.parcel_dict[n.job_id])
                 else:
                     new_nodes.append(n)
             
@@ -422,7 +429,7 @@ class LSSolver:
 
     def random_perturbation(self, routes, unserved_pass, unserved_parc, data, percentage=0.05, tabu_dict=None, current_iter=0, tenure=10):
         # Tính theo số lượng request (mỗi passenger = 1, mỗi parcel pair = 1 request)
-        served_reqs = set([(n.type.split('_')[0], n.request_id) for r in routes for n in r.nodes[1:-1]])
+        served_reqs = set([n.job_id for r in routes for n in r.nodes[1:-1]])
         if not served_reqs: return 0
         num_remove = max(1, int(len(served_reqs) * percentage))
         to_remove = set(random.sample(list(served_reqs), min(num_remove, len(served_reqs))))
@@ -431,9 +438,9 @@ class LSSolver:
         if tabu_dict is not None:
             for r in routes:
                 for i in range(1, len(r.nodes)-1):
-                    if (r.nodes[i].type.split('_')[0], r.nodes[i].request_id) in to_remove:
-                        tabu_dict[(r.nodes[i-1].id, r.nodes[i].id)] = current_iter + tenure
-                        tabu_dict[(r.nodes[i].id, r.nodes[i+1].id)] = current_iter + tenure
+                    if r.nodes[i].job_id in to_remove:
+                        tabu_dict[(r.nodes[i-1].node_id, r.nodes[i].node_id)] = current_iter + tenure
+                        tabu_dict[(r.nodes[i].node_id, r.nodes[i+1].node_id)] = current_iter + tenure
                         
         self._apply_removal(routes, unserved_pass, unserved_parc, to_remove, data)
         return len(to_remove)
@@ -449,10 +456,10 @@ class LSSolver:
             self.log_and_print(f"[INIT] Nạp tour từ file: {initial_tour_file}")
             routes = load_tour(self.data, initial_tour_file)
             
-            served_pass_reqs = set([n.request_id for r in routes for n in r.nodes[1:-1] if n.type == 'PASSENGER'])
-            served_parc_reqs = set([n.request_id for r in routes for n in r.nodes[1:-1] if 'PARCEL' in n.type])
-            unserved_pass = [p for p in self.data.passengers if p.request_id not in served_pass_reqs]
-            unserved_parc = [(p, d) for p, d in self.data.parcels if p.request_id not in served_parc_reqs]
+            served_pass_reqs = set([n.job_id for r in routes for n in r.nodes[1:-1] if n.type == 'PASSENGER'])
+            served_parc_reqs = set([n.job_id for r in routes for n in r.nodes[1:-1] if 'PARCEL' in n.type])
+            unserved_pass = [p for p in self.data.passengers if p.job_id not in served_pass_reqs]
+            unserved_parc = [(p, d) for p, d in self.data.parcels if p.job_id not in served_parc_reqs]
             
             self.best_benefit = sum(r.total_benefit for r in routes)
             self.best_routes = copy.deepcopy(routes)
@@ -585,10 +592,10 @@ class LSSolver:
             # --- PERTURBATION (PHÁ HỦY NGẪU NHIÊN 5% + ÁP DỤNG TABU) ---
             routes = [r.clone() for r in self.best_routes]
             
-            served_pass_reqs = set([n.request_id for r in routes for n in r.nodes[1:-1] if n.type == 'PASSENGER'])
-            served_parc_reqs = set([n.request_id for r in routes for n in r.nodes[1:-1] if 'PARCEL' in n.type])
-            unserved_pass = [p for p in self.data.passengers if p.request_id not in served_pass_reqs]
-            unserved_parc = [(p, d) for p, d in self.data.parcels if p.request_id not in served_parc_reqs]
+            served_pass_reqs = set([n.job_id for r in routes for n in r.nodes[1:-1] if n.type == 'PASSENGER'])
+            served_parc_reqs = set([n.job_id for r in routes for n in r.nodes[1:-1] if 'PARCEL' in n.type])
+            unserved_pass = [p for p in self.data.passengers if p.job_id not in served_pass_reqs]
+            unserved_parc = [(p, d) for p, d in self.data.parcels if p.job_id not in served_parc_reqs]
             
             num_removed = self.random_perturbation(routes, unserved_pass, unserved_parc, self.data, MUTATION_RATE, tabu_dict, it, tabu_tenure)
             
@@ -659,11 +666,11 @@ class LSSolver:
         with open(out_filename, 'w', encoding='utf-8') as f:
             f.write(f"Total Benefit: {self.best_benefit}\n")
             for r in self.best_routes:
-                f.write(f"Xe {r.vehicle_id} (Capacity {r.capacity}):\n")
+                f.write(f"Xe {r.veh_id} (Capacity {r.capacity}):\n")
                 if len(r.nodes) <= 2:
                     f.write("  KHÔNG CHỞ\n")
                     continue
-                path_str = " -> ".join([f"[{'PASSENGER' if n.type == 'PASSENGER' else n.type} {n.request_id}]" for n in r.nodes[1:-1]])
+                path_str = " -> ".join([f"[{'PASSENGER' if n.type == 'PASSENGER' else n.type} {n.job_id}]" for n in r.nodes[1:-1]])
                 f.write(f"  {path_str}\n")
                 
             for msg in self.log_history:
@@ -689,4 +696,4 @@ if __name__ == "__main__":
     data = Data(filename)
     data.filename = filename
     solver = LSSolver(data)
-    solver.solve(max_iterations= 10, init_fraction= 0.95, initial_tour_file=initial_tour)
+    solver.solve(max_iterations= 1000, init_fraction= 0.95, initial_tour_file=initial_tour)

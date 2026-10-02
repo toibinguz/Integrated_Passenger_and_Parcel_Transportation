@@ -440,7 +440,7 @@ class LSSolver:
         served_reqs = set([n.job_id for r in routes for n in r.nodes[1:-1]])
         if not served_reqs: return 0
         # m bo khng xa SCH route khi s nh qu b (dn n Tabu chn mi nc i)
-        num_remove = max(1, int(len(served_reqs) * percentage))
+        num_remove = max(3, int(len(served_reqs) * percentage))
         # Nu testcase qu nh, gi li t nht 1 nh  khng b empty hon ton
         if num_remove >= len(served_reqs) and len(served_reqs) > 1:
             num_remove = len(served_reqs) - 1
@@ -457,6 +457,8 @@ class LSSolver:
                         
         self._apply_removal(routes, unserved_pass, unserved_parc, to_remove, data)
         return len(to_remove)
+
+
 
     def solve(self, max_iterations=100, init_fraction=1.0, initial_tour_file=None):
         import time
@@ -576,6 +578,23 @@ class LSSolver:
                 self.best_benefit = current_benefit
                 self.best_routes = [r.clone() for r in routes]
                 self.log_and_print(f"[Iter {it:03d}] NEW RECORD: {self.best_benefit:6.0f} | {stats_str} | Curr Unserved: {len(unserved_pass)+len(unserved_parc):2d} | Best Unserved: {getattr(self, 'best_unserved', 0):2d}")
+                
+                # --- APPLY OPERATOR X ON GLOBAL BEST ---
+                import operator_x
+                if not hasattr(self, 'req_dict'):
+                    self.req_dict = {}
+                    for p in self.data.passengers: self.req_dict[p.job_id] = p
+                    for pick, drop in self.data.parcels: self.req_dict[pick.job_id] = (pick, drop)
+                    
+                improved_by_x = True
+                while improved_by_x:
+                    improved_by_x = operator_x.run_operator_x(self.best_routes, unserved_pass, unserved_parc, self.data, self.req_dict, solver=self)
+                    if improved_by_x:
+                        routes = [r.clone() for r in self.best_routes]
+                        current_benefit = sum(r.total_benefit for r in routes)
+                        self.best_benefit = current_benefit
+                        self.log_and_print(f"    [Opt X] Kỷ lục được X tiếp tục phá! Ben mới: {current_benefit}")
+                        
             else:
                 self.log_and_print(f"[Iter {it:03d}] Local Opt : {current_benefit:6.0f} (Best: {self.best_benefit:6.0f}) | {stats_str} | Curr Unserved: {len(unserved_pass)+len(unserved_parc):2d} | Best Unserved: {getattr(self, 'best_unserved', 0):2d}")
                 

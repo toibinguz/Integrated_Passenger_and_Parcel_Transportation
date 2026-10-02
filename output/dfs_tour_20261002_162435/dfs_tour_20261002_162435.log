@@ -1,0 +1,68 @@
+--- STARTING MULTI-SAMPLE DFS WITH REVERT (1 ITER = FULL SCAN) ---
+[Iter 0001] NEW RECORD: 656 | Unserved: 238
+[Iter 0001] NEW RECORD: 1193 | Unserved: 236
+[Iter 0001] NEW RECORD: 1665 | Unserved: 234
+[Iter 0001] NEW RECORD: 2070 | Unserved: 232
+[Iter 0001] NEW RECORD: 2564 | Unserved: 229
+[Iter 0001] NEW RECORD: 2894 | Unserved: 226
+[Iter 0001] NEW RECORD: 3399 | Unserved: 224
+[Iter 0001] NEW RECORD: 3846 | Unserved: 222
+[Iter 0001] NEW RECORD: 4487 | Unserved: 220
+[Iter 0001] NEW RECORD: 5015 | Unserved: 218
+[Iter 0001] NEW RECORD: 5409 | Unserved: 216
+[Iter 0001] NEW RECORD: 6124 | Unserved: 213
+[Iter 0001] NEW RECORD: 6446 | Unserved: 211
+[Iter 0001] NEW RECORD: 6838 | Unserved: 209
+[Iter 0001] NEW RECORD: 7067 | Unserved: 207
+[Iter 0001] NEW RECORD: 7438 | Unserved: 205
+[Iter 0001] NEW RECORD: 7938 | Unserved: 203
+[Iter 0001] NEW RECORD: 8222 | Unserved: 201
+[Iter 0001] NEW RECORD: 8611 | Unserved: 199
+[Iter 0001] NEW RECORD: 8949 | Unserved: 197
+[Iter 0003] NEW RECORD: 8983 | Unserved: 193
+[Iter 0003] NEW RECORD: 9136 | Unserved: 193
+[Iter 0003] NEW RECORD: 9138 | Unserved: 194
+[Iter 0003] NEW RECORD: 9184 | Unserved: 194
+[Iter 0003] NEW RECORD: 9300 | Unserved: 194
+[Iter 0003] NEW RECORD: 9318 | Unserved: 194
+[Iter 0003] NEW RECORD: 9411 | Unserved: 194
+[Iter 0003] NEW RECORD: 9469 | Unserved: 194
+[Iter 0003] NEW RECORD: 9598 | Unserved: 194
+[Iter 0003] NEW RECORD: 9790 | Unserved: 193
+[Iter 0005] NEW RECORD: 9937 | Unserved: 190
+[Iter 0005] NEW RECORD: 10130 | Unserved: 189
+[Iter 0005] NEW RECORD: 10246 | Unserved: 189
+[Iter 0005] NEW RECORD: 10264 | Unserved: 189
+[Iter 0007] NEW RECORD: 10370 | Unserved: 187
+[Iter 0007] NEW RECORD: 10524 | Unserved: 187
+[Iter 0007] NEW RECORD: 10534 | Unserved: 187
+[Iter 0008] NEW RECORD: 10613 | Unserved: 187
+[Iter 0009] NEW RECORD: 10691 | Unserved: 188
+[Iter 0009] NEW RECORD: 10762 | Unserved: 188
+[Iter 0012] NEW RECORD: 10783 | Unserved: 188
+[Iter 0013] NEW RECORD: 10862 | Unserved: 188
+[Iter 0013] NEW RECORD: 10892 | Unserved: 188
+[Iter 0015] NEW RECORD: 10968 | Unserved: 185
+[Iter 0020] NEW RECORD: 11042 | Unserved: 188
+[Iter 0020] NEW RECORD: 11187 | Unserved: 188
+[Iter 0023] NEW RECORD: 11210 | Unserved: 186
+[Iter 0024] NEW RECORD: 11237 | Unserved: 185
+[Iter 0024] NEW RECORD: 11244 | Unserved: 184
+[Iter 0024] NEW RECORD: 11245 | Unserved: 184
+[Iter 0033] NEW RECORD: 11286 | Unserved: 186
+[Iter 0034] NEW RECORD: 11293 | Unserved: 186
+[Iter 0035] NEW RECORD: 11334 | Unserved: 186
+[Iter 0037] NEW RECORD: 11411 | Unserved: 185
+[Iter 0039] NEW RECORD: 11501 | Unserved: 186
+[Iter 0039] NEW RECORD: 11655 | Unserved: 186
+[Iter 0039] NEW RECORD: 11726 | Unserved: 186
+[Iter 0048] Stagnant for 10 iters. Reverting to Global Best: 11726
+[Iter 0050] NEW RECORD: 11748 | Unserved: 186
+[Iter 0050] Current Ben: 11455 | Best: 11748
+[Iter 0059] Stagnant for 10 iters. Reverting to Global Best: 11748
+[Iter 0069] Stagnant for 10 iters. Reverting to Global Best: 11748
+[Iter 0079] Stagnant for 10 iters. Reverting to Global Best: 11748
+[Iter 0080] NEW RECORD: 11760 | Unserved: 186
+--- FINAL RESULTS ---
+Total Max Benefit: 11760
+Total Run Time: 60.21s

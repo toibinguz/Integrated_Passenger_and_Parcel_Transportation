@@ -1,0 +1,15 @@
+--- STARTING DUAL-DESTROY DFS ROUTE OPTIMIZER ---
+[Iter 0001] NEW RECORD: 415 | Unserved: 28
+[Iter 0003] NEW RECORD: 738 | Unserved: 26
+[Iter 0004] NEW RECORD: 957 | Unserved: 24
+[Iter 0005] NEW RECORD: 1196 | Unserved: 22
+[Iter 0017] NEW RECORD: 1280 | Unserved: 22
+[Iter 0071] NEW RECORD: 1317 | Unserved: 21
+[Iter 0072] NEW RECORD: 1356 | Unserved: 21
+[Iter 0500] Current Ben: 1058 | Best: 1356
+[Iter 1000] Current Ben: 1196 | Best: 1356
+[Iter 1500] Current Ben: 1052 | Best: 1356
+[Iter 2000] Current Ben: 1105 | Best: 1356
+--- FINAL RESULTS ---
+Total Max Benefit: 1356
+Total Run Time: 60.01s

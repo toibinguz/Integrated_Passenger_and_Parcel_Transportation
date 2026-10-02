@@ -1,6 +1,6 @@
 import sys
 
-RELEASE_MODE = True
+RELEASE_MODE = False
 
 def vprint(*args, **kwargs):
     if not RELEASE_MODE:

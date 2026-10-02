@@ -1,0 +1,8 @@
+--- STARTING DETERMINISTIC POOLING ELITIST ILS (NODE_MAX = 12) ---
+[Iter 0001] NEW RECORD: 1275 | Unserved: 22
+[Iter 0024] NEW RECORD: 1280 | Unserved: 22
+[Iter 0034] NEW RECORD: 1305 | Unserved: 20
+[Iter 0136] NEW RECORD: 1337 | Unserved: 18
+--- FINAL RESULTS ---
+Total Max Benefit: 1337
+Total Run Time: 60.03s

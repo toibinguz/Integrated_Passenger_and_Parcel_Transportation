@@ -1,0 +1,9 @@
+--- STARTING DETERMINISTIC POOLING DFS ---
+Inserted pool of 2 into Vehicle 3 | Gain: 215 | Total Ben: 415 | Unserved: 28
+Inserted pool of 2 into Vehicle 0 | Gain: 192 | Total Ben: 654 | Unserved: 26
+Inserted pool of 2 into Vehicle 2 | Gain: 151 | Total Ben: 957 | Unserved: 24
+Inserted pool of 2 into Vehicle 4 | Gain: 91 | Total Ben: 1280 | Unserved: 22
+No more pool can be profitably inserted.
+--- FINAL RESULTS ---
+Total Max Benefit: 1280
+Total Run Time: 0.60s

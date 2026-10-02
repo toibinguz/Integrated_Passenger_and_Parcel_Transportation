@@ -1,0 +1,47 @@
+=== BÁO CÁO CHI TIẾT CHO TOUR: output\dfs_tour_20261002_160438\dfs_tour_20261002_160438_tour.txt ===
+Dữ liệu gốc: testcases/test_65.txt
+
+--- CHI TIẾT HÀNH TRÌNH TỪNG XE ---
+
+[Xe 0] (Tải trọng tối đa: 27)
+  01. PARCEL_PICKUP 24 | Tải trọng:  15/27 | TW: [13-36]      | Tới:      8 | Chờ:    5 | Bắt đầu:     13 | Dịch vụ:    3 | Xong:     16 | Doanh thu:   207 | Chi phí chặng:    20
+  02. PARCEL_PICKUP 26 | Tải trọng:  21/27 | TW: [57-81]      | Tới:     45 | Chờ:   12 | Bắt đầu:     57 | Dịch vụ:    2 | Xong:     59 | Doanh thu:   126 | Chi phí chặng:    72
+  03. PARCEL_DROPOFF 24 | Tải trọng:   6/27 | TW: [74-128]     | Tới:     80 | Chờ:    0 | Bắt đầu:     80 | Dịch vụ:    3 | Xong:     83 | Doanh thu:     0 | Chi phí chặng:    52
+  04. PARCEL_DROPOFF 26 | Tải trọng:   0/27 | TW: [88-135]     | Tới:     86 | Chờ:    2 | Bắt đầu:     88 | Dịch vụ:    2 | Xong:     90 | Doanh thu:     0 | Chi phí chặng:     8
+  05. PARCEL_PICKUP 25 | Tải trọng:  13/27 | TW: [73-99]      | Tới:     99 | Chờ:    0 | Bắt đầu:     99 | Dịch vụ:    3 | Xong:    102 | Doanh thu:   386 | Chi phí chặng:    22
+  06. PARCEL_DROPOFF 25 | Tải trọng:   0/27 | TW: [175-233]    | Tới:    194 | Chờ:    0 | Bắt đầu:    194 | Dịch vụ:    3 | Xong:    197 | Doanh thu:     0 | Chi phí chặng:   230
+
+[Xe 1] (Tải trọng tối đa: 20)
+  01. PARCEL_PICKUP 29 | Tải trọng:  11/20 | TW: [19-49]      | Tới:     14 | Chờ:    5 | Bắt đầu:     19 | Dịch vụ:    5 | Xong:     24 | Doanh thu:   382 | Chi phí chặng:    35
+  02. PASSENGER 13     | Tải trọng:  11/20 | TW: [38-52]      | Tới:     34 | Chờ:    4 | Bắt đầu:     38 | Dịch vụ:   70 | Xong:    108 | Doanh thu:   330 | Chi phí chặng:   179
+  03. PARCEL_DROPOFF 29 | Tải trọng:   0/20 | TW: [107-147]    | Tới:    143 | Chờ:    0 | Bắt đầu:    143 | Dịch vụ:    5 | Xong:    148 | Doanh thu:     0 | Chi phí chặng:    88
+
+[Xe 2] (Tải trọng tối đa: 23)
+  01. PARCEL_PICKUP 15 | Tải trọng:   9/23 | TW: [31-52]      | Tới:     52 | Chờ:    0 | Bắt đầu:     52 | Dịch vụ:    2 | Xong:     54 | Doanh thu:   488 | Chi phí chặng:   130
+  02. PASSENGER 4      | Tải trọng:   9/23 | TW: [83-89]      | Tới:     80 | Chờ:    3 | Bắt đầu:     83 | Dịch vụ:   43 | Xong:    126 | Doanh thu:   189 | Chi phí chặng:   147
+  03. PARCEL_DROPOFF 15 | Tải trọng:   0/23 | TW: [135-167]    | Tới:    165 | Chờ:    0 | Bắt đầu:    165 | Dịch vụ:    2 | Xong:    167 | Doanh thu:     0 | Chi phí chặng:    97
+
+[Xe 3] (Tải trọng tối đa: 24)
+  01. PASSENGER 5      | Tải trọng:   0/24 | TW: [34-54]      | Tới:     28 | Chờ:    6 | Bắt đầu:     34 | Dịch vụ:   25 | Xong:     59 | Doanh thu:   112 | Chi phí chặng:   117
+  02. PARCEL_PICKUP 17 | Tải trọng:   5/24 | TW: [79-85]      | Tới:     83 | Chờ:    0 | Bắt đầu:     83 | Dịch vụ:    5 | Xong:     88 | Doanh thu:   368 | Chi phí chặng:    60
+  03. PARCEL_DROPOFF 17 | Tải trọng:   0/24 | TW: [149-178]    | Tới:    153 | Chờ:    0 | Bắt đầu:    153 | Dịch vụ:    5 | Xong:    158 | Doanh thu:     0 | Chi phí chặng:   162
+
+[Xe 4] (Tải trọng tối đa: 30)
+  01. PARCEL_PICKUP 22 | Tải trọng:  13/30 | TW: [29-57]      | Tới:     18 | Chờ:   11 | Bắt đầu:     29 | Dịch vụ:    2 | Xong:     31 | Doanh thu:   378 | Chi phí chặng:    45
+  02. PARCEL_PICKUP 23 | Tải trọng:  27/30 | TW: [57-66]      | Tới:     63 | Chờ:    0 | Bắt đầu:     63 | Dịch vụ:    3 | Xong:     66 | Doanh thu:   286 | Chi phí chặng:    79
+  03. PARCEL_DROPOFF 23 | Tải trọng:  13/30 | TW: [110-135]    | Tới:    116 | Chờ:    0 | Bắt đầu:    116 | Dịch vụ:    3 | Xong:    119 | Doanh thu:     0 | Chi phí chặng:   125
+  04. PARCEL_DROPOFF 22 | Tải trọng:   0/30 | TW: [123-178]    | Tới:    156 | Chờ:    0 | Bắt đầu:    156 | Dịch vụ:    2 | Xong:    158 | Doanh thu:     0 | Chi phí chặng:    92
+
+--- THỐNG KÊ PHỤC VỤ ---
+Tổng hành khách đã phục vụ: 3 / 15
+Tổng hàng hóa đã phục vụ  : 8 / 15
+Tổng hành khách BỎ QUA    : 12
+  Danh sách: PASSENGER 0, PASSENGER 1, PASSENGER 2, PASSENGER 3, PASSENGER 6, PASSENGER 7, PASSENGER 8, PASSENGER 9, PASSENGER 10, PASSENGER 11, PASSENGER 12, PASSENGER 14
+Tổng hàng hóa BỎ QUA      : 7
+  Danh sách: PARCEL 16, PARCEL 18, PARCEL 19, PARCEL 20, PARCEL 21, PARCEL 27, PARCEL 28
+
+--- TỔNG KẾT TÀI CHÍNH ---
+Tổng doanh thu tối đa có thể: 8535
+Doanh thu đạt được        : 3252
+Chi phí vận hành          : 1760
+Lợi nhuận cuối cùng       : 1492

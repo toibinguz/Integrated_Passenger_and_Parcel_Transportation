@@ -1,0 +1,76 @@
+--- STARTING MULTI-SAMPLE DFS WITH REVERT (1 ITER = FULL SCAN) ---
+[Iter 0001] NEW RECORD: 239 | Unserved: 28
+[Iter 0001] NEW RECORD: 649 | Unserved: 26
+[Iter 0001] NEW RECORD: 952 | Unserved: 24
+[Iter 0001] NEW RECORD: 1275 | Unserved: 22
+[Iter 0002] NEW RECORD: 1351 | Unserved: 21
+[Iter 0003] NEW RECORD: 1365 | Unserved: 19
+[Iter 0003] NEW RECORD: 1390 | Unserved: 19
+[Iter 0007] NEW RECORD: 1404 | Unserved: 19
+[Iter 0008] NEW RECORD: 1408 | Unserved: 19
+[Iter 0008] NEW RECORD: 1492 | Unserved: 19
+[Iter 0017] Stagnant for 10 iters. Reverting to Global Best: 1492
+[Iter 0027] Stagnant for 10 iters. Reverting to Global Best: 1492
+[Iter 0037] Stagnant for 10 iters. Reverting to Global Best: 1492
+[Iter 0047] Stagnant for 10 iters. Reverting to Global Best: 1492
+[Iter 0050] Current Ben: 1130 | Best: 1492
+[Iter 0057] Stagnant for 10 iters. Reverting to Global Best: 1492
+[Iter 0067] Stagnant for 10 iters. Reverting to Global Best: 1492
+[Iter 0077] Stagnant for 10 iters. Reverting to Global Best: 1492
+[Iter 0087] Stagnant for 10 iters. Reverting to Global Best: 1492
+[Iter 0097] Stagnant for 10 iters. Reverting to Global Best: 1492
+[Iter 0100] Current Ben: 1098 | Best: 1492
+[Iter 0107] Stagnant for 10 iters. Reverting to Global Best: 1492
+[Iter 0117] Stagnant for 10 iters. Reverting to Global Best: 1492
+[Iter 0127] Stagnant for 10 iters. Reverting to Global Best: 1492
+[Iter 0137] Stagnant for 10 iters. Reverting to Global Best: 1492
+[Iter 0147] Stagnant for 10 iters. Reverting to Global Best: 1492
+[Iter 0150] Current Ben: 893 | Best: 1492
+[Iter 0157] Stagnant for 10 iters. Reverting to Global Best: 1492
+[Iter 0167] Stagnant for 10 iters. Reverting to Global Best: 1492
+[Iter 0177] Stagnant for 10 iters. Reverting to Global Best: 1492
+[Iter 0187] Stagnant for 10 iters. Reverting to Global Best: 1492
+[Iter 0197] Stagnant for 10 iters. Reverting to Global Best: 1492
+[Iter 0200] Current Ben: 1178 | Best: 1492
+[Iter 0207] Stagnant for 10 iters. Reverting to Global Best: 1492
+[Iter 0217] Stagnant for 10 iters. Reverting to Global Best: 1492
+[Iter 0227] Stagnant for 10 iters. Reverting to Global Best: 1492
+[Iter 0237] Stagnant for 10 iters. Reverting to Global Best: 1492
+[Iter 0247] Stagnant for 10 iters. Reverting to Global Best: 1492
+[Iter 0250] Current Ben: 1224 | Best: 1492
+[Iter 0257] Stagnant for 10 iters. Reverting to Global Best: 1492
+[Iter 0267] Stagnant for 10 iters. Reverting to Global Best: 1492
+[Iter 0277] Stagnant for 10 iters. Reverting to Global Best: 1492
+[Iter 0287] Stagnant for 10 iters. Reverting to Global Best: 1492
+[Iter 0297] Stagnant for 10 iters. Reverting to Global Best: 1492
+[Iter 0300] Current Ben: 829 | Best: 1492
+[Iter 0307] Stagnant for 10 iters. Reverting to Global Best: 1492
+[Iter 0317] Stagnant for 10 iters. Reverting to Global Best: 1492
+[Iter 0327] Stagnant for 10 iters. Reverting to Global Best: 1492
+[Iter 0337] Stagnant for 10 iters. Reverting to Global Best: 1492
+[Iter 0347] Stagnant for 10 iters. Reverting to Global Best: 1492
+[Iter 0350] Current Ben: 1014 | Best: 1492
+[Iter 0357] Stagnant for 10 iters. Reverting to Global Best: 1492
+[Iter 0367] Stagnant for 10 iters. Reverting to Global Best: 1492
+[Iter 0377] Stagnant for 10 iters. Reverting to Global Best: 1492
+[Iter 0387] Stagnant for 10 iters. Reverting to Global Best: 1492
+[Iter 0397] Stagnant for 10 iters. Reverting to Global Best: 1492
+[Iter 0400] Current Ben: 1181 | Best: 1492
+[Iter 0407] Stagnant for 10 iters. Reverting to Global Best: 1492
+[Iter 0417] Stagnant for 10 iters. Reverting to Global Best: 1492
+[Iter 0427] Stagnant for 10 iters. Reverting to Global Best: 1492
+[Iter 0437] Stagnant for 10 iters. Reverting to Global Best: 1492
+[Iter 0447] Stagnant for 10 iters. Reverting to Global Best: 1492
+[Iter 0450] Current Ben: 1090 | Best: 1492
+[Iter 0457] Stagnant for 10 iters. Reverting to Global Best: 1492
+[Iter 0467] Stagnant for 10 iters. Reverting to Global Best: 1492
+[Iter 0477] Stagnant for 10 iters. Reverting to Global Best: 1492
+[Iter 0487] Stagnant for 10 iters. Reverting to Global Best: 1492
+[Iter 0497] Stagnant for 10 iters. Reverting to Global Best: 1492
+[Iter 0500] Current Ben: 977 | Best: 1492
+[Iter 0507] Stagnant for 10 iters. Reverting to Global Best: 1492
+[Iter 0517] Stagnant for 10 iters. Reverting to Global Best: 1492
+[Iter 0527] Stagnant for 10 iters. Reverting to Global Best: 1492
+--- FINAL RESULTS ---
+Total Max Benefit: 1492
+Total Run Time: 60.11s

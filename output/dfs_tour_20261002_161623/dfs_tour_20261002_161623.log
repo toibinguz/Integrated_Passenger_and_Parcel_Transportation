@@ -1,0 +1,194 @@
+--- STARTING MULTI-SAMPLE DFS WITH REVERT (STAGNANT_LIMIT=15) ---
+[Iter 0001] NEW RECORD: 239 | Unserved: 28
+[Iter 0002] NEW RECORD: 649 | Unserved: 26
+[Iter 0003] NEW RECORD: 968 | Unserved: 24
+[Iter 0004] NEW RECORD: 1187 | Unserved: 22
+[Iter 0009] NEW RECORD: 1249 | Unserved: 21
+[Iter 0013] NEW RECORD: 1275 | Unserved: 22
+[Iter 0020] NEW RECORD: 1365 | Unserved: 19
+[Iter 0023] NEW RECORD: 1374 | Unserved: 20
+[Iter 0036] NEW RECORD: 1392 | Unserved: 20
+[Iter 0041] NEW RECORD: 1453 | Unserved: 19
+[Iter 0056] Stagnant for 15 iters. Reverting to Global Best: 1453
+[Iter 0069] NEW RECORD: 1492 | Unserved: 19
+[Iter 0084] Stagnant for 15 iters. Reverting to Global Best: 1492
+[Iter 0099] Stagnant for 15 iters. Reverting to Global Best: 1492
+[Iter 0114] Stagnant for 15 iters. Reverting to Global Best: 1492
+[Iter 0129] Stagnant for 15 iters. Reverting to Global Best: 1492
+[Iter 0144] Stagnant for 15 iters. Reverting to Global Best: 1492
+[Iter 0159] Stagnant for 15 iters. Reverting to Global Best: 1492
+[Iter 0174] Stagnant for 15 iters. Reverting to Global Best: 1492
+[Iter 0189] Stagnant for 15 iters. Reverting to Global Best: 1492
+[Iter 0204] Stagnant for 15 iters. Reverting to Global Best: 1492
+[Iter 0219] Stagnant for 15 iters. Reverting to Global Best: 1492
+[Iter 0234] Stagnant for 15 iters. Reverting to Global Best: 1492
+[Iter 0249] Stagnant for 15 iters. Reverting to Global Best: 1492
+[Iter 0264] Stagnant for 15 iters. Reverting to Global Best: 1492
+[Iter 0279] Stagnant for 15 iters. Reverting to Global Best: 1492
+[Iter 0294] Stagnant for 15 iters. Reverting to Global Best: 1492
+[Iter 0309] Stagnant for 15 iters. Reverting to Global Best: 1492
+[Iter 0324] Stagnant for 15 iters. Reverting to Global Best: 1492
+[Iter 0339] Stagnant for 15 iters. Reverting to Global Best: 1492
+[Iter 0354] Stagnant for 15 iters. Reverting to Global Best: 1492
+[Iter 0369] Stagnant for 15 iters. Reverting to Global Best: 1492
+[Iter 0384] Stagnant for 15 iters. Reverting to Global Best: 1492
+[Iter 0399] Stagnant for 15 iters. Reverting to Global Best: 1492
+[Iter 0414] Stagnant for 15 iters. Reverting to Global Best: 1492
+[Iter 0429] Stagnant for 15 iters. Reverting to Global Best: 1492
+[Iter 0444] Stagnant for 15 iters. Reverting to Global Best: 1492
+[Iter 0459] Stagnant for 15 iters. Reverting to Global Best: 1492
+[Iter 0474] Stagnant for 15 iters. Reverting to Global Best: 1492
+[Iter 0489] Stagnant for 15 iters. Reverting to Global Best: 1492
+[Iter 0500] Current Ben: 1329 | Best: 1492
+[Iter 0504] Stagnant for 15 iters. Reverting to Global Best: 1492
+[Iter 0519] Stagnant for 15 iters. Reverting to Global Best: 1492
+[Iter 0534] Stagnant for 15 iters. Reverting to Global Best: 1492
+[Iter 0549] Stagnant for 15 iters. Reverting to Global Best: 1492
+[Iter 0564] Stagnant for 15 iters. Reverting to Global Best: 1492
+[Iter 0579] Stagnant for 15 iters. Reverting to Global Best: 1492
+[Iter 0594] Stagnant for 15 iters. Reverting to Global Best: 1492
+[Iter 0609] Stagnant for 15 iters. Reverting to Global Best: 1492
+[Iter 0624] Stagnant for 15 iters. Reverting to Global Best: 1492
+[Iter 0639] Stagnant for 15 iters. Reverting to Global Best: 1492
+[Iter 0654] Stagnant for 15 iters. Reverting to Global Best: 1492
+[Iter 0669] Stagnant for 15 iters. Reverting to Global Best: 1492
+[Iter 0684] Stagnant for 15 iters. Reverting to Global Best: 1492
+[Iter 0699] Stagnant for 15 iters. Reverting to Global Best: 1492
+[Iter 0714] Stagnant for 15 iters. Reverting to Global Best: 1492
+[Iter 0729] Stagnant for 15 iters. Reverting to Global Best: 1492
+[Iter 0744] Stagnant for 15 iters. Reverting to Global Best: 1492
+[Iter 0759] Stagnant for 15 iters. Reverting to Global Best: 1492
+[Iter 0774] Stagnant for 15 iters. Reverting to Global Best: 1492
+[Iter 0789] Stagnant for 15 iters. Reverting to Global Best: 1492
+[Iter 0804] Stagnant for 15 iters. Reverting to Global Best: 1492
+[Iter 0819] Stagnant for 15 iters. Reverting to Global Best: 1492
+[Iter 0834] Stagnant for 15 iters. Reverting to Global Best: 1492
+[Iter 0849] Stagnant for 15 iters. Reverting to Global Best: 1492
+[Iter 0864] Stagnant for 15 iters. Reverting to Global Best: 1492
+[Iter 0879] Stagnant for 15 iters. Reverting to Global Best: 1492
+[Iter 0894] Stagnant for 15 iters. Reverting to Global Best: 1492
+[Iter 0909] Stagnant for 15 iters. Reverting to Global Best: 1492
+[Iter 0924] Stagnant for 15 iters. Reverting to Global Best: 1492
+[Iter 0939] Stagnant for 15 iters. Reverting to Global Best: 1492
+[Iter 0954] Stagnant for 15 iters. Reverting to Global Best: 1492
+[Iter 0969] Stagnant for 15 iters. Reverting to Global Best: 1492
+[Iter 0984] Stagnant for 15 iters. Reverting to Global Best: 1492
+[Iter 0999] Stagnant for 15 iters. Reverting to Global Best: 1492
+[Iter 1000] Current Ben: 1408 | Best: 1492
+[Iter 1014] Stagnant for 15 iters. Reverting to Global Best: 1492
+[Iter 1029] Stagnant for 15 iters. Reverting to Global Best: 1492
+[Iter 1044] Stagnant for 15 iters. Reverting to Global Best: 1492
+[Iter 1059] Stagnant for 15 iters. Reverting to Global Best: 1492
+[Iter 1074] Stagnant for 15 iters. Reverting to Global Best: 1492
+[Iter 1089] Stagnant for 15 iters. Reverting to Global Best: 1492
+[Iter 1104] Stagnant for 15 iters. Reverting to Global Best: 1492
+[Iter 1119] Stagnant for 15 iters. Reverting to Global Best: 1492
+[Iter 1134] Stagnant for 15 iters. Reverting to Global Best: 1492
+[Iter 1149] Stagnant for 15 iters. Reverting to Global Best: 1492
+[Iter 1164] Stagnant for 15 iters. Reverting to Global Best: 1492
+[Iter 1179] Stagnant for 15 iters. Reverting to Global Best: 1492
+[Iter 1194] Stagnant for 15 iters. Reverting to Global Best: 1492
+[Iter 1209] Stagnant for 15 iters. Reverting to Global Best: 1492
+[Iter 1224] Stagnant for 15 iters. Reverting to Global Best: 1492
+[Iter 1239] Stagnant for 15 iters. Reverting to Global Best: 1492
+[Iter 1254] Stagnant for 15 iters. Reverting to Global Best: 1492
+[Iter 1269] Stagnant for 15 iters. Reverting to Global Best: 1492
+[Iter 1284] Stagnant for 15 iters. Reverting to Global Best: 1492
+[Iter 1299] Stagnant for 15 iters. Reverting to Global Best: 1492
+[Iter 1314] Stagnant for 15 iters. Reverting to Global Best: 1492
+[Iter 1329] Stagnant for 15 iters. Reverting to Global Best: 1492
+[Iter 1344] Stagnant for 15 iters. Reverting to Global Best: 1492
+[Iter 1359] Stagnant for 15 iters. Reverting to Global Best: 1492
+[Iter 1374] Stagnant for 15 iters. Reverting to Global Best: 1492
+[Iter 1389] Stagnant for 15 iters. Reverting to Global Best: 1492
+[Iter 1404] Stagnant for 15 iters. Reverting to Global Best: 1492
+[Iter 1419] Stagnant for 15 iters. Reverting to Global Best: 1492
+[Iter 1434] Stagnant for 15 iters. Reverting to Global Best: 1492
+[Iter 1449] Stagnant for 15 iters. Reverting to Global Best: 1492
+[Iter 1464] Stagnant for 15 iters. Reverting to Global Best: 1492
+[Iter 1479] Stagnant for 15 iters. Reverting to Global Best: 1492
+[Iter 1494] Stagnant for 15 iters. Reverting to Global Best: 1492
+[Iter 1500] Current Ben: 1212 | Best: 1492
+[Iter 1509] Stagnant for 15 iters. Reverting to Global Best: 1492
+[Iter 1524] Stagnant for 15 iters. Reverting to Global Best: 1492
+[Iter 1539] Stagnant for 15 iters. Reverting to Global Best: 1492
+[Iter 1554] Stagnant for 15 iters. Reverting to Global Best: 1492
+[Iter 1569] Stagnant for 15 iters. Reverting to Global Best: 1492
+[Iter 1584] Stagnant for 15 iters. Reverting to Global Best: 1492
+[Iter 1599] Stagnant for 15 iters. Reverting to Global Best: 1492
+[Iter 1614] Stagnant for 15 iters. Reverting to Global Best: 1492
+[Iter 1629] Stagnant for 15 iters. Reverting to Global Best: 1492
+[Iter 1644] Stagnant for 15 iters. Reverting to Global Best: 1492
+[Iter 1659] Stagnant for 15 iters. Reverting to Global Best: 1492
+[Iter 1674] Stagnant for 15 iters. Reverting to Global Best: 1492
+[Iter 1689] Stagnant for 15 iters. Reverting to Global Best: 1492
+[Iter 1704] Stagnant for 15 iters. Reverting to Global Best: 1492
+[Iter 1719] Stagnant for 15 iters. Reverting to Global Best: 1492
+[Iter 1734] Stagnant for 15 iters. Reverting to Global Best: 1492
+[Iter 1749] Stagnant for 15 iters. Reverting to Global Best: 1492
+[Iter 1764] Stagnant for 15 iters. Reverting to Global Best: 1492
+[Iter 1779] Stagnant for 15 iters. Reverting to Global Best: 1492
+[Iter 1794] Stagnant for 15 iters. Reverting to Global Best: 1492
+[Iter 1809] Stagnant for 15 iters. Reverting to Global Best: 1492
+[Iter 1824] Stagnant for 15 iters. Reverting to Global Best: 1492
+[Iter 1839] Stagnant for 15 iters. Reverting to Global Best: 1492
+[Iter 1854] Stagnant for 15 iters. Reverting to Global Best: 1492
+[Iter 1869] Stagnant for 15 iters. Reverting to Global Best: 1492
+[Iter 1884] Stagnant for 15 iters. Reverting to Global Best: 1492
+[Iter 1899] Stagnant for 15 iters. Reverting to Global Best: 1492
+[Iter 1914] Stagnant for 15 iters. Reverting to Global Best: 1492
+[Iter 1929] Stagnant for 15 iters. Reverting to Global Best: 1492
+[Iter 1944] Stagnant for 15 iters. Reverting to Global Best: 1492
+[Iter 1959] Stagnant for 15 iters. Reverting to Global Best: 1492
+[Iter 1974] Stagnant for 15 iters. Reverting to Global Best: 1492
+[Iter 1989] Stagnant for 15 iters. Reverting to Global Best: 1492
+[Iter 2000] Current Ben: 1169 | Best: 1492
+[Iter 2004] Stagnant for 15 iters. Reverting to Global Best: 1492
+[Iter 2019] Stagnant for 15 iters. Reverting to Global Best: 1492
+[Iter 2034] Stagnant for 15 iters. Reverting to Global Best: 1492
+[Iter 2049] Stagnant for 15 iters. Reverting to Global Best: 1492
+[Iter 2064] Stagnant for 15 iters. Reverting to Global Best: 1492
+[Iter 2079] Stagnant for 15 iters. Reverting to Global Best: 1492
+[Iter 2094] Stagnant for 15 iters. Reverting to Global Best: 1492
+[Iter 2109] Stagnant for 15 iters. Reverting to Global Best: 1492
+[Iter 2124] Stagnant for 15 iters. Reverting to Global Best: 1492
+[Iter 2139] Stagnant for 15 iters. Reverting to Global Best: 1492
+[Iter 2154] Stagnant for 15 iters. Reverting to Global Best: 1492
+[Iter 2169] Stagnant for 15 iters. Reverting to Global Best: 1492
+[Iter 2184] Stagnant for 15 iters. Reverting to Global Best: 1492
+[Iter 2199] Stagnant for 15 iters. Reverting to Global Best: 1492
+[Iter 2214] Stagnant for 15 iters. Reverting to Global Best: 1492
+[Iter 2229] Stagnant for 15 iters. Reverting to Global Best: 1492
+[Iter 2244] Stagnant for 15 iters. Reverting to Global Best: 1492
+[Iter 2259] Stagnant for 15 iters. Reverting to Global Best: 1492
+[Iter 2274] Stagnant for 15 iters. Reverting to Global Best: 1492
+[Iter 2289] Stagnant for 15 iters. Reverting to Global Best: 1492
+[Iter 2304] Stagnant for 15 iters. Reverting to Global Best: 1492
+[Iter 2319] Stagnant for 15 iters. Reverting to Global Best: 1492
+[Iter 2334] Stagnant for 15 iters. Reverting to Global Best: 1492
+[Iter 2349] Stagnant for 15 iters. Reverting to Global Best: 1492
+[Iter 2364] Stagnant for 15 iters. Reverting to Global Best: 1492
+[Iter 2379] Stagnant for 15 iters. Reverting to Global Best: 1492
+[Iter 2394] Stagnant for 15 iters. Reverting to Global Best: 1492
+[Iter 2409] Stagnant for 15 iters. Reverting to Global Best: 1492
+[Iter 2424] Stagnant for 15 iters. Reverting to Global Best: 1492
+[Iter 2439] Stagnant for 15 iters. Reverting to Global Best: 1492
+[Iter 2454] Stagnant for 15 iters. Reverting to Global Best: 1492
+[Iter 2469] Stagnant for 15 iters. Reverting to Global Best: 1492
+[Iter 2484] Stagnant for 15 iters. Reverting to Global Best: 1492
+[Iter 2499] Stagnant for 15 iters. Reverting to Global Best: 1492
+[Iter 2500] Current Ben: 1351 | Best: 1492
+[Iter 2514] Stagnant for 15 iters. Reverting to Global Best: 1492
+[Iter 2529] Stagnant for 15 iters. Reverting to Global Best: 1492
+[Iter 2544] Stagnant for 15 iters. Reverting to Global Best: 1492
+[Iter 2559] Stagnant for 15 iters. Reverting to Global Best: 1492
+[Iter 2574] Stagnant for 15 iters. Reverting to Global Best: 1492
+[Iter 2589] Stagnant for 15 iters. Reverting to Global Best: 1492
+[Iter 2604] Stagnant for 15 iters. Reverting to Global Best: 1492
+[Iter 2619] Stagnant for 15 iters. Reverting to Global Best: 1492
+[Iter 2634] Stagnant for 15 iters. Reverting to Global Best: 1492
+[Iter 2649] Stagnant for 15 iters. Reverting to Global Best: 1492
+[Iter 2664] Stagnant for 15 iters. Reverting to Global Best: 1492
+--- FINAL RESULTS ---
+Total Max Benefit: 1492
+Total Run Time: 60.02s

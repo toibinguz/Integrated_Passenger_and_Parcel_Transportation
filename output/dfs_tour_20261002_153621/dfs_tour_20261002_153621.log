@@ -1,0 +1,8 @@
+--- STARTING CLEAN SKELETON DFS ---
+Inserted into Vehicle 0 | Gain: 39 | Total Ben: 86 | Unserved: 29
+Inserted into Vehicle 0 | Gain: 106 | Total Ben: 239 | Unserved: 28
+Inserted into Vehicle 2 | Gain: 33 | Total Ben: 322 | Unserved: 27
+No more requests can be profitably inserted.
+--- FINAL RESULTS ---
+Total Max Benefit: 322
+Total Run Time: 0.00s

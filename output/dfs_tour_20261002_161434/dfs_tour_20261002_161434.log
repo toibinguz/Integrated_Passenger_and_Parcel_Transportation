@@ -1,0 +1,68 @@
+--- STARTING MULTI-SAMPLE DFS WITH REVERT (STAGNANT_LIMIT=50) ---
+[Iter 0001] NEW RECORD: 410 | Unserved: 28
+[Iter 0002] NEW RECORD: 649 | Unserved: 26
+[Iter 0003] NEW RECORD: 968 | Unserved: 24
+[Iter 0005] NEW RECORD: 1187 | Unserved: 22
+[Iter 0006] NEW RECORD: 1191 | Unserved: 22
+[Iter 0007] NEW RECORD: 1275 | Unserved: 22
+[Iter 0009] NEW RECORD: 1312 | Unserved: 21
+[Iter 0010] NEW RECORD: 1453 | Unserved: 19
+[Iter 0060] Stagnant for 50 iters. Reverting to Global Best: 1453
+[Iter 0061] NEW RECORD: 1492 | Unserved: 19
+[Iter 0111] Stagnant for 50 iters. Reverting to Global Best: 1492
+[Iter 0161] Stagnant for 50 iters. Reverting to Global Best: 1492
+[Iter 0211] Stagnant for 50 iters. Reverting to Global Best: 1492
+[Iter 0261] Stagnant for 50 iters. Reverting to Global Best: 1492
+[Iter 0311] Stagnant for 50 iters. Reverting to Global Best: 1492
+[Iter 0361] Stagnant for 50 iters. Reverting to Global Best: 1492
+[Iter 0411] Stagnant for 50 iters. Reverting to Global Best: 1492
+[Iter 0461] Stagnant for 50 iters. Reverting to Global Best: 1492
+[Iter 0500] Current Ben: 1275 | Best: 1492
+[Iter 0511] Stagnant for 50 iters. Reverting to Global Best: 1492
+[Iter 0561] Stagnant for 50 iters. Reverting to Global Best: 1492
+[Iter 0611] Stagnant for 50 iters. Reverting to Global Best: 1492
+[Iter 0661] Stagnant for 50 iters. Reverting to Global Best: 1492
+[Iter 0711] Stagnant for 50 iters. Reverting to Global Best: 1492
+[Iter 0761] Stagnant for 50 iters. Reverting to Global Best: 1492
+[Iter 0811] Stagnant for 50 iters. Reverting to Global Best: 1492
+[Iter 0861] Stagnant for 50 iters. Reverting to Global Best: 1492
+[Iter 0911] Stagnant for 50 iters. Reverting to Global Best: 1492
+[Iter 0961] Stagnant for 50 iters. Reverting to Global Best: 1492
+[Iter 1000] Current Ben: 1173 | Best: 1492
+[Iter 1011] Stagnant for 50 iters. Reverting to Global Best: 1492
+[Iter 1061] Stagnant for 50 iters. Reverting to Global Best: 1492
+[Iter 1111] Stagnant for 50 iters. Reverting to Global Best: 1492
+[Iter 1161] Stagnant for 50 iters. Reverting to Global Best: 1492
+[Iter 1211] Stagnant for 50 iters. Reverting to Global Best: 1492
+[Iter 1261] Stagnant for 50 iters. Reverting to Global Best: 1492
+[Iter 1311] Stagnant for 50 iters. Reverting to Global Best: 1492
+[Iter 1361] Stagnant for 50 iters. Reverting to Global Best: 1492
+[Iter 1411] Stagnant for 50 iters. Reverting to Global Best: 1492
+[Iter 1461] Stagnant for 50 iters. Reverting to Global Best: 1492
+[Iter 1500] Current Ben: 1236 | Best: 1492
+[Iter 1511] Stagnant for 50 iters. Reverting to Global Best: 1492
+[Iter 1561] Stagnant for 50 iters. Reverting to Global Best: 1492
+[Iter 1611] Stagnant for 50 iters. Reverting to Global Best: 1492
+[Iter 1661] Stagnant for 50 iters. Reverting to Global Best: 1492
+[Iter 1711] Stagnant for 50 iters. Reverting to Global Best: 1492
+[Iter 1761] Stagnant for 50 iters. Reverting to Global Best: 1492
+[Iter 1811] Stagnant for 50 iters. Reverting to Global Best: 1492
+[Iter 1861] Stagnant for 50 iters. Reverting to Global Best: 1492
+[Iter 1911] Stagnant for 50 iters. Reverting to Global Best: 1492
+[Iter 1961] Stagnant for 50 iters. Reverting to Global Best: 1492
+[Iter 2000] Current Ben: 1129 | Best: 1492
+[Iter 2011] Stagnant for 50 iters. Reverting to Global Best: 1492
+[Iter 2061] Stagnant for 50 iters. Reverting to Global Best: 1492
+[Iter 2111] Stagnant for 50 iters. Reverting to Global Best: 1492
+[Iter 2161] Stagnant for 50 iters. Reverting to Global Best: 1492
+[Iter 2211] Stagnant for 50 iters. Reverting to Global Best: 1492
+[Iter 2261] Stagnant for 50 iters. Reverting to Global Best: 1492
+[Iter 2311] Stagnant for 50 iters. Reverting to Global Best: 1492
+[Iter 2361] Stagnant for 50 iters. Reverting to Global Best: 1492
+[Iter 2411] Stagnant for 50 iters. Reverting to Global Best: 1492
+[Iter 2461] Stagnant for 50 iters. Reverting to Global Best: 1492
+[Iter 2500] Current Ben: 1492 | Best: 1492
+[Iter 2511] Stagnant for 50 iters. Reverting to Global Best: 1492
+--- FINAL RESULTS ---
+Total Max Benefit: 1492
+Total Run Time: 60.02s

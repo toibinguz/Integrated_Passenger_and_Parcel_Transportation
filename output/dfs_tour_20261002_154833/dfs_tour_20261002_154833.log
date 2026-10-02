@@ -1,0 +1,9 @@
+--- STARTING NODE-BASED LIMIT DFS (MAX NODES = 12) ---
+[Iter 0001] Applied Move on Vehicle 3 | Gain: 215 | Total Ben: 415 | Unserved: 28
+[Iter 0002] Applied Move on Vehicle 0 | Gain: 192 | Total Ben: 654 | Unserved: 26
+[Iter 0003] Applied Move on Vehicle 2 | Gain: 151 | Total Ben: 957 | Unserved: 24
+[Iter 0004] Applied Move on Vehicle 4 | Gain: 91 | Total Ben: 1280 | Unserved: 22
+[Iter 0005] No positive gain found. Stopped climbing.
+--- FINAL RESULTS ---
+Total Max Benefit: 1280
+Total Run Time: 0.19s

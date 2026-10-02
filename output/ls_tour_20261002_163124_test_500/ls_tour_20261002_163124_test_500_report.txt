@@ -1,0 +1,146 @@
+=== BÁO CÁO CHI TIẾT CHO TOUR: output\ls_tour_20261002_163124_test_500\ls_tour_20261002_163124_test_500_tour.txt ===
+Dữ liệu gốc: testcases/test_500.txt
+
+--- CHI TIẾT HÀNH TRÌNH TỪNG XE ---
+
+[Xe 0] (Tải trọng tối đa: 30)
+  01. PASSENGER 65     | Tải trọng:   0/30 | TW: [17-28]      | Tới:     14 | Chờ:    3 | Bắt đầu:     17 | Dịch vụ:   80 | Xong:     97 | Doanh thu:   389 | Chi phí chặng:   221
+
+[Xe 1] (Tải trọng tối đa: 26)
+  01. PARCEL_PICKUP 138 | Tải trọng:  10/26 | TW: [36-53]      | Tới:      4 | Chờ:   32 | Bắt đầu:     36 | Dịch vụ:    3 | Xong:     39 | Doanh thu:   381 | Chi phí chặng:    10
+  02. PARCEL_PICKUP 171 | Tải trọng:  18/26 | TW: [32-58]      | Tới:     45 | Chờ:    0 | Bắt đầu:     45 | Dịch vụ:    2 | Xong:     47 | Doanh thu:   395 | Chi phí chặng:    14
+  03. PASSENGER 19     | Tải trọng:  18/26 | TW: [52-71]      | Tới:     50 | Chờ:    2 | Bắt đầu:     52 | Dịch vụ:   81 | Xong:    133 | Doanh thu:   384 | Chi phí chặng:   183
+  04. PARCEL_DROPOFF 171 | Tải trọng:  10/26 | TW: [106-150]    | Tới:    144 | Chờ:    0 | Bắt đầu:    144 | Dịch vụ:    2 | Xong:    146 | Doanh thu:     0 | Chi phí chặng:    28
+  05. PARCEL_DROPOFF 138 | Tải trọng:   0/26 | TW: [115-168]    | Tới:    166 | Chờ:    0 | Bắt đầu:    166 | Dịch vụ:    3 | Xong:    169 | Doanh thu:     0 | Chi phí chặng:    50
+
+[Xe 2] (Tải trọng tối đa: 20)
+  01. PARCEL_PICKUP 202 | Tải trọng:   5/20 | TW: [9-32]       | Tới:     17 | Chờ:    0 | Bắt đầu:     17 | Dịch vụ:    2 | Xong:     19 | Doanh thu:   451 | Chi phí chặng:    42
+  02. PASSENGER 36     | Tải trọng:   5/20 | TW: [50-70]      | Tới:     32 | Chờ:   18 | Bắt đầu:     50 | Dịch vụ:  122 | Xong:    172 | Doanh thu:   464 | Chi phí chặng:   313
+  03. PARCEL_DROPOFF 202 | Tải trọng:   0/20 | TW: [119-176]    | Tới:    176 | Chờ:    0 | Bắt đầu:    176 | Dịch vụ:    2 | Xong:    178 | Doanh thu:     0 | Chi phí chặng:    10
+
+[Xe 3] (Tải trọng tối đa: 28)
+  01. PARCEL_PICKUP 220 | Tải trọng:   6/28 | TW: [16-24]      | Tới:      9 | Chờ:    7 | Bắt đầu:     16 | Dịch vụ:    2 | Xong:     18 | Doanh thu:   296 | Chi phí chặng:    22
+  02. PARCEL_PICKUP 154 | Tải trọng:  13/28 | TW: [33-41]      | Tới:     40 | Chờ:    0 | Bắt đầu:     40 | Dịch vụ:    4 | Xong:     44 | Doanh thu:   413 | Chi phí chặng:    55
+  03. PARCEL_PICKUP 147 | Tải trọng:  24/28 | TW: [51-80]      | Tới:     56 | Chờ:    0 | Bắt đầu:     56 | Dịch vụ:    2 | Xong:     58 | Doanh thu:   431 | Chi phí chặng:    30
+  04. PARCEL_DROPOFF 220 | Tải trọng:  18/28 | TW: [89-116]     | Tới:    113 | Chờ:    0 | Bắt đầu:    113 | Dịch vụ:    2 | Xong:    115 | Doanh thu:     0 | Chi phí chặng:   135
+  05. PARCEL_DROPOFF 154 | Tải trọng:  11/28 | TW: [126-152]    | Tới:    148 | Chờ:    0 | Bắt đầu:    148 | Dịch vụ:    4 | Xong:    152 | Doanh thu:     0 | Chi phí chặng:    81
+  06. PARCEL_DROPOFF 147 | Tải trọng:   0/28 | TW: [136-194]    | Tới:    160 | Chờ:    0 | Bắt đầu:    160 | Dịch vụ:    2 | Xong:    162 | Doanh thu:     0 | Chi phí chặng:    19
+
+[Xe 4] (Tải trọng tối đa: 26)
+  01. PARCEL_PICKUP 231 | Tải trọng:   9/26 | TW: [0-15]       | Tới:      8 | Chờ:    0 | Bắt đầu:      8 | Dịch vụ:    2 | Xong:     10 | Doanh thu:    99 | Chi phí chặng:    20
+  02. PARCEL_DROPOFF 231 | Tải trọng:   0/26 | TW: [26-68]      | Tới:     25 | Chờ:    1 | Bắt đầu:     26 | Dịch vụ:    2 | Xong:     28 | Doanh thu:     0 | Chi phí chặng:    37
+  03. PARCEL_PICKUP 234 | Tải trọng:  13/26 | TW: [52-69]      | Tới:     44 | Chờ:    8 | Bắt đầu:     52 | Dịch vụ:    2 | Xong:     54 | Doanh thu:   463 | Chi phí chặng:    40
+  04. PARCEL_PICKUP 177 | Tải trọng:  23/26 | TW: [82-88]      | Tới:     76 | Chờ:    6 | Bắt đầu:     82 | Dịch vụ:    2 | Xong:     84 | Doanh thu:   526 | Chi phí chặng:    54
+  05. PARCEL_DROPOFF 177 | Tải trọng:  13/26 | TW: [177-219]    | Tới:    177 | Chờ:    0 | Bắt đầu:    177 | Dịch vụ:    2 | Xong:    179 | Doanh thu:     0 | Chi phí chặng:   230
+  06. PARCEL_DROPOFF 234 | Tải trọng:   0/26 | TW: [156-200]    | Tới:    196 | Chờ:    0 | Bắt đầu:    196 | Dịch vụ:    2 | Xong:    198 | Doanh thu:     0 | Chi phí chặng:    42
+
+[Xe 5] (Tải trọng tối đa: 27)
+  01. PARCEL_PICKUP 132 | Tải trọng:   8/27 | TW: [18-37]      | Tới:     15 | Chờ:    3 | Bắt đầu:     18 | Dịch vụ:    4 | Xong:     22 | Doanh thu:   392 | Chi phí chặng:    37
+  02. PASSENGER 35     | Tải trọng:   8/27 | TW: [28-48]      | Tới:     38 | Chờ:    0 | Bắt đầu:     38 | Dịch vụ:   51 | Xong:     89 | Doanh thu:   247 | Chi phí chặng:   145
+  03. PARCEL_PICKUP 197 | Tải trọng:  22/27 | TW: [88-108]     | Tới:     98 | Chờ:    0 | Bắt đầu:     98 | Dịch vụ:    2 | Xong:    100 | Doanh thu:   168 | Chi phí chặng:    22
+  04. PARCEL_DROPOFF 132 | Tải trọng:  14/27 | TW: [106-143]    | Tới:    142 | Chờ:    0 | Bắt đầu:    142 | Dịch vụ:    4 | Xong:    146 | Doanh thu:     0 | Chi phí chặng:   104
+  05. PARCEL_DROPOFF 197 | Tải trọng:   0/27 | TW: [129-175]    | Tới:    174 | Chờ:    0 | Bắt đầu:    174 | Dịch vụ:    2 | Xong:    176 | Doanh thu:     0 | Chi phí chặng:    69
+
+[Xe 6] (Tải trọng tối đa: 25)
+  01. PARCEL_PICKUP 195 | Tải trọng:  10/25 | TW: [51-73]      | Tới:     14 | Chờ:   37 | Bắt đầu:     51 | Dịch vụ:    2 | Xong:     53 | Doanh thu:   161 | Chi phí chặng:    35
+  02. PARCEL_PICKUP 209 | Tải trọng:  21/25 | TW: [67-91]      | Tới:     73 | Chờ:    0 | Bắt đầu:     73 | Dịch vụ:    5 | Xong:     78 | Doanh thu:   409 | Chi phí chặng:    49
+  03. PARCEL_DROPOFF 195 | Tải trọng:  11/25 | TW: [87-133]     | Tới:     90 | Chờ:    0 | Bắt đầu:     90 | Dịch vụ:    2 | Xong:     92 | Doanh thu:     0 | Chi phí chặng:    30
+  04. PARCEL_PICKUP 184 | Tải trọng:  16/25 | TW: [77-104]     | Tới:    100 | Chờ:    0 | Bắt đầu:    100 | Dịch vụ:    5 | Xong:    105 | Doanh thu:   286 | Chi phí chặng:    20
+  05. PASSENGER 88     | Tải trọng:  16/25 | TW: [98-111]     | Tới:    109 | Chờ:    0 | Bắt đầu:    109 | Dịch vụ:   63 | Xong:    172 | Doanh thu:   322 | Chi phí chặng:   150
+  06. PARCEL_DROPOFF 184 | Tải trọng:  11/25 | TW: [150-184]    | Tới:    177 | Chờ:    0 | Bắt đầu:    177 | Dịch vụ:    5 | Xong:    182 | Doanh thu:     0 | Chi phí chặng:    12
+  07. PARCEL_DROPOFF 209 | Tải trọng:   0/25 | TW: [165-217]    | Tới:    196 | Chờ:    0 | Bắt đầu:    196 | Dịch vụ:    5 | Xong:    201 | Doanh thu:     0 | Chi phí chặng:    34
+
+[Xe 7] (Tải trọng tối đa: 29)
+  01. PARCEL_PICKUP 121 | Tải trọng:   7/29 | TW: [39-47]      | Tới:     13 | Chờ:   26 | Bắt đầu:     39 | Dịch vụ:    2 | Xong:     41 | Doanh thu:   490 | Chi phí chặng:    32
+  02. PARCEL_PICKUP 189 | Tải trọng:  15/29 | TW: [39-58]      | Tới:     49 | Chờ:    0 | Bắt đầu:     49 | Dịch vụ:    2 | Xong:     51 | Doanh thu:   269 | Chi phí chặng:    20
+  03. PARCEL_PICKUP 229 | Tải trọng:  29/29 | TW: [87-117]     | Tới:     69 | Chờ:   18 | Bắt đầu:     87 | Dịch vụ:    3 | Xong:     90 | Doanh thu:   420 | Chi phí chặng:    44
+  04. PARCEL_DROPOFF 189 | Tải trọng:  21/29 | TW: [109-144]    | Tới:    138 | Chờ:    0 | Bắt đầu:    138 | Dịch vụ:    2 | Xong:    140 | Doanh thu:     0 | Chi phí chặng:   118
+  05. PARCEL_DROPOFF 121 | Tải trọng:  14/29 | TW: [140-177]    | Tới:    175 | Chờ:    0 | Bắt đầu:    175 | Dịch vụ:    2 | Xong:    177 | Doanh thu:     0 | Chi phí chặng:    86
+  06. PARCEL_DROPOFF 229 | Tải trọng:   0/29 | TW: [177-244]    | Tới:    200 | Chờ:    0 | Bắt đầu:    200 | Dịch vụ:    3 | Xong:    203 | Doanh thu:     0 | Chi phí chặng:    56
+
+[Xe 8] (Tải trọng tối đa: 24)
+  01. PARCEL_PICKUP 178 | Tải trọng:  11/24 | TW: [5-11]       | Tới:      6 | Chờ:    0 | Bắt đầu:      6 | Dịch vụ:    5 | Xong:     11 | Doanh thu:   359 | Chi phí chặng:    15
+  02. PARCEL_PICKUP 140 | Tải trọng:  23/24 | TW: [16-43]      | Tới:     42 | Chờ:    0 | Bắt đầu:     42 | Dịch vụ:    4 | Xong:     46 | Doanh thu:   100 | Chi phí chặng:    77
+  03. PARCEL_DROPOFF 140 | Tải trọng:  11/24 | TW: [39-89]      | Tới:     61 | Chờ:    0 | Bắt đầu:     61 | Dịch vụ:    4 | Xong:     65 | Doanh thu:     0 | Chi phí chặng:    37
+  04. PARCEL_DROPOFF 178 | Tải trọng:   0/24 | TW: [80-110]     | Tới:     83 | Chờ:    0 | Bắt đầu:     83 | Dịch vụ:    5 | Xong:     88 | Doanh thu:     0 | Chi phí chặng:    44
+  05. PARCEL_PICKUP 206 | Tải trọng:   8/24 | TW: [85-104]     | Tới:     93 | Chờ:    0 | Bắt đầu:     93 | Dịch vụ:    5 | Xong:     98 | Doanh thu:   362 | Chi phí chặng:    12
+  06. PASSENGER 106    | Tải trọng:   8/24 | TW: [97-112]     | Tới:    111 | Chờ:    0 | Bắt đầu:    111 | Dịch vụ:   57 | Xong:    168 | Doanh thu:   295 | Chi phí chặng:   163
+  07. PARCEL_DROPOFF 206 | Tải trọng:   0/24 | TW: [162-208]    | Tới:    207 | Chờ:    0 | Bắt đầu:    207 | Dịch vụ:    5 | Xong:    212 | Doanh thu:     0 | Chi phí chặng:    97
+
+[Xe 9] (Tải trọng tối đa: 22)
+  01. PARCEL_PICKUP 182 | Tải trọng:   7/22 | TW: [1-27]       | Tới:     14 | Chờ:    0 | Bắt đầu:     14 | Dịch vụ:    2 | Xong:     16 | Doanh thu:   465 | Chi phí chặng:    34
+  02. PASSENGER 17     | Tải trọng:   7/22 | TW: [60-75]      | Tới:     38 | Chờ:   22 | Bắt đầu:     60 | Dịch vụ:   84 | Xong:    144 | Doanh thu:   348 | Chi phí chặng:   245
+  03. PARCEL_DROPOFF 182 | Tải trọng:   0/22 | TW: [98-158]     | Tới:    148 | Chờ:    0 | Bắt đầu:    148 | Dịch vụ:    2 | Xong:    150 | Doanh thu:     0 | Chi phí chặng:    10
+
+[Xe 10] (Tải trọng tối đa: 20)
+  01. PARCEL_PICKUP 203 | Tải trọng:  11/20 | TW: [38-68]      | Tới:     35 | Chờ:    3 | Bắt đầu:     38 | Dịch vụ:    3 | Xong:     41 | Doanh thu:   199 | Chi phí chặng:    86
+  02. PARCEL_DROPOFF 203 | Tải trọng:   0/20 | TW: [78-147]     | Tới:     77 | Chờ:    1 | Bắt đầu:     78 | Dịch vụ:    3 | Xong:     81 | Doanh thu:     0 | Chi phí chặng:    87
+  03. PARCEL_PICKUP 151 | Tải trọng:  13/20 | TW: [76-104]     | Tới:     86 | Chờ:    0 | Bắt đầu:     86 | Dịch vụ:    3 | Xong:     89 | Doanh thu:   318 | Chi phí chặng:    12
+  04. PASSENGER 31     | Tải trọng:  13/20 | TW: [94-105]     | Tới:     95 | Chờ:    0 | Bắt đầu:     95 | Dịch vụ:   71 | Xong:    166 | Doanh thu:   313 | Chi phí chặng:   176
+  05. PARCEL_DROPOFF 151 | Tải trọng:   0/20 | TW: [152-209]    | Tới:    182 | Chờ:    0 | Bắt đầu:    182 | Dịch vụ:    3 | Xong:    185 | Doanh thu:     0 | Chi phí chặng:    39
+
+[Xe 11] (Tải trọng tối đa: 30)
+  01. PASSENGER 84     | Tải trọng:   0/30 | TW: [1-25]       | Tới:      8 | Chờ:    0 | Bắt đầu:      8 | Dịch vụ:   26 | Xong:     34 | Doanh thu:   119 | Chi phí chặng:    73
+  02. PASSENGER 95     | Tải trọng:   0/30 | TW: [44-49]      | Tới:     39 | Chờ:    5 | Bắt đầu:     44 | Dịch vụ:   34 | Xong:     78 | Doanh thu:   171 | Chi phí chặng:    86
+  03. PASSENGER 64     | Tải trọng:   0/30 | TW: [85-100]     | Tới:     99 | Chờ:    0 | Bắt đầu:     99 | Dịch vụ:  103 | Xong:    202 | Doanh thu:   429 | Chi phí chặng:   285
+
+[Xe 12] (Tải trọng tối đa: 24)
+  01. PARCEL_PICKUP 130 | Tải trọng:  12/24 | TW: [24-30]      | Tới:     17 | Chờ:    7 | Bắt đầu:     24 | Dịch vụ:    3 | Xong:     27 | Doanh thu:   131 | Chi phí chặng:    42
+  02. PARCEL_PICKUP 174 | Tải trọng:  23/24 | TW: [56-73]      | Tới:     53 | Chờ:    3 | Bắt đầu:     56 | Dịch vụ:    4 | Xong:     60 | Doanh thu:   366 | Chi phí chặng:    65
+  03. PARCEL_DROPOFF 130 | Tải trọng:  11/24 | TW: [62-77]      | Tới:     63 | Chờ:    0 | Bắt đầu:     63 | Dịch vụ:    3 | Xong:     66 | Doanh thu:     0 | Chi phí chặng:     8
+  04. PASSENGER 3      | Tải trọng:  11/24 | TW: [74-82]      | Tới:     73 | Chờ:    1 | Bắt đầu:     74 | Dịch vụ:   80 | Xong:    154 | Doanh thu:   362 | Chi phí chặng:   205
+  05. PARCEL_DROPOFF 174 | Tải trọng:   0/24 | TW: [144-184]    | Tới:    167 | Chờ:    0 | Bắt đầu:    167 | Dịch vụ:    4 | Xong:    171 | Doanh thu:     0 | Chi phí chặng:    32
+
+[Xe 13] (Tải trọng tối đa: 21)
+  01. PARCEL_PICKUP 139 | Tải trọng:  14/21 | TW: [13-43]      | Tới:      9 | Chờ:    4 | Bắt đầu:     13 | Dịch vụ:    5 | Xong:     18 | Doanh thu:   371 | Chi phí chặng:    22
+  02. PARCEL_PICKUP 131 | Tải trọng:  21/21 | TW: [23-44]      | Tới:     25 | Chờ:    0 | Bắt đầu:     25 | Dịch vụ:    3 | Xong:     28 | Doanh thu:   397 | Chi phí chặng:    18
+  03. PASSENGER 113    | Tải trọng:  21/21 | TW: [36-56]      | Tới:     48 | Chờ:    0 | Bắt đầu:     48 | Dịch vụ:   52 | Xong:    100 | Doanh thu:   280 | Chi phí chặng:   169
+  04. PARCEL_DROPOFF 131 | Tải trọng:  14/21 | TW: [110-144]    | Tới:    123 | Chờ:    0 | Bắt đầu:    123 | Dịch vụ:    3 | Xong:    126 | Doanh thu:     0 | Chi phí chặng:    57
+  05. PARCEL_DROPOFF 139 | Tải trọng:   0/21 | TW: [103-165]    | Tới:    153 | Chờ:    0 | Bắt đầu:    153 | Dịch vụ:    5 | Xong:    158 | Doanh thu:     0 | Chi phí chặng:    67
+
+[Xe 14] (Tải trọng tối đa: 29)
+  01. PARCEL_PICKUP 224 | Tải trọng:  12/29 | TW: [10-34]      | Tới:      1 | Chờ:    9 | Bắt đầu:     10 | Dịch vụ:    2 | Xong:     12 | Doanh thu:   367 | Chi phí chặng:     2
+  02. PARCEL_PICKUP 159 | Tải trọng:  24/29 | TW: [38-49]      | Tới:     21 | Chờ:   17 | Bắt đầu:     38 | Dịch vụ:    3 | Xong:     41 | Doanh thu:   510 | Chi phí chặng:    22
+  03. PASSENGER 96     | Tải trọng:  24/29 | TW: [68-81]      | Tới:     72 | Chờ:    0 | Bắt đầu:     72 | Dịch vụ:   25 | Xong:     97 | Doanh thu:   114 | Chi phí chặng:   124
+  04. PARCEL_DROPOFF 224 | Tải trọng:  12/29 | TW: [87-139]     | Tới:    126 | Chờ:    0 | Bắt đầu:    126 | Dịch vụ:    2 | Xong:    128 | Doanh thu:     0 | Chi phí chặng:    72
+  05. PARCEL_DROPOFF 159 | Tải trọng:   0/29 | TW: [137-186]    | Tới:    167 | Chờ:    0 | Bắt đầu:    167 | Dịch vụ:    3 | Xong:    170 | Doanh thu:     0 | Chi phí chặng:    96
+
+[Xe 15] (Tải trọng tối đa: 25)
+  01. PARCEL_PICKUP 233 | Tải trọng:  14/25 | TW: [0-26]       | Tới:      7 | Chờ:    0 | Bắt đầu:      7 | Dịch vụ:    5 | Xong:     12 | Doanh thu:   367 | Chi phí chặng:    17
+  02. PARCEL_PICKUP 157 | Tải trọng:  24/25 | TW: [10-43]      | Tới:     20 | Chờ:    0 | Bắt đầu:     20 | Dịch vụ:    4 | Xong:     24 | Doanh thu:    80 | Chi phí chặng:    20
+  03. PARCEL_DROPOFF 157 | Tải trọng:  14/25 | TW: [28-70]      | Tới:     35 | Chờ:    0 | Bắt đầu:     35 | Dịch vụ:    4 | Xong:     39 | Doanh thu:     0 | Chi phí chặng:    28
+  04. PASSENGER 24     | Tải trọng:  14/25 | TW: [41-56]      | Tới:     50 | Chờ:    0 | Bắt đầu:     50 | Dịch vụ:   58 | Xong:    108 | Doanh thu:   299 | Chi phí chặng:   157
+  05. PARCEL_DROPOFF 233 | Tải trọng:   0/25 | TW: [74-127]     | Tới:    115 | Chờ:    0 | Bắt đầu:    115 | Dịch vụ:    5 | Xong:    120 | Doanh thu:     0 | Chi phí chặng:    18
+
+[Xe 16] (Tải trọng tối đa: 21)
+  01. PARCEL_PICKUP 196 | Tải trọng:  14/21 | TW: [13-30]      | Tới:     18 | Chờ:    0 | Bắt đầu:     18 | Dịch vụ:    4 | Xong:     22 | Doanh thu:   385 | Chi phí chặng:    44
+  02. PASSENGER 89     | Tải trọng:  14/21 | TW: [47-56]      | Tới:     51 | Chờ:    0 | Bắt đầu:     51 | Dịch vụ:   75 | Xong:    126 | Doanh thu:   332 | Chi phí chặng:   234
+  03. PARCEL_DROPOFF 196 | Tải trọng:   0/21 | TW: [94-144]     | Tới:    142 | Chờ:    0 | Bắt đầu:    142 | Dịch vụ:    4 | Xong:    146 | Doanh thu:     0 | Chi phí chặng:    40
+
+[Xe 17] (Tải trọng tối đa: 26)
+  01. PARCEL_PICKUP 168 | Tải trọng:  11/26 | TW: [31-51]      | Tới:     29 | Chờ:    2 | Bắt đầu:     31 | Dịch vụ:    2 | Xong:     33 | Doanh thu:   583 | Chi phí chặng:    71
+  02. PASSENGER 22     | Tải trọng:  11/26 | TW: [32-44]      | Tới:     39 | Chờ:    0 | Bắt đầu:     39 | Dịch vụ:   79 | Xong:    118 | Doanh thu:   410 | Chi phí chặng:   199
+  03. PARCEL_DROPOFF 168 | Tải trọng:   0/26 | TW: [147-172]    | Tới:    152 | Chờ:    0 | Bắt đầu:    152 | Dịch vụ:    2 | Xong:    154 | Doanh thu:     0 | Chi phí chặng:    84
+
+[Xe 18] (Tải trọng tối đa: 24)
+  01. PASSENGER 40     | Tải trọng:   0/24 | TW: [38-52]      | Tới:      9 | Chờ:   29 | Bắt đầu:     38 | Dịch vụ:  127 | Xong:    165 | Doanh thu:   515 | Chi phí chặng:   314
+
+[Xe 19] (Tải trọng tối đa: 29)
+  01. PASSENGER 50     | Tải trọng:   0/29 | TW: [17-30]      | Tới:     18 | Chờ:    0 | Bắt đầu:     18 | Dịch vụ:   41 | Xong:     59 | Doanh thu:   204 | Chi phí chặng:   131
+  02. PARCEL_PICKUP 223 | Tải trọng:   9/29 | TW: [85-98]      | Tới:     60 | Chờ:   25 | Bắt đầu:     85 | Dịch vụ:    2 | Xong:     87 | Doanh thu:   425 | Chi phí chặng:     2
+  03. PASSENGER 57     | Tải trọng:   9/29 | TW: [86-105]     | Tới:    104 | Chờ:    0 | Bắt đầu:    104 | Dịch vụ:   63 | Xong:    167 | Doanh thu:   310 | Chi phí chặng:   183
+  04. PARCEL_DROPOFF 223 | Tải trọng:   0/29 | TW: [178-217]    | Tới:    204 | Chờ:    0 | Bắt đầu:    204 | Dịch vụ:    2 | Xong:    206 | Doanh thu:     0 | Chi phí chặng:    91
+
+--- THỐNG KÊ PHỤC VỤ ---
+Tổng hành khách đã phục vụ: 20 / 120
+Tổng hàng hóa đã phục vụ  : 34 / 120
+Tổng hành khách BỎ QUA    : 100
+  Danh sách: PASSENGER 0, PASSENGER 1, PASSENGER 2, PASSENGER 4, PASSENGER 5, PASSENGER 6, PASSENGER 7, PASSENGER 8, PASSENGER 9, PASSENGER 10, PASSENGER 11, PASSENGER 12, PASSENGER 13, PASSENGER 14, PASSENGER 15, PASSENGER 16, PASSENGER 18, PASSENGER 20, PASSENGER 21, PASSENGER 23, PASSENGER 25, PASSENGER 26, PASSENGER 27, PASSENGER 28, PASSENGER 29, PASSENGER 30, PASSENGER 32, PASSENGER 33, PASSENGER 34, PASSENGER 37, PASSENGER 38, PASSENGER 39, PASSENGER 41, PASSENGER 42, PASSENGER 43, PASSENGER 44, PASSENGER 45, PASSENGER 46, PASSENGER 47, PASSENGER 48, PASSENGER 49, PASSENGER 51, PASSENGER 52, PASSENGER 53, PASSENGER 54, PASSENGER 55, PASSENGER 56, PASSENGER 58, PASSENGER 59, PASSENGER 60, PASSENGER 61, PASSENGER 62, PASSENGER 63, PASSENGER 66, PASSENGER 67, PASSENGER 68, PASSENGER 69, PASSENGER 70, PASSENGER 71, PASSENGER 72, PASSENGER 73, PASSENGER 74, PASSENGER 75, PASSENGER 76, PASSENGER 77, PASSENGER 78, PASSENGER 79, PASSENGER 80, PASSENGER 81, PASSENGER 82, PASSENGER 83, PASSENGER 85, PASSENGER 86, PASSENGER 87, PASSENGER 90, PASSENGER 91, PASSENGER 92, PASSENGER 93, PASSENGER 94, PASSENGER 97, PASSENGER 98, PASSENGER 99, PASSENGER 100, PASSENGER 101, PASSENGER 102, PASSENGER 103, PASSENGER 104, PASSENGER 105, PASSENGER 107, PASSENGER 108, PASSENGER 109, PASSENGER 110, PASSENGER 111, PASSENGER 112, PASSENGER 114, PASSENGER 115, PASSENGER 116, PASSENGER 117, PASSENGER 118, PASSENGER 119
+Tổng hàng hóa BỎ QUA      : 86
+  Danh sách: PARCEL 120, PARCEL 122, PARCEL 123, PARCEL 124, PARCEL 125, PARCEL 126, PARCEL 127, PARCEL 128, PARCEL 129, PARCEL 133, PARCEL 134, PARCEL 135, PARCEL 136, PARCEL 137, PARCEL 141, PARCEL 142, PARCEL 143, PARCEL 144, PARCEL 145, PARCEL 146, PARCEL 148, PARCEL 149, PARCEL 150, PARCEL 152, PARCEL 153, PARCEL 155, PARCEL 156, PARCEL 158, PARCEL 160, PARCEL 161, PARCEL 162, PARCEL 163, PARCEL 164, PARCEL 165, PARCEL 166, PARCEL 167, PARCEL 169, PARCEL 170, PARCEL 172, PARCEL 173, PARCEL 175, PARCEL 176, PARCEL 179, PARCEL 180, PARCEL 181, PARCEL 183, PARCEL 185, PARCEL 186, PARCEL 187, PARCEL 188, PARCEL 190, PARCEL 191, PARCEL 192, PARCEL 193, PARCEL 194, PARCEL 198, PARCEL 199, PARCEL 200, PARCEL 201, PARCEL 204, PARCEL 205, PARCEL 207, PARCEL 208, PARCEL 210, PARCEL 211, PARCEL 212, PARCEL 213, PARCEL 214, PARCEL 215, PARCEL 216, PARCEL 217, PARCEL 218, PARCEL 219, PARCEL 221, PARCEL 222, PARCEL 225, PARCEL 226, PARCEL 227, PARCEL 228, PARCEL 230, PARCEL 232, PARCEL 235, PARCEL 236, PARCEL 237, PARCEL 238, PARCEL 239
+
+--- TỔNG KẾT TÀI CHÍNH ---
+Tổng doanh thu tối đa có thể: 63480
+Doanh thu đạt được        : 18142
+Chi phí vận hành          : 6911
+Lợi nhuận cuối cùng       : 11231

@@ -1,7 +1,0 @@
---- STARTING ELITIST ILS DFS (NODE_MAX = 12) ---
-[Iter 0001] NEW RECORD: 1192 | Unserved: 22
-[Iter 0005] NEW RECORD: 1236 | Unserved: 21
-[Iter 0015] NEW RECORD: 1298 | Unserved: 17
---- FINAL RESULTS ---
-Total Max Benefit: 1298
-Total Run Time: 60.00s

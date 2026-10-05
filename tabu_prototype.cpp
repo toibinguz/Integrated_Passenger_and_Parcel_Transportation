@@ -1,6 +1,15 @@
 #include <bits/stdc++.h>
 using namespace std;
 
+// ============================================================================
+// THAM SỐ CẤU HÌNH THUẬT TOÁN (HYPERPARAMETERS)
+// ============================================================================
+int MAX_ITER = 10000;            // Tổng số thế hệ chạy Tabu Search
+int TABU_TENURE_BASE = 5;       // Thời gian cấm Tabu cơ sở
+int TABU_TENURE_RAND = 10;      // Biên độ ngẫu nhiên của Tabu (Tenure = Base + rand() % Rand)
+int STAGNANT_LIMIT = 100;        // Số thế hệ liên tiếp không cải thiện để kích hoạt Ruin
+int RUIN_SIZE = 6;              // Số lượng request bị cưỡng chế gỡ bỏ trong 1 lần Ruin
+
 const long long INF = 1e18;
 const int MAXV = 1005;
 const int MAX_REQ = 1005;
@@ -191,8 +200,8 @@ void run_tabu_search() {
     memset(veh_of, 0, sizeof(veh_of));
     for (int k = 1; k <= K; ++k) route_obj[k] = 0;
     cur_total_obj = 0; global_best_obj = 0;
+    int stagnant_iters = 0;
 
-    int MAX_ITER = 1000;
     for (int iter = 1; iter <= MAX_ITER; ++iter) {
         Move best_move;
         int valid_neighbors = 0, tabu_hits = 0, tabu_overrides = 0;
@@ -221,7 +230,7 @@ void run_tabu_search() {
             check_route_edges(k1, rt1);
             if (k2 != -1) check_route_edges(k2, rt2);
 
-            if (new_edges == 0) return; // Không thay đổi gì
+            if (type != 4 && new_edges == 0) return; // Không thay đổi gì (ngoại trừ DROP)
 
             if (is_tabu) {
                 tabu_hits++;
@@ -277,6 +286,40 @@ void run_tabu_search() {
         }
 
         // -------------------------------------------------------------
+        // TOÁN TỬ 4: DROP (Bỏ bớt request r khỏi xe về unserved để lùi bước thoát bẫy)
+        // -------------------------------------------------------------
+        for (int r = 1; r <= N + M; ++r) {
+            if (veh_of[r] == 0) continue;
+            int k = veh_of[r];
+            vector<int> rt = remove_req(routes[k], r);
+            long long b = eval_single_route(k, rt);
+            test_candidate(4, k, rt, b, -1, {}, 0, 0, r);
+        }
+
+        // -------------------------------------------------------------
+        // TOÁN TỬ 5: INTER-ROUTE SWAP (Đổi chéo request r1 ở xe k1 lấy r2 ở xe k2)
+        // -------------------------------------------------------------
+        for (int r1 = 1; r1 <= N + M; ++r1) {
+            if (veh_of[r1] == 0) continue;
+            int k1 = veh_of[r1];
+            for (int r2 = r1 + 1; r2 <= N + M; ++r2) {
+                if (veh_of[r2] == 0) continue;
+                int k2 = veh_of[r2];
+                if (k1 == k2) continue;
+
+                auto rt1_no_r1 = remove_req(routes[k1], r1);
+                auto [b1, new_rt1] = best_insert(k1, rt1_no_r1, r2);
+                if (b1 == -INF) continue; // Early prune
+
+                auto rt2_no_r2 = remove_req(routes[k2], r2);
+                auto [b2, new_rt2] = best_insert(k2, rt2_no_r2, r1);
+                if (b2 == -INF) continue; // Early prune
+
+                test_candidate(5, k1, new_rt1, b1, k2, new_rt2, b2, r2, r1);
+            }
+        }
+
+        // -------------------------------------------------------------
         // ÁP DỤNG NƯỚC ĐI TỐT NHẤT & CẬP NHẬT TABU
         // -------------------------------------------------------------
         cerr << "[Iter " << iter << "] Valid Neighbors: " << valid_neighbors 
@@ -295,7 +338,7 @@ void run_tabu_search() {
             auto apply_edges = [&](int k, const vector<int>& rt) {
                 int curr = O[k];
                 for (int v : get_physical_route(rt)) {
-                    if (!has_edge[curr][v]) tabu_add[curr][v] = iter + 5 + rand() % 10;
+                    if (!has_edge[curr][v]) tabu_add[curr][v] = iter + TABU_TENURE_BASE + rand() % TABU_TENURE_RAND;
                     has_edge[curr][v] = true;
                     curr = v;
                 }
@@ -316,9 +359,14 @@ void run_tabu_search() {
                 veh_of[best_move.r_in] = best_move.k1;
             } else if (best_move.type == 2) { // Relocate
                 veh_of[best_move.r_in] = best_move.k2;
-            } else if (best_move.type == 3) { // Swap
+            } else if (best_move.type == 3) { // Swap on same vehicle
                 veh_of[best_move.r_out] = 0;
                 veh_of[best_move.r_in] = best_move.k1;
+            } else if (best_move.type == 4) { // Drop
+                veh_of[best_move.r_out] = 0;
+            } else if (best_move.type == 5) { // Inter-route Swap
+                veh_of[best_move.r_in] = best_move.k1;
+                veh_of[best_move.r_out] = best_move.k2;
             }
 
             cur_total_obj += best_move.delta;
@@ -328,11 +376,99 @@ void run_tabu_search() {
                 global_best_obj = cur_total_obj;
                 for (int k = 1; k <= K; ++k) best_routes[k] = routes[k];
                 cerr << "  -> *** NEW GLOBAL BEST FOUND! ***\n";
+                stagnant_iters = 0;
+            } else {
+                stagnant_iters++;
             }
         } else {
+            stagnant_iters++;
             cerr << "  -> No valid neighbor found.\n";
         }
         cerr << "  -> Global Best Obj: " << global_best_obj << "\n";
+
+        // =============================================================
+        // CƠ CHẾ RUIN: MULTI-STRATEGY POOL (GIẢI PHÁP 1: 0 THAM SỐ MA THUẬT)
+        // =============================================================
+        if (stagnant_iters >= STAGNANT_LIMIT) {
+            stagnant_iters = 0;
+            vector<int> served_reqs;
+            for (int r = 1; r <= N + M; ++r) if (veh_of[r] != 0) served_reqs.push_back(r);
+
+            if (!served_reqs.empty()) {
+                int strategy = rand() % 4; // 0: Cost, 1: Time, 2: Time-Window, 3: Vehicle Dismantle
+
+                if (strategy == 3) {
+                    // Chiến lược 3: Intra-Route Ruin (Xóa sổ 100% một xe ngẫu nhiên đang chở hàng)
+                    vector<int> busy_vehs;
+                    for (int k = 1; k <= K; ++k) if (!routes[k].empty()) busy_vehs.push_back(k);
+
+                    if (!busy_vehs.empty()) {
+                        int k_target = busy_vehs[rand() % busy_vehs.size()];
+                        cerr << "  -> [RUIN MODE 3: VEHICLE DISMANTLE] Clearing vehicle #" << k_target << ": ";
+
+                        int curr = O[k_target];
+                        for (int v : get_physical_route(routes[k_target])) { has_edge[curr][v] = false; curr = v; }
+
+                        vector<int> reqs_in_k;
+                        for (int t : routes[k_target]) {
+                            int r = abs(t);
+                            if (find(reqs_in_k.begin(), reqs_in_k.end(), r) == reqs_in_k.end()) reqs_in_k.push_back(r);
+                        }
+                        for (int r : reqs_in_k) { veh_of[r] = 0; cerr << r << " "; }
+                        routes[k_target].clear();
+                        route_obj[k_target] = 0;
+                        cerr << "\n";
+                    }
+                } else {
+                    // Các chiến lược cụm Inter-Route (Cost, Time, Time-Window)
+                    int r_seed = served_reqs[rand() % served_reqs.size()];
+
+                    if (strategy == 0) { // Chi phí di chuyển c_mat
+                        sort(served_reqs.begin(), served_reqs.end(), [&](int a, int b) {
+                            return c_mat[P[r_seed]][P[a]] < c_mat[P[r_seed]][P[b]];
+                        });
+                        cerr << "  -> [RUIN MODE 0: COST RUIN] Ejecting near req " << r_seed << ": ";
+                    } else if (strategy == 1) { // Thời gian di chuyển t_mat
+                        sort(served_reqs.begin(), served_reqs.end(), [&](int a, int b) {
+                            return t_mat[P[r_seed]][P[a]] < t_mat[P[r_seed]][P[b]];
+                        });
+                        cerr << "  -> [RUIN MODE 1: TIME RUIN] Ejecting near req " << r_seed << ": ";
+                    } else { // Khung giờ đón xe |E_i - E_j|
+                        sort(served_reqs.begin(), served_reqs.end(), [&](int a, int b) {
+                            return abs(E[r_seed] - E[a]) < abs(E[r_seed] - E[b]);
+                        });
+                        cerr << "  -> [RUIN MODE 2: TIME-WINDOW RUIN] Ejecting near req " << r_seed << ": ";
+                    }
+
+                    int num_to_ruin = min((int)served_reqs.size(), RUIN_SIZE);
+                    for (int step = 0; step < num_to_ruin; ++step) {
+                        int pick_idx = rand() % min((int)served_reqs.size(), 4);
+                        int r = served_reqs[pick_idx];
+                        served_reqs.erase(served_reqs.begin() + pick_idx);
+
+                        int k = veh_of[r];
+                        if (k != 0) {
+                            int curr = O[k];
+                            for (int v : get_physical_route(routes[k])) { has_edge[curr][v] = false; curr = v; }
+
+                            routes[k] = remove_req(routes[k], r);
+                            route_obj[k] = eval_single_route(k, routes[k]);
+                            veh_of[r] = 0;
+
+                            curr = O[k];
+                            for (int v : get_physical_route(routes[k])) { has_edge[curr][v] = true; curr = v; }
+
+                            cerr << r << " ";
+                        }
+                    }
+                    cerr << "\n";
+                }
+
+                cur_total_obj = 0;
+                for (int k = 1; k <= K; ++k) cur_total_obj += route_obj[k];
+                cerr << "  -> Total Obj after Ruin: " << cur_total_obj << "\n";
+            }
+        }
     }
 
     // Xuất kết quả

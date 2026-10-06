@@ -1,4 +1,5 @@
 #include <bits/stdc++.h>
+#include <chrono>
 using namespace std;
 
 // ============================================================================
@@ -6,13 +7,13 @@ using namespace std;
 // ============================================================================
 int MAX_ITER = 10000;            // Tổng số thế hệ chạy Tabu Search
 int TABU_TENURE_BASE = 5;       // Thời gian cấm Tabu cơ sở
-int TABU_TENURE_RAND = 10;      // Biên độ ngẫu nhiên của Tabu (Tenure = Base + rand() % Rand)
+int TABU_TENURE_RAND = 10;      // Biên độ ngẫu nhiên của Tabu
 int STAGNANT_LIMIT = 100;        // Số thế hệ liên tiếp không cải thiện để kích hoạt Ruin
 int RUIN_SIZE = 6;              // Số lượng request bị cưỡng chế gỡ bỏ trong 1 lần Ruin
 
 const long long INF = 1e18;
-const int MAXV = 1005;
-const int MAX_REQ = 1005;
+const int MAXV = 1050;
+const int MAX_REQ = 1050;
 
 int K, N, M, V;
 int O[MAXV], Q[MAXV];
@@ -20,6 +21,11 @@ int req_type[MAX_REQ], P[MAX_REQ], D[MAX_REQ], W[MAX_REQ];
 int E[MAX_REQ], L_time[MAX_REQ], Ed[MAX_REQ], Ld[MAX_REQ];
 int S[MAX_REQ], Rev[MAX_REQ];
 int t_mat[MAXV][MAXV], c_mat[MAXV][MAXV];
+
+// Kiểm tra nhanh cạnh vật lý khả thi
+bool can_edge[MAXV][MAXV];
+long long earliest_dep[MAXV];
+long long latest_arr[MAXV];
 
 // Trạng thái nghiệm
 vector<int> routes[MAXV];           // Danh sách Task: r (Khách/Lấy hàng), -r (Trả hàng)
@@ -34,19 +40,100 @@ bool profitable[MAX_REQ];           // Lọc khách sinh lời âm
 int tabu_add[MAXV][MAXV];           // Bảng Tabu trên cạnh vật lý
 bool has_edge[MAXV][MAXV];          // Cạnh vật lý đang tồn tại trong nghiệm hiện tại
 
+// Đánh dấu để bỏ qua Tabu trong vài bước ngay sau Ruin
+int post_ruin_grace_period = 0;
+
+// ============================================================================
+// BỘ ĐO THỐNG KÊ HIỆU NĂNG
+// ============================================================================
+struct Profiler {
+    double time_op1 = 0, time_op2 = 0, time_op3 = 0, time_op4 = 0, time_op5 = 0;
+    double time_apply = 0, time_ruin = 0;
+    long long count_eval = 0; double time_eval = 0;
+    long long count_opt_route = 0; double time_opt_route = 0;
+    long long count_best_insert = 0; double time_best_insert = 0;
+
+    void print_final_report(int iters_done) {
+        if (iters_done == 0) return;
+        double total_tracked = time_op1 + time_op2 + time_op3 + time_op4 + time_op5 + time_apply + time_ruin;
+        cerr << "\n=================== FINAL PROFILING REPORT (" << iters_done << " ITERS) ===================\n";
+        cerr << fixed << setprecision(3);
+        cerr << "1. OPERATORS BREAKDOWN (Trung bình mỗi Iter):\n";
+        cerr << "   - Op1 (Insert)           : " << (time_op1 / iters_done) / 1000.0 << " ms (" 
+             << (total_tracked > 0 ? (time_op1 / total_tracked * 100.0) : 0) << "%)\n";
+        cerr << "   - Op2 (Relocate)         : " << (time_op2 / iters_done) / 1000.0 << " ms (" 
+             << (total_tracked > 0 ? (time_op2 / total_tracked * 100.0) : 0) << "%)\n";
+        cerr << "   - Op3 (Swap same veh)    : " << (time_op3 / iters_done) / 1000.0 << " ms (" 
+             << (total_tracked > 0 ? (time_op3 / total_tracked * 100.0) : 0) << "%)\n";
+        cerr << "   - Op4 (Drop)             : " << (time_op4 / iters_done) / 1000.0 << " ms (" 
+             << (total_tracked > 0 ? (time_op4 / total_tracked * 100.0) : 0) << "%)\n";
+        cerr << "   - Op5 (Inter-route Swap) : " << (time_op5 / iters_done) / 1000.0 << " ms (" 
+             << (total_tracked > 0 ? (time_op5 / total_tracked * 100.0) : 0) << "%)\n";
+        cerr << "   - Apply Move & Tabu Edge : " << (time_apply / iters_done) / 1000.0 << " ms (" 
+             << (total_tracked > 0 ? (time_apply / total_tracked * 100.0) : 0) << "%)\n";
+        cerr << "   - Ruin Mechanism         : " << (time_ruin / iters_done) / 1000.0 << " ms (" 
+             << (total_tracked > 0 ? (time_ruin / total_tracked * 100.0) : 0) << "%)\n";
+        cerr << "   -> TỔNG THỜI GIAN/ITER   : " << (total_tracked / iters_done) / 1000.0 << " ms\n\n";
+
+        cerr << "2. CORE FUNCTIONS BOTTLENECK:\n";
+        cerr << "   - eval_single_route()    : Gọi " << count_eval << " lần | Tổng: " 
+             << time_eval / 1000.0 << " ms | TB: " << (count_eval ? time_eval / count_eval : 0) << " us/lần\n";
+        cerr << "   - optimize_route()       : Gọi " << count_opt_route << " lần | Tổng: " 
+             << time_opt_route / 1000.0 << " ms | TB: " << (count_opt_route ? time_opt_route / count_opt_route : 0) << " us/lần\n";
+        cerr << "   - best_insert()          : Gọi " << count_best_insert << " lần | Tổng: " 
+             << time_best_insert / 1000.0 << " ms | TB: " << (count_best_insert ? time_best_insert / count_best_insert : 0) << " us/lần\n";
+        cerr << "===============================================================================\n\n";
+    }
+} profiler;
+
+#define TIMER_NOW() chrono::high_resolution_clock::now()
+#define TIMER_DIFF_US(start, end) (chrono::duration<double, micro>(end - start).count())
+
 int get_v_in(int task) { return (task > 0) ? P[abs(task)] : D[abs(task)]; }
 int get_v_out(int task) { return (task > 0 && abs(task) <= N) ? D[abs(task)] : get_v_in(task); }
+
+void init_edge_feasibility() {
+    for (int i = 1; i <= V; ++i) {
+        earliest_dep[i] = 0;
+        latest_arr[i] = INF;
+    }
+    for (int k = 1; k <= K; ++k) earliest_dep[O[k]] = 0;
+    
+    for (int r = 1; r <= N; ++r) {
+        latest_arr[P[r]] = L_time[r];
+        earliest_dep[P[r]] = E[r] + S[r];
+        earliest_dep[D[r]] = E[r] + 2LL * S[r] + t_mat[P[r]][D[r]];
+    }
+    for (int j = 1; j <= M; ++j) {
+        int r = N + j;
+        latest_arr[P[r]] = L_time[r];
+        earliest_dep[P[r]] = E[r] + S[r];
+        latest_arr[D[r]] = Ld[r];
+        long long earliest_arr_d = max((long long)Ed[r], (long long)E[r] + S[r] + t_mat[P[r]][D[r]]);
+        earliest_dep[D[r]] = earliest_arr_d + S[r];
+    }
+    for (int u = 1; u <= V; ++u) {
+        for (int v = 1; v <= V; ++v) {
+            can_edge[u][v] = (earliest_dep[u] + t_mat[u][v] <= latest_arr[v]);
+        }
+    }
+    for (int u = 1; u <= V; ++u) {
+        for (int k = 1; k <= K; ++k) can_edge[u][O[k]] = false;
+    }
+    for (int r = 1; r <= N; ++r) {
+        for (int v = 1; v <= V; ++v) if (v != D[r]) can_edge[P[r]][v] = false;
+        for (int u = 1; u <= V; ++u) if (u != P[r]) can_edge[u][D[r]] = false;
+    }
+}
 
 void read_input() {
     if (!(cin >> K >> N >> M)) { cerr << "LỖI ĐỌC FILE!\n"; exit(1); }
     V = 2 * N + 2 * M + K;
     for (int k = 1; k <= K; ++k) cin >> O[k] >> Q[k];
     
-    for (int i = 1; i <= N + M; ++i) profitable[i] = true;
     for (int i = 1; i <= N; ++i) {
         int r = i; req_type[r] = 1;
         cin >> P[r] >> D[r] >> E[r] >> L_time[r] >> S[r] >> Rev[r];
-        if (Rev[r] - c_mat[P[r]][D[r]] < 0) profitable[r] = false;
     }
     for (int j = 1; j <= M; ++j) {
         int r = N + j; req_type[r] = 2;
@@ -56,9 +143,15 @@ void read_input() {
         for (int j = 1; j <= V; ++j) cin >> t_mat[i][j];
     for (int i = 1; i <= V; ++i)
         for (int j = 1; j <= V; ++j) cin >> c_mat[i][j];
+
+    for (int i = 1; i <= N + M; ++i) profitable[i] = true;
+    for (int i = 1; i <= N; ++i) {
+        if (Rev[i] - c_mat[P[i]][D[i]] < 0) profitable[i] = false;
+    }
+
+    init_edge_feasibility();
 }
 
-// Chuyển Task sang các đỉnh vật lý (Physical Route)
 vector<int> get_physical_route(const vector<int>& rt) {
     vector<int> phys;
     for (int t : rt) {
@@ -69,9 +162,15 @@ vector<int> get_physical_route(const vector<int>& rt) {
     return phys;
 }
 
-// Đánh giá 1 xe độc lập
 long long eval_single_route(int k, const vector<int>& rt) {
-    if (rt.empty()) return 0;
+    auto t_start = TIMER_NOW();
+    profiler.count_eval++;
+
+    if (rt.empty()) {
+        auto t_end = TIMER_NOW();
+        profiler.time_eval += TIMER_DIFF_US(t_start, t_end);
+        return 0;
+    }
     long long time_now = 0; int load = 0; int curr = O[k];
     vector<bool> picked(N + M + 1, false), dropped(N + M + 1, false);
     long long benefit = 0;
@@ -84,35 +183,64 @@ long long eval_single_route(int k, const vector<int>& rt) {
         time_now += t_mat[curr][v_in]; benefit -= c_mat[curr][v_in];
         
         if (task > 0) { // Đón khách hoặc Lấy hàng
-            if (picked[r]) return -INF;
+            if (picked[r]) {
+                auto t_end = TIMER_NOW();
+                profiler.time_eval += TIMER_DIFF_US(t_start, t_end);
+                return -INF;
+            }
             time_now = max(time_now, (long long)E[r]);
-            if (time_now > L_time[r]) return -INF;
+            if (time_now > L_time[r]) {
+                auto t_end = TIMER_NOW();
+                profiler.time_eval += TIMER_DIFF_US(t_start, t_end);
+                return -INF;
+            }
             picked[r] = true;
             
-            if (r <= N) { // Hành khách (Macro Node)
+            if (r <= N) { // Hành khách
                 time_now += S[r] + t_mat[P[r]][D[r]]; benefit -= c_mat[P[r]][D[r]];
                 time_now += S[r]; dropped[r] = true; benefit += Rev[r];
             } else { // Kiện hàng
                 load += W[r];
-                if (load > Q[k]) return -INF;
+                if (load > Q[k]) {
+                    auto t_end = TIMER_NOW();
+                    profiler.time_eval += TIMER_DIFF_US(t_start, t_end);
+                    return -INF;
+                }
                 time_now += S[r];
             }
         } else { // Trả hàng (-r)
-            if (!picked[r] || dropped[r]) return -INF;
+            if (!picked[r] || dropped[r]) {
+                auto t_end = TIMER_NOW();
+                profiler.time_eval += TIMER_DIFF_US(t_start, t_end);
+                return -INF;
+            }
             time_now = max(time_now, (long long)Ed[r]);
-            if (time_now > Ld[r]) return -INF;
+            if (time_now > Ld[r]) {
+                auto t_end = TIMER_NOW();
+                profiler.time_eval += TIMER_DIFF_US(t_start, t_end);
+                return -INF;
+            }
             load -= W[r];
             dropped[r] = true; benefit += Rev[r];
             time_now += S[r];
         }
         curr = v_out;
     }
+
+    auto t_end = TIMER_NOW();
+    profiler.time_eval += TIMER_DIFF_US(t_start, t_end);
     return benefit;
 }
 
-// Tối ưu nội bộ xe O(L^3) - Tái sắp xếp không dùng heap allocation
 void optimize_route(int k, vector<int>& rt) {
-    if (rt.empty()) return;
+    auto t_start = TIMER_NOW();
+    profiler.count_opt_route++;
+
+    if (rt.empty()) {
+        auto t_end = TIMER_NOW();
+        profiler.time_opt_route += TIMER_DIFF_US(t_start, t_end);
+        return;
+    }
     bool improved = true;
     long long best_b = eval_single_route(k, rt);
 
@@ -129,16 +257,24 @@ void optimize_route(int k, vector<int>& rt) {
         for (int r : reqs) {
             vector<int> temp;
             for (int t : rt) if (abs(t) != r) temp.push_back(t);
+            int m = temp.size();
             
             if (r <= N) { // Passenger
-                for (int pos = 0; pos <= temp.size(); ++pos) {
+                for (int pos = 0; pos <= m; ++pos) {
+                    int u = (pos == 0) ? O[k] : get_v_out(temp[pos - 1]);
+                    if (!can_edge[u][P[r]]) continue;
+                    if (pos < m && !can_edge[D[r]][get_v_in(temp[pos])]) continue;
+
                     vector<int> cand = temp; cand.insert(cand.begin() + pos, r);
                     long long b = eval_single_route(k, cand);
                     if (b > best_b) { best_b = b; best_rt = cand; improved = true; }
                 }
             } else { // Parcel
-                for (int p1 = 0; p1 <= temp.size(); ++p1) {
-                    for (int p2 = p1 + 1; p2 <= temp.size() + 1; ++p2) {
+                for (int p1 = 0; p1 <= m; ++p1) {
+                    int u1 = (p1 == 0) ? O[k] : get_v_out(temp[p1 - 1]);
+                    if (!can_edge[u1][P[r]]) continue;
+
+                    for (int p2 = p1 + 1; p2 <= m + 1; ++p2) {
                         vector<int> cand = temp;
                         cand.insert(cand.begin() + p1, r); cand.insert(cand.begin() + p2, -r);
                         long long b = eval_single_route(k, cand);
@@ -149,22 +285,34 @@ void optimize_route(int k, vector<int>& rt) {
         }
         rt = best_rt;
     }
+
+    auto t_end = TIMER_NOW();
+    profiler.time_opt_route += TIMER_DIFF_US(t_start, t_end);
 }
 
-// Tìm cách chèn tốt nhất cho request r vào lộ trình rt của xe k
 pair<long long, vector<int>> best_insert(int k, const vector<int>& rt, int r) {
+    auto t_start = TIMER_NOW();
+    profiler.count_best_insert++;
+
     long long best_b = -INF;
     vector<int> best_rt;
     int n = rt.size();
 
     if (r <= N) { // Khách
         for (int pos = 0; pos <= n; ++pos) {
+            int u = (pos == 0) ? O[k] : get_v_out(rt[pos - 1]);
+            if (!can_edge[u][P[r]]) continue;
+            if (pos < n && !can_edge[D[r]][get_v_in(rt[pos])]) continue;
+
             vector<int> cand = rt; cand.insert(cand.begin() + pos, r);
             long long b = eval_single_route(k, cand);
             if (b > best_b) { best_b = b; best_rt = cand; }
         }
     } else { // Hàng
         for (int p1 = 0; p1 <= n; ++p1) {
+            int u1 = (p1 == 0) ? O[k] : get_v_out(rt[p1 - 1]);
+            if (!can_edge[u1][P[r]]) continue;
+
             for (int p2 = p1 + 1; p2 <= n + 1; ++p2) {
                 vector<int> cand = rt;
                 cand.insert(cand.begin() + p1, r); cand.insert(cand.begin() + p2, -r);
@@ -177,6 +325,9 @@ pair<long long, vector<int>> best_insert(int k, const vector<int>& rt, int r) {
         optimize_route(k, best_rt);
         best_b = eval_single_route(k, best_rt);
     }
+
+    auto t_end = TIMER_NOW();
+    profiler.time_best_insert += TIMER_DIFF_US(t_start, t_end);
     return {best_b, best_rt};
 }
 
@@ -191,7 +342,7 @@ struct Move {
     int k1 = -1, k2 = -1;
     vector<int> rt1, rt2;
     int r_in = 0, r_out = 0;
-    int type = 0; // 1: Insert, 2: Relocate, 3: Swap on same vehicle
+    int type = 0;
 };
 
 void run_tabu_search() {
@@ -215,14 +366,20 @@ void run_tabu_search() {
             long long delta = (b1 - route_obj[k1]);
             if (k2 != -1) delta += (b2 - route_obj[k2]);
 
-            // Kiểm tra cạnh mới và Tabu (Chỉ kiểm tra trên các xe bị sửa đổi!)
             bool is_tabu = false; int new_edges = 0;
             auto check_route_edges = [&](int k, const vector<int>& rt) {
                 int curr = O[k];
                 for (int v : get_physical_route(rt)) {
                     if (!has_edge[curr][v]) {
                         new_edges++;
-                        if (tabu_add[curr][v] >= iter) is_tabu = true;
+                        // Không bao giờ cấm cạnh nội bộ của Passenger P_r -> D_r
+                        bool is_internal_passenger_edge = false;
+                        for (int p = 1; p <= N; ++p) {
+                            if (curr == P[p] && v == D[p]) { is_internal_passenger_edge = true; break; }
+                        }
+                        if (!is_internal_passenger_edge && tabu_add[curr][v] >= iter) {
+                            is_tabu = true;
+                        }
                     }
                     curr = v;
                 }
@@ -230,12 +387,16 @@ void run_tabu_search() {
             check_route_edges(k1, rt1);
             if (k2 != -1) check_route_edges(k2, rt2);
 
-            if (type != 4 && new_edges == 0) return; // Không thay đổi gì (ngoại trừ DROP)
+            if (type != 4 && new_edges == 0) return;
+
+            // Bỏ qua kiểm tra Tabu trong giai đoạn ân hạn ngay sau Ruin
+            if (post_ruin_grace_period > 0) is_tabu = false;
 
             if (is_tabu) {
                 tabu_hits++;
-                if (cur_total_obj + delta > global_best_obj) tabu_overrides++;
-                else return; // Bị Tabu cấm
+                // Aspiration Criterion: vượt kỷ lục toàn cục HOẶC cải thiện delta dương lớn sau Ruin
+                if (cur_total_obj + delta > global_best_obj ) tabu_overrides++;
+                else return;
             }
 
             if (delta > best_move.delta || (delta == best_move.delta && rand() % 2 == 0)) {
@@ -243,9 +404,10 @@ void run_tabu_search() {
             }
         };
 
-        // -------------------------------------------------------------
-        // TOÁN TỬ 1: INSERT (Nhét request unserved vào 1 xe bất kỳ)
-        // -------------------------------------------------------------
+        if (post_ruin_grace_period > 0) post_ruin_grace_period--;
+
+        // TOÁN TỬ 1: INSERT
+        auto t1_start = TIMER_NOW();
         for (int u = 1; u <= N + M; ++u) {
             if (veh_of[u] != 0 || !profitable[u]) continue;
             for (int k = 1; k <= K; ++k) {
@@ -253,10 +415,11 @@ void run_tabu_search() {
                 test_candidate(1, k, rt, b, -1, {}, 0, u, 0);
             }
         }
+        auto t1_end = TIMER_NOW();
+        profiler.time_op1 += TIMER_DIFF_US(t1_start, t1_end);
 
-        // -------------------------------------------------------------
-        // TOÁN TỬ 2: RELOCATE (Chuyển request r từ xe k1 sang xe k2)
-        // -------------------------------------------------------------
+        // TOÁN TỬ 2: RELOCATE
+        auto t2_start = TIMER_NOW();
         for (int r = 1; r <= N + M; ++r) {
             if (veh_of[r] == 0) continue;
             int k1 = veh_of[r];
@@ -269,10 +432,11 @@ void run_tabu_search() {
                 test_candidate(2, k1, rt1, b1, k2, rt2, b2, r, r);
             }
         }
+        auto t2_end = TIMER_NOW();
+        profiler.time_op2 += TIMER_DIFF_US(t2_start, t2_end);
 
-        // -------------------------------------------------------------
-        // TOÁN TỬ 3: SWAP ON SAME VEHICLE (Đổi request r trên xe k lấy u unserved)
-        // -------------------------------------------------------------
+        // TOÁN TỬ 3: SWAP ON SAME VEHICLE
+        auto t3_start = TIMER_NOW();
         for (int r = 1; r <= N + M; ++r) {
             if (veh_of[r] == 0) continue;
             int k = veh_of[r];
@@ -284,10 +448,11 @@ void run_tabu_search() {
                 test_candidate(3, k, rt, b, -1, {}, 0, u, r);
             }
         }
+        auto t3_end = TIMER_NOW();
+        profiler.time_op3 += TIMER_DIFF_US(t3_start, t3_end);
 
-        // -------------------------------------------------------------
-        // TOÁN TỬ 4: DROP (Bỏ bớt request r khỏi xe về unserved để lùi bước thoát bẫy)
-        // -------------------------------------------------------------
+        // TOÁN TỬ 4: DROP
+        auto t4_start = TIMER_NOW();
         for (int r = 1; r <= N + M; ++r) {
             if (veh_of[r] == 0) continue;
             int k = veh_of[r];
@@ -295,10 +460,11 @@ void run_tabu_search() {
             long long b = eval_single_route(k, rt);
             test_candidate(4, k, rt, b, -1, {}, 0, 0, r);
         }
+        auto t4_end = TIMER_NOW();
+        profiler.time_op4 += TIMER_DIFF_US(t4_start, t4_end);
 
-        // -------------------------------------------------------------
-        // TOÁN TỬ 5: INTER-ROUTE SWAP (Đổi chéo request r1 ở xe k1 lấy r2 ở xe k2)
-        // -------------------------------------------------------------
+        // TOÁN TỬ 5: INTER-ROUTE SWAP
+        auto t5_start = TIMER_NOW();
         for (int r1 = 1; r1 <= N + M; ++r1) {
             if (veh_of[r1] == 0) continue;
             int k1 = veh_of[r1];
@@ -309,42 +475,55 @@ void run_tabu_search() {
 
                 auto rt1_no_r1 = remove_req(routes[k1], r1);
                 auto [b1, new_rt1] = best_insert(k1, rt1_no_r1, r2);
-                if (b1 == -INF) continue; // Early prune
+                if (b1 == -INF) continue;
 
                 auto rt2_no_r2 = remove_req(routes[k2], r2);
                 auto [b2, new_rt2] = best_insert(k2, rt2_no_r2, r1);
-                if (b2 == -INF) continue; // Early prune
+                if (b2 == -INF) continue;
 
                 test_candidate(5, k1, new_rt1, b1, k2, new_rt2, b2, r2, r1);
             }
         }
+        auto t5_end = TIMER_NOW();
+        profiler.time_op5 += TIMER_DIFF_US(t5_start, t5_end);
 
-        // -------------------------------------------------------------
-        // ÁP DỤNG NƯỚC ĐI TỐT NHẤT & CẬP NHẬT TABU
-        // -------------------------------------------------------------
+        // ÁP DỤNG NƯỚC ĐI TỐT NHẤT
+        auto t_apply_start = TIMER_NOW();
         cerr << "[Iter " << iter << "] Valid Neighbors: " << valid_neighbors 
              << " | Tabu Hits: " << tabu_hits << " (Overrides: " << tabu_overrides << ")\n";
 
         if (best_move.delta != -INF) {
-            // Xóa cạnh cũ trên has_edge
-            auto clear_edges = [&](int k) {
+            // SỬA LỖI: Cập nhật Tabu vi sai, chỉ gán Tabu cho cạnh thực sự mới
+            auto apply_diff_edges = [&](int k, const vector<int>& old_rt, const vector<int>& new_rt) {
+                set<pair<int, int>> old_edges, new_edges;
                 int curr = O[k];
-                for (int v : get_physical_route(routes[k])) { has_edge[curr][v] = false; curr = v; }
-            };
-            clear_edges(best_move.k1);
-            if (best_move.k2 != -1) clear_edges(best_move.k2);
+                for (int v : get_physical_route(old_rt)) { old_edges.insert({curr, v}); curr = v; }
+                curr = O[k];
+                for (int v : get_physical_route(new_rt)) { new_edges.insert({curr, v}); curr = v; }
 
-            // Cập nhật Tabu và đặt cạnh mới lên has_edge
-            auto apply_edges = [&](int k, const vector<int>& rt) {
-                int curr = O[k];
-                for (int v : get_physical_route(rt)) {
-                    if (!has_edge[curr][v]) tabu_add[curr][v] = iter + TABU_TENURE_BASE + rand() % TABU_TENURE_RAND;
-                    has_edge[curr][v] = true;
-                    curr = v;
+                // Xóa các cạnh không còn tồn tại
+                for (auto edge : old_edges) {
+                    if (!new_edges.count(edge)) has_edge[edge.first][edge.second] = false;
+                }
+                // Thêm các cạnh mới và gán Tabu
+                for (auto edge : new_edges) {
+                    if (!old_edges.count(edge)) {
+                        bool is_pass_internal = false;
+                        for (int p = 1; p <= N; ++p) {
+                            if (edge.first == P[p] && edge.second == D[p]) { is_pass_internal = true; break; }
+                        }
+                        if (!is_pass_internal) {
+                            tabu_add[edge.first][edge.second] = iter + TABU_TENURE_BASE + rand() % TABU_TENURE_RAND;
+                        }
+                    }
+                    has_edge[edge.first][edge.second] = true;
                 }
             };
-            apply_edges(best_move.k1, best_move.rt1);
-            if (best_move.k2 != -1) apply_edges(best_move.k2, best_move.rt2);
+
+            apply_diff_edges(best_move.k1, routes[best_move.k1], best_move.rt1);
+            if (best_move.k2 != -1) {
+                apply_diff_edges(best_move.k2, routes[best_move.k2], best_move.rt2);
+            }
 
             // Cập nhật trạng thái
             routes[best_move.k1] = best_move.rt1;
@@ -355,16 +534,16 @@ void run_tabu_search() {
                 route_obj[best_move.k2] = eval_single_route(best_move.k2, routes[best_move.k2]);
             }
 
-            if (best_move.type == 1) { // Insert
+            if (best_move.type == 1) {
                 veh_of[best_move.r_in] = best_move.k1;
-            } else if (best_move.type == 2) { // Relocate
+            } else if (best_move.type == 2) {
                 veh_of[best_move.r_in] = best_move.k2;
-            } else if (best_move.type == 3) { // Swap on same vehicle
+            } else if (best_move.type == 3) {
                 veh_of[best_move.r_out] = 0;
                 veh_of[best_move.r_in] = best_move.k1;
-            } else if (best_move.type == 4) { // Drop
+            } else if (best_move.type == 4) {
                 veh_of[best_move.r_out] = 0;
-            } else if (best_move.type == 5) { // Inter-route Swap
+            } else if (best_move.type == 5) {
                 veh_of[best_move.r_in] = best_move.k1;
                 veh_of[best_move.r_out] = best_move.k2;
             }
@@ -385,20 +564,22 @@ void run_tabu_search() {
             cerr << "  -> No valid neighbor found.\n";
         }
         cerr << "  -> Global Best Obj: " << global_best_obj << "\n";
+        auto t_apply_end = TIMER_NOW();
+        profiler.time_apply += TIMER_DIFF_US(t_apply_start, t_apply_end);
 
-        // =============================================================
-        // CƠ CHẾ RUIN: MULTI-STRATEGY POOL (GIẢI PHÁP 1: 0 THAM SỐ MA THUẬT)
-        // =============================================================
+        // CƠ CHẾ RUIN
+        auto t_ruin_start = TIMER_NOW();
         if (stagnant_iters >= STAGNANT_LIMIT) {
             stagnant_iters = 0;
+            post_ruin_grace_period = 3; // Cấp 3 iter ân hạn để tái thiết lập lộ trình
+
             vector<int> served_reqs;
             for (int r = 1; r <= N + M; ++r) if (veh_of[r] != 0) served_reqs.push_back(r);
 
             if (!served_reqs.empty()) {
-                int strategy = rand() % 4; // 0: Cost, 1: Time, 2: Time-Window, 3: Vehicle Dismantle
+                int strategy = rand() % 4;
 
                 if (strategy == 3) {
-                    // Chiến lược 3: Intra-Route Ruin (Xóa sổ 100% một xe ngẫu nhiên đang chở hàng)
                     vector<int> busy_vehs;
                     for (int k = 1; k <= K; ++k) if (!routes[k].empty()) busy_vehs.push_back(k);
 
@@ -407,7 +588,11 @@ void run_tabu_search() {
                         cerr << "  -> [RUIN MODE 3: VEHICLE DISMANTLE] Clearing vehicle #" << k_target << ": ";
 
                         int curr = O[k_target];
-                        for (int v : get_physical_route(routes[k_target])) { has_edge[curr][v] = false; curr = v; }
+                        for (int v : get_physical_route(routes[k_target])) { 
+                            has_edge[curr][v] = false; 
+                            tabu_add[curr][v] = iter + TABU_TENURE_BASE + rand() % TABU_TENURE_RAND; // GIẢI PHÓNG TABU KHI RUIN
+                            curr = v; 
+                        }
 
                         vector<int> reqs_in_k;
                         for (int t : routes[k_target]) {
@@ -420,20 +605,19 @@ void run_tabu_search() {
                         cerr << "\n";
                     }
                 } else {
-                    // Các chiến lược cụm Inter-Route (Cost, Time, Time-Window)
                     int r_seed = served_reqs[rand() % served_reqs.size()];
 
-                    if (strategy == 0) { // Chi phí di chuyển c_mat
+                    if (strategy == 0) {
                         sort(served_reqs.begin(), served_reqs.end(), [&](int a, int b) {
                             return c_mat[P[r_seed]][P[a]] < c_mat[P[r_seed]][P[b]];
                         });
                         cerr << "  -> [RUIN MODE 0: COST RUIN] Ejecting near req " << r_seed << ": ";
-                    } else if (strategy == 1) { // Thời gian di chuyển t_mat
+                    } else if (strategy == 1) {
                         sort(served_reqs.begin(), served_reqs.end(), [&](int a, int b) {
                             return t_mat[P[r_seed]][P[a]] < t_mat[P[r_seed]][P[b]];
                         });
                         cerr << "  -> [RUIN MODE 1: TIME RUIN] Ejecting near req " << r_seed << ": ";
-                    } else { // Khung giờ đón xe |E_i - E_j|
+                    } else {
                         sort(served_reqs.begin(), served_reqs.end(), [&](int a, int b) {
                             return abs(E[r_seed] - E[a]) < abs(E[r_seed] - E[b]);
                         });
@@ -449,7 +633,11 @@ void run_tabu_search() {
                         int k = veh_of[r];
                         if (k != 0) {
                             int curr = O[k];
-                            for (int v : get_physical_route(routes[k])) { has_edge[curr][v] = false; curr = v; }
+                            for (int v : get_physical_route(routes[k])) { 
+                                has_edge[curr][v] = false; 
+                                tabu_add[curr][v] = iter + TABU_TENURE_BASE + rand() % TABU_TENURE_RAND; // GIẢI PHÓNG TABU CỦA REQUEST BỊ GỠ
+                                curr = v; 
+                            }
 
                             routes[k] = remove_req(routes[k], r);
                             route_obj[k] = eval_single_route(k, routes[k]);
@@ -469,9 +657,12 @@ void run_tabu_search() {
                 cerr << "  -> Total Obj after Ruin: " << cur_total_obj << "\n";
             }
         }
+        auto t_ruin_end = TIMER_NOW();
+        profiler.time_ruin += TIMER_DIFF_US(t_ruin_start, t_ruin_end);
     }
 
-    // Xuất kết quả
+    profiler.print_final_report(MAX_ITER);
+
     cout << global_best_obj << "\n";
     for (int k = 1; k <= K; ++k) {
         vector<int> phys = get_physical_route(best_routes[k]);
@@ -492,3 +683,7 @@ int main(int argc, char** argv) {
     run_tabu_search();
     return 0;
 }
+
+
+
+// GEHIHI đang tắt tabu không ghi nhận ruin . Cần sửa

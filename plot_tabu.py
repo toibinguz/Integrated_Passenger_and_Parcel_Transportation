@@ -365,7 +365,7 @@ def generate_detailed_tour_report(instance_file, solution_file, milestones, repo
 # ==============================================================================
 if __name__ == '__main__':
     log_file = sys.argv[1] if len(sys.argv) > 1 else "log_tabu.txt"
-    inst_file = sys.argv[2] if len(sys.argv) > 2 else "testcases/test_65.txt"
+    inst_file = sys.argv[2] if len(sys.argv) > 2 else "testcases/test_500.txt"
     sol_file = sys.argv[3] if len(sys.argv) > 3 else "ketqua.txt"
     rep_file = sys.argv[4] if len(sys.argv) > 4 else "tour_report.txt"
 

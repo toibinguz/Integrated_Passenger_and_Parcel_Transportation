@@ -1,6 +1,11 @@
 #include <bits/stdc++.h>
 #include <chrono>
+#include <filesystem>
+#include <fstream>
+#include <ctime>
+#include <iomanip>
 using namespace std;
+namespace fs = std::filesystem;
 
 // ============================================================================
 // THAM SỐ CẤU HÌNH THUẬT TOÁN (HYPERPARAMETERS)
@@ -8,7 +13,7 @@ using namespace std;
 int MAX_ITER = 10000;            // Tổng số thế hệ chạy Tabu Search
 int TABU_TENURE_BASE = 5;       // Thời gian cấm Tabu cơ sở
 int TABU_TENURE_RAND = 10;      // Biên độ ngẫu nhiên của Tabu
-int STAGNANT_LIMIT = 100;        // Số thế hệ liên tiếp không cải thiện để kích hoạt Ruin
+int STAGNANT_LIMIT = 50;         // Số thế hệ liên tiếp không cải thiện để kích hoạt Ruin
 int RUIN_SIZE = 6;              // Số lượng request bị cưỡng chế gỡ bỏ trong 1 lần Ruin
 
 const long long INF = 1e18;
@@ -40,9 +45,6 @@ bool profitable[MAX_REQ];           // Lọc khách sinh lời âm
 int tabu_add[MAXV][MAXV];           // Bảng Tabu trên cạnh vật lý
 bool has_edge[MAXV][MAXV];          // Cạnh vật lý đang tồn tại trong nghiệm hiện tại
 
-// Đánh dấu để bỏ qua Tabu trong vài bước ngay sau Ruin
-int post_ruin_grace_period = 0;
-
 // ============================================================================
 // BỘ ĐO THỐNG KÊ HIỆU NĂNG
 // ============================================================================
@@ -58,7 +60,7 @@ struct Profiler {
         double total_tracked = time_op1 + time_op2 + time_op3 + time_op4 + time_op5 + time_apply + time_ruin;
         cerr << "\n=================== FINAL PROFILING REPORT (" << iters_done << " ITERS) ===================\n";
         cerr << fixed << setprecision(3);
-        cerr << "1. OPERATORS BREAKDOWN (Trung bình mỗi Iter):\n";
+        cerr << "1. OPERATORS BREAKDOWN (Average per Iteration):\n";
         cerr << "   - Op1 (Insert)           : " << (time_op1 / iters_done) / 1000.0 << " ms (" 
              << (total_tracked > 0 ? (time_op1 / total_tracked * 100.0) : 0) << "%)\n";
         cerr << "   - Op2 (Relocate)         : " << (time_op2 / iters_done) / 1000.0 << " ms (" 
@@ -73,15 +75,15 @@ struct Profiler {
              << (total_tracked > 0 ? (time_apply / total_tracked * 100.0) : 0) << "%)\n";
         cerr << "   - Ruin Mechanism         : " << (time_ruin / iters_done) / 1000.0 << " ms (" 
              << (total_tracked > 0 ? (time_ruin / total_tracked * 100.0) : 0) << "%)\n";
-        cerr << "   -> TỔNG THỜI GIAN/ITER   : " << (total_tracked / iters_done) / 1000.0 << " ms\n\n";
+        cerr << "   -> TOTAL TIME / ITER     : " << (total_tracked / iters_done) / 1000.0 << " ms\n\n";
 
         cerr << "2. CORE FUNCTIONS BOTTLENECK:\n";
-        cerr << "   - eval_single_route()    : Gọi " << count_eval << " lần | Tổng: " 
-             << time_eval / 1000.0 << " ms | TB: " << (count_eval ? time_eval / count_eval : 0) << " us/lần\n";
-        cerr << "   - optimize_route()       : Gọi " << count_opt_route << " lần | Tổng: " 
-             << time_opt_route / 1000.0 << " ms | TB: " << (count_opt_route ? time_opt_route / count_opt_route : 0) << " us/lần\n";
-        cerr << "   - best_insert()          : Gọi " << count_best_insert << " lần | Tổng: " 
-             << time_best_insert / 1000.0 << " ms | TB: " << (count_best_insert ? time_best_insert / count_best_insert : 0) << " us/lần\n";
+        cerr << "   - eval_single_route()    : Called " << count_eval << " times | Total: " 
+             << time_eval / 1000.0 << " ms | Avg: " << (count_eval ? time_eval / count_eval : 0) << " us/call\n";
+        cerr << "   - optimize_route()       : Called " << count_opt_route << " times | Total: " 
+             << time_opt_route / 1000.0 << " ms | Avg: " << (count_opt_route ? time_opt_route / count_opt_route : 0) << " us/call\n";
+        cerr << "   - best_insert()          : Called " << count_best_insert << " times | Total: " 
+             << time_best_insert / 1000.0 << " ms | Avg: " << (count_best_insert ? time_best_insert / count_best_insert : 0) << " us/call\n";
         cerr << "===============================================================================\n\n";
     }
 } profiler;
@@ -127,7 +129,7 @@ void init_edge_feasibility() {
 }
 
 void read_input() {
-    if (!(cin >> K >> N >> M)) { cerr << "LỖI ĐỌC FILE!\n"; exit(1); }
+    if (!(cin >> K >> N >> M)) { cerr << "ERROR: Failed to read input file!\n"; exit(1); }
     V = 2 * N + 2 * M + K;
     for (int k = 1; k <= K; ++k) cin >> O[k] >> Q[k];
     
@@ -372,14 +374,7 @@ void run_tabu_search() {
                 for (int v : get_physical_route(rt)) {
                     if (!has_edge[curr][v]) {
                         new_edges++;
-                        // Không bao giờ cấm cạnh nội bộ của Passenger P_r -> D_r
-                        bool is_internal_passenger_edge = false;
-                        for (int p = 1; p <= N; ++p) {
-                            if (curr == P[p] && v == D[p]) { is_internal_passenger_edge = true; break; }
-                        }
-                        if (!is_internal_passenger_edge && tabu_add[curr][v] >= iter) {
-                            is_tabu = true;
-                        }
+                        if (tabu_add[curr][v] >= iter) is_tabu = true;
                     }
                     curr = v;
                 }
@@ -389,13 +384,10 @@ void run_tabu_search() {
 
             if (type != 4 && new_edges == 0) return;
 
-            // Bỏ qua kiểm tra Tabu trong giai đoạn ân hạn ngay sau Ruin
-            if (post_ruin_grace_period > 0) is_tabu = false;
-
             if (is_tabu) {
                 tabu_hits++;
-                // Aspiration Criterion: vượt kỷ lục toàn cục HOẶC cải thiện delta dương lớn sau Ruin
-                if (cur_total_obj + delta > global_best_obj ) tabu_overrides++;
+                // Aspiration Criterion: vượt kỷ lục toàn cục
+                if (cur_total_obj + delta > global_best_obj) tabu_overrides++;
                 else return;
             }
 
@@ -403,8 +395,6 @@ void run_tabu_search() {
                 best_move = {delta, k1, k2, rt1, rt2, r_in, r_out, type};
             }
         };
-
-        if (post_ruin_grace_period > 0) post_ruin_grace_period--;
 
         // TOÁN TỬ 1: INSERT
         auto t1_start = TIMER_NOW();
@@ -493,30 +483,29 @@ void run_tabu_search() {
              << " | Tabu Hits: " << tabu_hits << " (Overrides: " << tabu_overrides << ")\n";
 
         if (best_move.delta != -INF) {
-            // SỬA LỖI: Cập nhật Tabu vi sai, chỉ gán Tabu cho cạnh thực sự mới
+            // Cập nhật Tabu vi sai: cấm tái tạo các cạnh vừa bị gỡ bỏ, làm mới tem các cạnh mới
             auto apply_diff_edges = [&](int k, const vector<int>& old_rt, const vector<int>& new_rt) {
-                set<pair<int, int>> old_edges, new_edges;
+                vector<pair<int, int>> old_edges, new_edges;
                 int curr = O[k];
-                for (int v : get_physical_route(old_rt)) { old_edges.insert({curr, v}); curr = v; }
+                for (int v : get_physical_route(old_rt)) { old_edges.push_back({curr, v}); curr = v; }
                 curr = O[k];
-                for (int v : get_physical_route(new_rt)) { new_edges.insert({curr, v}); curr = v; }
+                for (int v : get_physical_route(new_rt)) { new_edges.push_back({curr, v}); curr = v; }
 
-                // Xóa các cạnh không còn tồn tại
-                for (auto edge : old_edges) {
-                    if (!new_edges.count(edge)) has_edge[edge.first][edge.second] = false;
-                }
-                // Thêm các cạnh mới và gán Tabu
-                for (auto edge : new_edges) {
-                    if (!old_edges.count(edge)) {
-                        bool is_pass_internal = false;
-                        for (int p = 1; p <= N; ++p) {
-                            if (edge.first == P[p] && edge.second == D[p]) { is_pass_internal = true; break; }
-                        }
-                        if (!is_pass_internal) {
-                            tabu_add[edge.first][edge.second] = iter + TABU_TENURE_BASE + rand() % TABU_TENURE_RAND;
-                        }
+                // Xóa các cạnh không còn tồn tại và gán Tabu (ngăn nước đi sau lập tức lắp lại)
+                for (const auto& edge : old_edges) {
+                    bool still_exists = false;
+                    for (const auto& ne : new_edges) {
+                        if (ne == edge) { still_exists = true; break; }
                     }
+                    if (!still_exists) {
+                        has_edge[edge.first][edge.second] = false;
+                        tabu_add[edge.first][edge.second] = iter + TABU_TENURE_BASE + rand() % TABU_TENURE_RAND;
+                    }
+                }
+                // Thêm các cạnh mới và làm mới tem Tabu
+                for (const auto& edge : new_edges) {
                     has_edge[edge.first][edge.second] = true;
+                    tabu_add[edge.first][edge.second] = iter + TABU_TENURE_BASE + rand() % TABU_TENURE_RAND;
                 }
             };
 
@@ -555,6 +544,7 @@ void run_tabu_search() {
                 global_best_obj = cur_total_obj;
                 for (int k = 1; k <= K; ++k) best_routes[k] = routes[k];
                 cerr << "  -> *** NEW GLOBAL BEST FOUND! ***\n";
+                cout << "  -> [Iter " << setw(5) << iter << "] NEW GLOBAL BEST: " << global_best_obj << "\n" << flush;
                 stagnant_iters = 0;
             } else {
                 stagnant_iters++;
@@ -571,7 +561,6 @@ void run_tabu_search() {
         auto t_ruin_start = TIMER_NOW();
         if (stagnant_iters >= STAGNANT_LIMIT) {
             stagnant_iters = 0;
-            post_ruin_grace_period = 3; // Cấp 3 iter ân hạn để tái thiết lập lộ trình
 
             vector<int> served_reqs;
             for (int r = 1; r <= N + M; ++r) if (veh_of[r] != 0) served_reqs.push_back(r);
@@ -590,7 +579,7 @@ void run_tabu_search() {
                         int curr = O[k_target];
                         for (int v : get_physical_route(routes[k_target])) { 
                             has_edge[curr][v] = false; 
-                            tabu_add[curr][v] = iter + TABU_TENURE_BASE + rand() % TABU_TENURE_RAND; // GIẢI PHÓNG TABU KHI RUIN
+                            tabu_add[curr][v] = iter + TABU_TENURE_BASE + rand() % TABU_TENURE_RAND;
                             curr = v; 
                         }
 
@@ -635,7 +624,7 @@ void run_tabu_search() {
                             int curr = O[k];
                             for (int v : get_physical_route(routes[k])) { 
                                 has_edge[curr][v] = false; 
-                                tabu_add[curr][v] = iter + TABU_TENURE_BASE + rand() % TABU_TENURE_RAND; // GIẢI PHÓNG TABU CỦA REQUEST BỊ GỠ
+                                tabu_add[curr][v] = iter + TABU_TENURE_BASE + rand() % TABU_TENURE_RAND;
                                 curr = v; 
                             }
 
@@ -663,27 +652,92 @@ void run_tabu_search() {
 
     profiler.print_final_report(MAX_ITER);
 
-    cout << global_best_obj << "\n";
+}
+
+string get_current_timestamp() {
+    auto now = chrono::system_clock::now();
+    time_t now_c = chrono::system_clock::to_time_t(now);
+    tm now_tm = *localtime(&now_c);
+    char buf[64];
+    strftime(buf, sizeof(buf), "%Y-%m-%d-%H-%M-%S", &now_tm);
+    return string(buf);
+}
+
+void save_solution(const string& res_path) {
+    ofstream fout(res_path);
+    if (!fout.is_open()) {
+        cerr << "ERROR: Failed to open solution file for writing: " << res_path << "\n";
+        return;
+    }
+    fout << global_best_obj << "\n";
     for (int k = 1; k <= K; ++k) {
         vector<int> phys = get_physical_route(best_routes[k]);
-        cout << phys.size();
-        for (int v : phys) cout << " " << v;
-        cout << "\n";
+        fout << phys.size();
+        for (int v : phys) fout << " " << v;
+        fout << "\n";
     }
+    fout.close();
 }
 
 int main(int argc, char** argv) {
     ios_base::sync_with_stdio(false); cin.tie(NULL);
+
+    string test_filepath = "input.txt";
     if (argc > 1) {
-        if (!freopen(argv[1], "r", stdin)) { cerr << "LỖI FILE!\n"; return 1; }
+        test_filepath = argv[1];
+        if (!freopen(argv[1], "r", stdin)) { cerr << "ERROR: Failed to open input file!\n"; return 1; }
     } else {
-        if (!freopen("input.txt", "r", stdin)) { cerr << "LỖI FILE!\n"; return 1; }
+        if (!freopen("input.txt", "r", stdin)) { cerr << "ERROR: Failed to open input file!\n"; return 1; }
     }
+    if (argc > 2) {
+        MAX_ITER = atoi(argv[2]);
+    }
+
+    // 1. Identify testcase name, program name, and execution timestamp
+    string test_name = fs::path(test_filepath).stem().string();
+    string cpp_name = fs::path(__FILE__).stem().string();
+    string timestamp = get_current_timestamp();
+
+    // 2. Create new subfolder inside output directory
+    string folder_name = test_name + "_" + cpp_name + "_" + timestamp;
+    fs::path out_dir = fs::path("output") / folder_name;
+    fs::create_directories(out_dir);
+
+    // 3. Define output paths inheriting folder name format
+    string res_file_path = (out_dir / (folder_name + "_ket_qua.txt")).string();
+    string log_file_path = (out_dir / (folder_name + "_log.txt")).string();
+
+    cout << "======================================================================\n";
+    cout << "  STARTING TABU SEARCH SOLVER\n";
+    cout << "  * Testcase       : " << test_name << " (" << test_filepath << ")\n";
+    cout << "  * Source (.cpp)  : " << cpp_name << ".cpp\n";
+    cout << "  * Max Iterations : " << MAX_ITER << "\n";
+    cout << "  * Output Dir     : " << out_dir.string() << "\n";
+    cout << "  * Result File    : " << res_file_path << "\n";
+    cout << "  * Log File       : " << log_file_path << "\n";
+    cout << "======================================================================\n" << flush;
+
+    // 4. Redirect cerr stream to log file
+    ofstream log_file(log_file_path);
+    streambuf* old_cerr_buf = cerr.rdbuf(log_file.rdbuf());
+    cerr << unitbuf;
+
     read_input();
     run_tabu_search();
+
+    // 5. Save final best solution
+    save_solution(res_file_path);
+
+    // 6. Restore cerr stream and finish
+    cerr.rdbuf(old_cerr_buf);
+    log_file.close();
+
+    cout << "======================================================================\n";
+    cout << "  SEARCH COMPLETED SUCCESSFULLY!\n";
+    cout << "  * Global Best Objective : " << global_best_obj << "\n";
+    cout << "  * Solution saved to     : " << res_file_path << "\n";
+    cout << "  * Execution log saved to: " << log_file_path << "\n";
+    cout << "======================================================================\n" << flush;
+
     return 0;
 }
-
-
-
-// GEHIHI đang tắt tabu không ghi nhận ruin . Cần sửa

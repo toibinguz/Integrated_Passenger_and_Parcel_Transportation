@@ -1,0 +1,938 @@
+[Iter 1] Valid Neighbors: 93 | Tabu Hits: 0 (Overrides: 0)
+  -> Best Neighbor Obj: 183 (Delta: 183)
+  -> *** NEW GLOBAL BEST FOUND! ***
+  -> Global Best Obj: 183
+[Iter 2] Valid Neighbors: 93 | Tabu Hits: 0 (Overrides: 0)
+  -> Best Neighbor Obj: 362 (Delta: 179)
+  -> *** NEW GLOBAL BEST FOUND! ***
+  -> Global Best Obj: 362
+[Iter 3] Valid Neighbors: 92 | Tabu Hits: 0 (Overrides: 0)
+  -> Best Neighbor Obj: 527 (Delta: 165)
+  -> *** NEW GLOBAL BEST FOUND! ***
+  -> Global Best Obj: 527
+[Iter 4] Valid Neighbors: 96 | Tabu Hits: 0 (Overrides: 0)
+  -> Best Neighbor Obj: 772 (Delta: 245)
+  -> *** NEW GLOBAL BEST FOUND! ***
+  -> Global Best Obj: 772
+[Iter 5] Valid Neighbors: 79 | Tabu Hits: 3 (Overrides: 0)
+  -> Best Neighbor Obj: 925 (Delta: 153)
+  -> *** NEW GLOBAL BEST FOUND! ***
+  -> Global Best Obj: 925
+[Iter 6] Valid Neighbors: 79 | Tabu Hits: 3 (Overrides: 0)
+  -> Best Neighbor Obj: 1016 (Delta: 91)
+  -> *** NEW GLOBAL BEST FOUND! ***
+  -> Global Best Obj: 1016
+[Iter 7] Valid Neighbors: 78 | Tabu Hits: 1 (Overrides: 0)
+  -> Best Neighbor Obj: 1228 (Delta: 212)
+  -> *** NEW GLOBAL BEST FOUND! ***
+  -> Global Best Obj: 1228
+[Iter 8] Valid Neighbors: 59 | Tabu Hits: 2 (Overrides: 0)
+  -> Best Neighbor Obj: 1217 (Delta: -11)
+  -> Global Best Obj: 1228
+[Iter 9] Valid Neighbors: 59 | Tabu Hits: 3 (Overrides: 0)
+  -> Best Neighbor Obj: 1394 (Delta: 177)
+  -> *** NEW GLOBAL BEST FOUND! ***
+  -> Global Best Obj: 1394
+[Iter 10] Valid Neighbors: 45 | Tabu Hits: 3 (Overrides: 0)
+  -> Best Neighbor Obj: 1380 (Delta: -14)
+  -> Global Best Obj: 1394
+[Iter 11] Valid Neighbors: 46 | Tabu Hits: 5 (Overrides: 0)
+  -> Best Neighbor Obj: 1341 (Delta: -39)
+  -> Global Best Obj: 1394
+[Iter 12] Valid Neighbors: 46 | Tabu Hits: 7 (Overrides: 0)
+  -> Best Neighbor Obj: 1320 (Delta: -21)
+  -> Global Best Obj: 1394
+[Iter 13] Valid Neighbors: 45 | Tabu Hits: 9 (Overrides: 0)
+  -> Best Neighbor Obj: 1279 (Delta: -41)
+  -> Global Best Obj: 1394
+[Iter 14] Valid Neighbors: 45 | Tabu Hits: 11 (Overrides: 0)
+  -> Best Neighbor Obj: 1227 (Delta: -52)
+  -> Global Best Obj: 1394
+[Iter 15] Valid Neighbors: 45 | Tabu Hits: 12 (Overrides: 0)
+  -> Best Neighbor Obj: 1269 (Delta: 42)
+  -> Global Best Obj: 1394
+[Iter 16] Valid Neighbors: 30 | Tabu Hits: 8 (Overrides: 0)
+  -> Best Neighbor Obj: 1214 (Delta: -55)
+  -> Global Best Obj: 1394
+[Iter 17] Valid Neighbors: 33 | Tabu Hits: 9 (Overrides: 0)
+  -> Best Neighbor Obj: 1157 (Delta: -57)
+  -> Global Best Obj: 1394
+[Iter 18] Valid Neighbors: 36 | Tabu Hits: 8 (Overrides: 0)
+  -> Best Neighbor Obj: 1281 (Delta: 124)
+  -> Global Best Obj: 1394
+[Iter 19] Valid Neighbors: 29 | Tabu Hits: 8 (Overrides: 0)
+  -> Best Neighbor Obj: 1203 (Delta: -78)
+  -> Global Best Obj: 1394
+[Iter 20] Valid Neighbors: 30 | Tabu Hits: 9 (Overrides: 0)
+  -> Best Neighbor Obj: 1313 (Delta: 110)
+  -> Global Best Obj: 1394
+[Iter 21] Valid Neighbors: 15 | Tabu Hits: 5 (Overrides: 1)
+  -> Best Neighbor Obj: 1414 (Delta: 101)
+  -> *** NEW GLOBAL BEST FOUND! ***
+  -> Global Best Obj: 1414
+[Iter 22] Valid Neighbors: 15 | Tabu Hits: 5 (Overrides: 0)
+  -> Best Neighbor Obj: 1375 (Delta: -39)
+  -> Global Best Obj: 1414
+[Iter 23] Valid Neighbors: 15 | Tabu Hits: 6 (Overrides: 0)
+  -> Best Neighbor Obj: 1241 (Delta: -134)
+  -> Global Best Obj: 1414
+[Iter 24] Valid Neighbors: 19 | Tabu Hits: 8 (Overrides: 0)
+  -> Best Neighbor Obj: 1299 (Delta: 58)
+  -> Global Best Obj: 1414
+[Iter 25] Valid Neighbors: 18 | Tabu Hits: 8 (Overrides: 0)
+  -> Best Neighbor Obj: 1216 (Delta: -83)
+  -> Global Best Obj: 1414
+[Iter 26] Valid Neighbors: 17 | Tabu Hits: 8 (Overrides: 0)
+  -> Best Neighbor Obj: 1146 (Delta: -70)
+  -> Global Best Obj: 1414
+[Iter 27] Valid Neighbors: 29 | Tabu Hits: 14 (Overrides: 0)
+  -> Best Neighbor Obj: 1188 (Delta: 42)
+  -> Global Best Obj: 1414
+[Iter 28] Valid Neighbors: 27 | Tabu Hits: 11 (Overrides: 0)
+  -> Best Neighbor Obj: 1167 (Delta: -21)
+  -> Global Best Obj: 1414
+[Iter 29] Valid Neighbors: 27 | Tabu Hits: 12 (Overrides: 0)
+  -> Best Neighbor Obj: 1130 (Delta: -37)
+  -> Global Best Obj: 1414
+[Iter 30] Valid Neighbors: 30 | Tabu Hits: 13 (Overrides: 0)
+  -> Best Neighbor Obj: 1342 (Delta: 212)
+  -> Global Best Obj: 1414
+[Iter 31] Valid Neighbors: 16 | Tabu Hits: 7 (Overrides: 0)
+  -> Best Neighbor Obj: 1300 (Delta: -42)
+  -> Global Best Obj: 1414
+[Iter 32] Valid Neighbors: 30 | Tabu Hits: 12 (Overrides: 0)
+  -> Best Neighbor Obj: 1352 (Delta: 52)
+  -> Global Best Obj: 1414
+[Iter 33] Valid Neighbors: 29 | Tabu Hits: 10 (Overrides: 0)
+  -> Best Neighbor Obj: 1324 (Delta: -28)
+  -> Global Best Obj: 1414
+[Iter 34] Valid Neighbors: 30 | Tabu Hits: 10 (Overrides: 0)
+  -> Best Neighbor Obj: 1294 (Delta: -30)
+  -> Global Best Obj: 1414
+[Iter 35] Valid Neighbors: 29 | Tabu Hits: 9 (Overrides: 0)
+  -> Best Neighbor Obj: 1287 (Delta: -7)
+  -> Global Best Obj: 1414
+[Iter 36] Valid Neighbors: 29 | Tabu Hits: 9 (Overrides: 0)
+  -> Best Neighbor Obj: 1264 (Delta: -23)
+  -> Global Best Obj: 1414
+[Iter 37] Valid Neighbors: 30 | Tabu Hits: 9 (Overrides: 0)
+  -> Best Neighbor Obj: 1314 (Delta: 50)
+  -> Global Best Obj: 1414
+[Iter 38] Valid Neighbors: 17 | Tabu Hits: 4 (Overrides: 0)
+  -> Best Neighbor Obj: 1273 (Delta: -41)
+  -> Global Best Obj: 1414
+[Iter 39] Valid Neighbors: 17 | Tabu Hits: 5 (Overrides: 0)
+  -> Best Neighbor Obj: 1225 (Delta: -48)
+  -> Global Best Obj: 1414
+[Iter 40] Valid Neighbors: 17 | Tabu Hits: 5 (Overrides: 0)
+  -> Best Neighbor Obj: 1234 (Delta: 9)
+  -> Global Best Obj: 1414
+[Iter 41] Valid Neighbors: 16 | Tabu Hits: 6 (Overrides: 0)
+  -> Best Neighbor Obj: 1296 (Delta: 62)
+  -> Global Best Obj: 1414
+[Iter 42] Valid Neighbors: 16 | Tabu Hits: 6 (Overrides: 0)
+  -> Best Neighbor Obj: 1186 (Delta: -110)
+  -> Global Best Obj: 1414
+[Iter 43] Valid Neighbors: 32 | Tabu Hits: 13 (Overrides: 0)
+  -> Best Neighbor Obj: 1264 (Delta: 78)
+  -> Global Best Obj: 1414
+[Iter 44] Valid Neighbors: 31 | Tabu Hits: 13 (Overrides: 0)
+  -> Best Neighbor Obj: 1159 (Delta: -105)
+  -> Global Best Obj: 1414
+[Iter 45] Valid Neighbors: 31 | Tabu Hits: 13 (Overrides: 0)
+  -> Best Neighbor Obj: 1187 (Delta: 28)
+  -> Global Best Obj: 1414
+[Iter 46] Valid Neighbors: 32 | Tabu Hits: 12 (Overrides: 0)
+  -> Best Neighbor Obj: 1314 (Delta: 127)
+  -> Global Best Obj: 1414
+[Iter 47] Valid Neighbors: 16 | Tabu Hits: 5 (Overrides: 0)
+  -> Best Neighbor Obj: 1353 (Delta: 39)
+  -> Global Best Obj: 1414
+[Iter 48] Valid Neighbors: 16 | Tabu Hits: 6 (Overrides: 0)
+  -> Best Neighbor Obj: 1292 (Delta: -61)
+  -> Global Best Obj: 1414
+[Iter 49] Valid Neighbors: 28 | Tabu Hits: 13 (Overrides: 0)
+  -> Best Neighbor Obj: 1430 (Delta: 138)
+  -> *** NEW GLOBAL BEST FOUND! ***
+  -> Global Best Obj: 1430
+[Iter 50] Valid Neighbors: 27 | Tabu Hits: 10 (Overrides: 0)
+  -> Best Neighbor Obj: 1375 (Delta: -55)
+  -> Global Best Obj: 1430
+[Iter 51] Valid Neighbors: 29 | Tabu Hits: 13 (Overrides: 0)
+  -> Best Neighbor Obj: 1317 (Delta: -58)
+  -> Global Best Obj: 1430
+[Iter 52] Valid Neighbors: 29 | Tabu Hits: 12 (Overrides: 0)
+  -> Best Neighbor Obj: 1310 (Delta: -7)
+  -> Global Best Obj: 1430
+[Iter 53] Valid Neighbors: 29 | Tabu Hits: 13 (Overrides: 0)
+  -> Best Neighbor Obj: 1287 (Delta: -23)
+  -> Global Best Obj: 1430
+[Iter 54] Valid Neighbors: 30 | Tabu Hits: 15 (Overrides: 0)
+  -> Best Neighbor Obj: 1257 (Delta: -30)
+  -> Global Best Obj: 1430
+[Iter 55] Valid Neighbors: 30 | Tabu Hits: 11 (Overrides: 0)
+  -> Best Neighbor Obj: 1297 (Delta: 40)
+  -> Global Best Obj: 1430
+[Iter 56] Valid Neighbors: 29 | Tabu Hits: 13 (Overrides: 0)
+  -> Best Neighbor Obj: 1256 (Delta: -41)
+  -> Global Best Obj: 1430
+[Iter 57] Valid Neighbors: 29 | Tabu Hits: 11 (Overrides: 0)
+  -> Best Neighbor Obj: 1199 (Delta: -57)
+  -> Global Best Obj: 1430
+[Iter 58] Valid Neighbors: 31 | Tabu Hits: 11 (Overrides: 0)
+  -> Best Neighbor Obj: 1323 (Delta: 124)
+  -> Global Best Obj: 1430
+[Iter 59] Valid Neighbors: 24 | Tabu Hits: 9 (Overrides: 0)
+  -> Best Neighbor Obj: 1288 (Delta: -35)
+  -> Global Best Obj: 1430
+[Iter 60] Valid Neighbors: 23 | Tabu Hits: 9 (Overrides: 0)
+  -> Best Neighbor Obj: 1244 (Delta: -44)
+  -> Global Best Obj: 1430
+[Iter 61] Valid Neighbors: 24 | Tabu Hits: 9 (Overrides: 0)
+  -> Best Neighbor Obj: 1202 (Delta: -42)
+  -> Global Best Obj: 1430
+[Iter 62] Valid Neighbors: 24 | Tabu Hits: 9 (Overrides: 0)
+  -> Best Neighbor Obj: 1261 (Delta: 59)
+  -> Global Best Obj: 1430
+[Iter 63] Valid Neighbors: 24 | Tabu Hits: 9 (Overrides: 0)
+  -> Best Neighbor Obj: 1339 (Delta: 78)
+  -> Global Best Obj: 1430
+[Iter 64] Valid Neighbors: 23 | Tabu Hits: 10 (Overrides: 1)
+  -> Best Neighbor Obj: 1440 (Delta: 101)
+  -> *** NEW GLOBAL BEST FOUND! ***
+  -> Global Best Obj: 1440
+[Iter 65] Valid Neighbors: 23 | Tabu Hits: 10 (Overrides: 0)
+  -> Best Neighbor Obj: 1313 (Delta: -127)
+  -> Global Best Obj: 1440
+[Iter 66] Valid Neighbors: 42 | Tabu Hits: 16 (Overrides: 0)
+  -> Best Neighbor Obj: 1404 (Delta: 91)
+  -> Global Best Obj: 1440
+[Iter 67] Valid Neighbors: 42 | Tabu Hits: 15 (Overrides: 0)
+  -> Best Neighbor Obj: 1390 (Delta: -14)
+  -> Global Best Obj: 1440
+[Iter 68] Valid Neighbors: 42 | Tabu Hits: 16 (Overrides: 0)
+  -> Best Neighbor Obj: 1312 (Delta: -78)
+  -> Global Best Obj: 1440
+[Iter 69] Valid Neighbors: 43 | Tabu Hits: 16 (Overrides: 0)
+  -> Best Neighbor Obj: 1422 (Delta: 110)
+  -> Global Best Obj: 1440
+[Iter 70] Valid Neighbors: 25 | Tabu Hits: 9 (Overrides: 0)
+  -> Best Neighbor Obj: 1362 (Delta: -60)
+  -> Global Best Obj: 1440
+[Iter 71] Valid Neighbors: 25 | Tabu Hits: 11 (Overrides: 0)
+  -> Best Neighbor Obj: 1238 (Delta: -124)
+  -> Global Best Obj: 1440
+[Iter 72] Valid Neighbors: 32 | Tabu Hits: 13 (Overrides: 0)
+  -> Best Neighbor Obj: 1295 (Delta: 57)
+  -> Global Best Obj: 1440
+[Iter 73] Valid Neighbors: 30 | Tabu Hits: 14 (Overrides: 0)
+  -> Best Neighbor Obj: 1350 (Delta: 55)
+  -> Global Best Obj: 1440
+[Iter 74] Valid Neighbors: 28 | Tabu Hits: 13 (Overrides: 0)
+  -> Best Neighbor Obj: 1206 (Delta: -144)
+  -> Global Best Obj: 1440
+[Iter 75] Valid Neighbors: 28 | Tabu Hits: 9 (Overrides: 0)
+  -> Best Neighbor Obj: 1165 (Delta: -41)
+  -> Global Best Obj: 1440
+[Iter 76] Valid Neighbors: 28 | Tabu Hits: 9 (Overrides: 0)
+  -> Best Neighbor Obj: 1227 (Delta: 62)
+  -> Global Best Obj: 1440
+[Iter 77] Valid Neighbors: 28 | Tabu Hits: 11 (Overrides: 0)
+  -> Best Neighbor Obj: 1176 (Delta: -51)
+  -> Global Best Obj: 1440
+[Iter 78] Valid Neighbors: 28 | Tabu Hits: 12 (Overrides: 0)
+  -> Best Neighbor Obj: 1149 (Delta: -27)
+  -> Global Best Obj: 1440
+[Iter 79] Valid Neighbors: 29 | Tabu Hits: 12 (Overrides: 0)
+  -> Best Neighbor Obj: 1211 (Delta: 62)
+  -> Global Best Obj: 1440
+[Iter 80] Valid Neighbors: 29 | Tabu Hits: 13 (Overrides: 0)
+  -> Best Neighbor Obj: 1177 (Delta: -34)
+  -> Global Best Obj: 1440
+[Iter 81] Valid Neighbors: 29 | Tabu Hits: 12 (Overrides: 0)
+  -> Best Neighbor Obj: 1217 (Delta: 40)
+  -> Global Best Obj: 1440
+[Iter 82] Valid Neighbors: 17 | Tabu Hits: 6 (Overrides: 0)
+  -> Best Neighbor Obj: 1149 (Delta: -68)
+  -> Global Best Obj: 1440
+[Iter 83] Valid Neighbors: 30 | Tabu Hits: 14 (Overrides: 0)
+  -> Best Neighbor Obj: 1186 (Delta: 37)
+  -> Global Best Obj: 1440
+[Iter 84] Valid Neighbors: 27 | Tabu Hits: 11 (Overrides: 0)
+  -> Best Neighbor Obj: 1129 (Delta: -57)
+  -> Global Best Obj: 1440
+[Iter 85] Valid Neighbors: 27 | Tabu Hits: 12 (Overrides: 0)
+  -> Best Neighbor Obj: 1121 (Delta: -8)
+  -> Global Best Obj: 1440
+[Iter 86] Valid Neighbors: 31 | Tabu Hits: 11 (Overrides: 0)
+  -> Best Neighbor Obj: 1297 (Delta: 176)
+  -> Global Best Obj: 1440
+[Iter 87] Valid Neighbors: 18 | Tabu Hits: 5 (Overrides: 0)
+  -> Best Neighbor Obj: 1336 (Delta: 39)
+  -> Global Best Obj: 1440
+[Iter 88] Valid Neighbors: 18 | Tabu Hits: 6 (Overrides: 0)
+  -> Best Neighbor Obj: 1280 (Delta: -56)
+  -> Global Best Obj: 1440
+[Iter 89] Valid Neighbors: 18 | Tabu Hits: 6 (Overrides: 0)
+  -> Best Neighbor Obj: 1259 (Delta: -21)
+  -> Global Best Obj: 1440
+[Iter 90] Valid Neighbors: 19 | Tabu Hits: 8 (Overrides: 0)
+  -> Best Neighbor Obj: 1205 (Delta: -54)
+  -> Global Best Obj: 1440
+[Iter 91] Valid Neighbors: 19 | Tabu Hits: 8 (Overrides: 0)
+  -> Best Neighbor Obj: 1253 (Delta: 48)
+  -> Global Best Obj: 1440
+[Iter 92] Valid Neighbors: 17 | Tabu Hits: 6 (Overrides: 0)
+  -> Best Neighbor Obj: 1193 (Delta: -60)
+  -> Global Best Obj: 1440
+[Iter 93] Valid Neighbors: 17 | Tabu Hits: 6 (Overrides: 0)
+  -> Best Neighbor Obj: 1153 (Delta: -40)
+  -> Global Best Obj: 1440
+[Iter 94] Valid Neighbors: 28 | Tabu Hits: 13 (Overrides: 0)
+  -> Best Neighbor Obj: 1203 (Delta: 50)
+  -> Global Best Obj: 1440
+[Iter 95] Valid Neighbors: 27 | Tabu Hits: 11 (Overrides: 0)
+  -> Best Neighbor Obj: 1159 (Delta: -44)
+  -> Global Best Obj: 1440
+[Iter 96] Valid Neighbors: 30 | Tabu Hits: 16 (Overrides: 0)
+  -> Best Neighbor Obj: 1118 (Delta: -41)
+  -> Global Best Obj: 1440
+[Iter 97] Valid Neighbors: 30 | Tabu Hits: 17 (Overrides: 0)
+  -> Best Neighbor Obj: 1069 (Delta: -49)
+  -> Global Best Obj: 1440
+[Iter 98] Valid Neighbors: 45 | Tabu Hits: 24 (Overrides: 0)
+  -> Best Neighbor Obj: 1134 (Delta: 65)
+  -> Global Best Obj: 1440
+[Iter 99] Valid Neighbors: 41 | Tabu Hits: 19 (Overrides: 0)
+  -> Best Neighbor Obj: 1097 (Delta: -37)
+  -> Global Best Obj: 1440
+[Iter 100] Valid Neighbors: 44 | Tabu Hits: 17 (Overrides: 0)
+  -> Best Neighbor Obj: 1309 (Delta: 212)
+  -> Global Best Obj: 1440
+[Iter 101] Valid Neighbors: 28 | Tabu Hits: 8 (Overrides: 0)
+  -> Best Neighbor Obj: 1410 (Delta: 101)
+  -> Global Best Obj: 1440
+[Iter 102] Valid Neighbors: 28 | Tabu Hits: 10 (Overrides: 0)
+  -> Best Neighbor Obj: 1371 (Delta: -39)
+  -> Global Best Obj: 1440
+[Iter 103] Valid Neighbors: 28 | Tabu Hits: 11 (Overrides: 0)
+  -> Best Neighbor Obj: 1320 (Delta: -51)
+  -> Global Best Obj: 1440
+[Iter 104] Valid Neighbors: 28 | Tabu Hits: 9 (Overrides: 0)
+  -> Best Neighbor Obj: 1299 (Delta: -21)
+  -> Global Best Obj: 1440
+[Iter 105] Valid Neighbors: 28 | Tabu Hits: 11 (Overrides: 0)
+  -> Best Neighbor Obj: 1272 (Delta: -27)
+  -> Global Best Obj: 1440
+[Iter 106] Valid Neighbors: 29 | Tabu Hits: 12 (Overrides: 0)
+  -> Best Neighbor Obj: 1300 (Delta: 28)
+  -> Global Best Obj: 1440
+[Iter 107] Valid Neighbors: 29 | Tabu Hits: 12 (Overrides: 0)
+  -> Best Neighbor Obj: 1340 (Delta: 40)
+  -> Global Best Obj: 1440
+[Iter 108] Valid Neighbors: 16 | Tabu Hits: 5 (Overrides: 0)
+  -> Best Neighbor Obj: 1285 (Delta: -55)
+  -> Global Best Obj: 1440
+[Iter 109] Valid Neighbors: 19 | Tabu Hits: 6 (Overrides: 0)
+  -> Best Neighbor Obj: 1199 (Delta: -86)
+  -> Global Best Obj: 1440
+[Iter 110] Valid Neighbors: 19 | Tabu Hits: 8 (Overrides: 0)
+  -> Best Neighbor Obj: 1145 (Delta: -54)
+  -> Global Best Obj: 1440
+[Iter 111] Valid Neighbors: 19 | Tabu Hits: 9 (Overrides: 0)
+  -> Best Neighbor Obj: 1113 (Delta: -32)
+  -> Global Best Obj: 1440
+[Iter 112] Valid Neighbors: 31 | Tabu Hits: 18 (Overrides: 0)
+  -> Best Neighbor Obj: 1165 (Delta: 52)
+  -> Global Best Obj: 1440
+[Iter 113] Valid Neighbors: 27 | Tabu Hits: 12 (Overrides: 0)
+  -> Best Neighbor Obj: 1123 (Delta: -42)
+  -> Global Best Obj: 1440
+[Iter 114] Valid Neighbors: 29 | Tabu Hits: 12 (Overrides: 0)
+  -> Best Neighbor Obj: 1276 (Delta: 153)
+  -> Global Best Obj: 1440
+  -> [RUIN MODE 0: COST RUIN] Ejecting near req 18: 25 30 17 21 18 2 
+  -> Total Obj after Ruin: 520
+[Iter 115] Valid Neighbors: 59 | Tabu Hits: 28 (Overrides: 0)
+  -> Best Neighbor Obj: 699 (Delta: 179)
+  -> Global Best Obj: 1440
+[Iter 116] Valid Neighbors: 58 | Tabu Hits: 27 (Overrides: 0)
+  -> Best Neighbor Obj: 864 (Delta: 165)
+  -> Global Best Obj: 1440
+[Iter 117] Valid Neighbors: 61 | Tabu Hits: 26 (Overrides: 0)
+  -> Best Neighbor Obj: 1109 (Delta: 245)
+  -> Global Best Obj: 1440
+[Iter 118] Valid Neighbors: 45 | Tabu Hits: 19 (Overrides: 0)
+  -> Best Neighbor Obj: 1180 (Delta: 71)
+  -> Global Best Obj: 1440
+[Iter 119] Valid Neighbors: 41 | Tabu Hits: 17 (Overrides: 0)
+  -> Best Neighbor Obj: 1159 (Delta: -21)
+  -> Global Best Obj: 1440
+[Iter 120] Valid Neighbors: 41 | Tabu Hits: 19 (Overrides: 0)
+  -> Best Neighbor Obj: 1156 (Delta: -3)
+  -> Global Best Obj: 1440
+[Iter 121] Valid Neighbors: 41 | Tabu Hits: 21 (Overrides: 0)
+  -> Best Neighbor Obj: 1148 (Delta: -8)
+  -> Global Best Obj: 1440
+[Iter 122] Valid Neighbors: 43 | Tabu Hits: 23 (Overrides: 0)
+  -> Best Neighbor Obj: 1131 (Delta: -17)
+  -> Global Best Obj: 1440
+[Iter 123] Valid Neighbors: 41 | Tabu Hits: 21 (Overrides: 0)
+  -> Best Neighbor Obj: 1130 (Delta: -1)
+  -> Global Best Obj: 1440
+[Iter 124] Valid Neighbors: 41 | Tabu Hits: 21 (Overrides: 0)
+  -> Best Neighbor Obj: 1200 (Delta: 70)
+  -> Global Best Obj: 1440
+[Iter 125] Valid Neighbors: 45 | Tabu Hits: 19 (Overrides: 0)
+  -> Best Neighbor Obj: 1357 (Delta: 157)
+  -> Global Best Obj: 1440
+[Iter 126] Valid Neighbors: 31 | Tabu Hits: 10 (Overrides: 0)
+  -> Best Neighbor Obj: 1297 (Delta: -60)
+  -> Global Best Obj: 1440
+[Iter 127] Valid Neighbors: 31 | Tabu Hits: 10 (Overrides: 0)
+  -> Best Neighbor Obj: 1256 (Delta: -41)
+  -> Global Best Obj: 1440
+[Iter 128] Valid Neighbors: 31 | Tabu Hits: 11 (Overrides: 0)
+  -> Best Neighbor Obj: 1199 (Delta: -57)
+  -> Global Best Obj: 1440
+[Iter 129] Valid Neighbors: 33 | Tabu Hits: 10 (Overrides: 0)
+  -> Best Neighbor Obj: 1323 (Delta: 124)
+  -> Global Best Obj: 1440
+[Iter 130] Valid Neighbors: 26 | Tabu Hits: 10 (Overrides: 0)
+  -> Best Neighbor Obj: 1258 (Delta: -65)
+  -> Global Best Obj: 1440
+[Iter 131] Valid Neighbors: 26 | Tabu Hits: 11 (Overrides: 0)
+  -> Best Neighbor Obj: 1235 (Delta: -23)
+  -> Global Best Obj: 1440
+[Iter 132] Valid Neighbors: 27 | Tabu Hits: 10 (Overrides: 0)
+  -> Best Neighbor Obj: 1285 (Delta: 50)
+  -> Global Best Obj: 1440
+[Iter 133] Valid Neighbors: 15 | Tabu Hits: 5 (Overrides: 0)
+  -> Best Neighbor Obj: 1199 (Delta: -86)
+  -> Global Best Obj: 1440
+[Iter 134] Valid Neighbors: 15 | Tabu Hits: 4 (Overrides: 0)
+  -> Best Neighbor Obj: 1261 (Delta: 62)
+  -> Global Best Obj: 1440
+[Iter 135] Valid Neighbors: 15 | Tabu Hits: 5 (Overrides: 0)
+  -> Best Neighbor Obj: 1248 (Delta: -13)
+  -> Global Best Obj: 1440
+[Iter 136] Valid Neighbors: 27 | Tabu Hits: 12 (Overrides: 0)
+  -> Best Neighbor Obj: 1357 (Delta: 109)
+  -> Global Best Obj: 1440
+[Iter 137] Valid Neighbors: 27 | Tabu Hits: 10 (Overrides: 0)
+  -> Best Neighbor Obj: 1336 (Delta: -21)
+  -> Global Best Obj: 1440
+[Iter 138] Valid Neighbors: 27 | Tabu Hits: 12 (Overrides: 0)
+  -> Best Neighbor Obj: 1312 (Delta: -24)
+  -> Global Best Obj: 1440
+[Iter 139] Valid Neighbors: 27 | Tabu Hits: 12 (Overrides: 0)
+  -> Best Neighbor Obj: 1354 (Delta: 42)
+  -> Global Best Obj: 1440
+[Iter 140] Valid Neighbors: 15 | Tabu Hits: 5 (Overrides: 0)
+  -> Best Neighbor Obj: 1244 (Delta: -110)
+  -> Global Best Obj: 1440
+[Iter 141] Valid Neighbors: 30 | Tabu Hits: 9 (Overrides: 0)
+  -> Best Neighbor Obj: 1336 (Delta: 92)
+  -> Global Best Obj: 1440
+[Iter 142] Valid Neighbors: 29 | Tabu Hits: 9 (Overrides: 0)
+  -> Best Neighbor Obj: 1322 (Delta: -14)
+  -> Global Best Obj: 1440
+[Iter 143] Valid Neighbors: 29 | Tabu Hits: 10 (Overrides: 0)
+  -> Best Neighbor Obj: 1236 (Delta: -86)
+  -> Global Best Obj: 1440
+[Iter 144] Valid Neighbors: 29 | Tabu Hits: 11 (Overrides: 0)
+  -> Best Neighbor Obj: 1217 (Delta: -19)
+  -> Global Best Obj: 1440
+[Iter 145] Valid Neighbors: 29 | Tabu Hits: 12 (Overrides: 0)
+  -> Best Neighbor Obj: 1212 (Delta: -5)
+  -> Global Best Obj: 1440
+[Iter 146] Valid Neighbors: 29 | Tabu Hits: 12 (Overrides: 0)
+  -> Best Neighbor Obj: 1272 (Delta: 60)
+  -> Global Best Obj: 1440
+[Iter 147] Valid Neighbors: 30 | Tabu Hits: 14 (Overrides: 0)
+  -> Best Neighbor Obj: 1251 (Delta: -21)
+  -> Global Best Obj: 1440
+[Iter 148] Valid Neighbors: 30 | Tabu Hits: 13 (Overrides: 0)
+  -> Best Neighbor Obj: 1245 (Delta: -6)
+  -> Global Best Obj: 1440
+[Iter 149] Valid Neighbors: 32 | Tabu Hits: 12 (Overrides: 0)
+  -> Best Neighbor Obj: 1291 (Delta: 46)
+  -> Global Best Obj: 1440
+[Iter 150] Valid Neighbors: 15 | Tabu Hits: 2 (Overrides: 0)
+  -> Best Neighbor Obj: 1249 (Delta: -42)
+  -> Global Best Obj: 1440
+[Iter 151] Valid Neighbors: 26 | Tabu Hits: 6 (Overrides: 0)
+  -> Best Neighbor Obj: 1301 (Delta: 52)
+  -> Global Best Obj: 1440
+[Iter 152] Valid Neighbors: 25 | Tabu Hits: 5 (Overrides: 0)
+  -> Best Neighbor Obj: 1262 (Delta: -39)
+  -> Global Best Obj: 1440
+[Iter 153] Valid Neighbors: 25 | Tabu Hits: 7 (Overrides: 0)
+  -> Best Neighbor Obj: 1216 (Delta: -46)
+  -> Global Best Obj: 1440
+[Iter 154] Valid Neighbors: 45 | Tabu Hits: 17 (Overrides: 0)
+  -> Best Neighbor Obj: 1275 (Delta: 59)
+  -> Global Best Obj: 1440
+[Iter 155] Valid Neighbors: 44 | Tabu Hits: 15 (Overrides: 0)
+  -> Best Neighbor Obj: 1385 (Delta: 110)
+  -> Global Best Obj: 1440
+[Iter 156] Valid Neighbors: 26 | Tabu Hits: 8 (Overrides: 0)
+  -> Best Neighbor Obj: 1364 (Delta: -21)
+  -> Global Best Obj: 1440
+[Iter 157] Valid Neighbors: 26 | Tabu Hits: 9 (Overrides: 0)
+  -> Best Neighbor Obj: 1323 (Delta: -41)
+  -> Global Best Obj: 1440
+[Iter 158] Valid Neighbors: 26 | Tabu Hits: 11 (Overrides: 0)
+  -> Best Neighbor Obj: 1258 (Delta: -65)
+  -> Global Best Obj: 1440
+[Iter 159] Valid Neighbors: 26 | Tabu Hits: 11 (Overrides: 0)
+  -> Best Neighbor Obj: 1265 (Delta: 7)
+  -> Global Best Obj: 1440
+[Iter 160] Valid Neighbors: 26 | Tabu Hits: 11 (Overrides: 0)
+  -> Best Neighbor Obj: 1235 (Delta: -30)
+  -> Global Best Obj: 1440
+[Iter 161] Valid Neighbors: 27 | Tabu Hits: 12 (Overrides: 0)
+  -> Best Neighbor Obj: 1285 (Delta: 50)
+  -> Global Best Obj: 1440
+[Iter 162] Valid Neighbors: 15 | Tabu Hits: 5 (Overrides: 0)
+  -> Best Neighbor Obj: 1199 (Delta: -86)
+  -> Global Best Obj: 1440
+[Iter 163] Valid Neighbors: 15 | Tabu Hits: 4 (Overrides: 0)
+  -> Best Neighbor Obj: 1300 (Delta: 101)
+  -> Global Best Obj: 1440
+[Iter 164] Valid Neighbors: 15 | Tabu Hits: 5 (Overrides: 0)
+  -> Best Neighbor Obj: 1287 (Delta: -13)
+  -> Global Best Obj: 1440
+  -> [RUIN MODE 0: COST RUIN] Ejecting near req 14: 14 12 26 25 20 27 
+  -> Total Obj after Ruin: 517
+[Iter 165] Valid Neighbors: 83 | Tabu Hits: 52 (Overrides: 0)
+  -> Best Neighbor Obj: 696 (Delta: 179)
+  -> Global Best Obj: 1440
+[Iter 166] Valid Neighbors: 81 | Tabu Hits: 51 (Overrides: 0)
+  -> Best Neighbor Obj: 832 (Delta: 136)
+  -> Global Best Obj: 1440
+[Iter 167] Valid Neighbors: 80 | Tabu Hits: 47 (Overrides: 0)
+  -> Best Neighbor Obj: 960 (Delta: 128)
+  -> Global Best Obj: 1440
+[Iter 168] Valid Neighbors: 78 | Tabu Hits: 43 (Overrides: 0)
+  -> Best Neighbor Obj: 1166 (Delta: 206)
+  -> Global Best Obj: 1440
+[Iter 169] Valid Neighbors: 61 | Tabu Hits: 32 (Overrides: 0)
+  -> Best Neighbor Obj: 1129 (Delta: -37)
+  -> Global Best Obj: 1440
+[Iter 170] Valid Neighbors: 63 | Tabu Hits: 31 (Overrides: 0)
+  -> Best Neighbor Obj: 1341 (Delta: 212)
+  -> Global Best Obj: 1440
+[Iter 171] Valid Neighbors: 46 | Tabu Hits: 21 (Overrides: 0)
+  -> Best Neighbor Obj: 1355 (Delta: 14)
+  -> Global Best Obj: 1440
+[Iter 172] Valid Neighbors: 45 | Tabu Hits: 18 (Overrides: 0)
+  -> Best Neighbor Obj: 1334 (Delta: -21)
+  -> Global Best Obj: 1440
+[Iter 173] Valid Neighbors: 44 | Tabu Hits: 19 (Overrides: 0)
+  -> Best Neighbor Obj: 1306 (Delta: -28)
+  -> Global Best Obj: 1440
+[Iter 174] Valid Neighbors: 45 | Tabu Hits: 21 (Overrides: 0)
+  -> Best Neighbor Obj: 1282 (Delta: -24)
+  -> Global Best Obj: 1440
+[Iter 175] Valid Neighbors: 45 | Tabu Hits: 19 (Overrides: 0)
+  -> Best Neighbor Obj: 1324 (Delta: 42)
+  -> Global Best Obj: 1440
+[Iter 176] Valid Neighbors: 30 | Tabu Hits: 10 (Overrides: 0)
+  -> Best Neighbor Obj: 1283 (Delta: -41)
+  -> Global Best Obj: 1440
+[Iter 177] Valid Neighbors: 30 | Tabu Hits: 11 (Overrides: 0)
+  -> Best Neighbor Obj: 1228 (Delta: -55)
+  -> Global Best Obj: 1440
+[Iter 178] Valid Neighbors: 33 | Tabu Hits: 12 (Overrides: 0)
+  -> Best Neighbor Obj: 1142 (Delta: -86)
+  -> Global Best Obj: 1440
+[Iter 179] Valid Neighbors: 33 | Tabu Hits: 9 (Overrides: 0)
+  -> Best Neighbor Obj: 1295 (Delta: 153)
+  -> Global Best Obj: 1440
+[Iter 180] Valid Neighbors: 29 | Tabu Hits: 8 (Overrides: 0)
+  -> Best Neighbor Obj: 1203 (Delta: -92)
+  -> Global Best Obj: 1440
+[Iter 181] Valid Neighbors: 30 | Tabu Hits: 9 (Overrides: 0)
+  -> Best Neighbor Obj: 1313 (Delta: 110)
+  -> Global Best Obj: 1440
+[Iter 182] Valid Neighbors: 15 | Tabu Hits: 6 (Overrides: 0)
+  -> Best Neighbor Obj: 1189 (Delta: -124)
+  -> Global Best Obj: 1440
+[Iter 183] Valid Neighbors: 21 | Tabu Hits: 9 (Overrides: 0)
+  -> Best Neighbor Obj: 1237 (Delta: 48)
+  -> Global Best Obj: 1440
+[Iter 184] Valid Neighbors: 18 | Tabu Hits: 8 (Overrides: 0)
+  -> Best Neighbor Obj: 1154 (Delta: -83)
+  -> Global Best Obj: 1440
+[Iter 185] Valid Neighbors: 17 | Tabu Hits: 8 (Overrides: 0)
+  -> Best Neighbor Obj: 1084 (Delta: -70)
+  -> Global Best Obj: 1440
+[Iter 186] Valid Neighbors: 29 | Tabu Hits: 14 (Overrides: 0)
+  -> Best Neighbor Obj: 1146 (Delta: 62)
+  -> Global Best Obj: 1440
+[Iter 187] Valid Neighbors: 29 | Tabu Hits: 15 (Overrides: 0)
+  -> Best Neighbor Obj: 1188 (Delta: 42)
+  -> Global Best Obj: 1440
+[Iter 188] Valid Neighbors: 27 | Tabu Hits: 14 (Overrides: 0)
+  -> Best Neighbor Obj: 1151 (Delta: -37)
+  -> Global Best Obj: 1440
+[Iter 189] Valid Neighbors: 30 | Tabu Hits: 14 (Overrides: 0)
+  -> Best Neighbor Obj: 1219 (Delta: 68)
+  -> Global Best Obj: 1440
+[Iter 190] Valid Neighbors: 17 | Tabu Hits: 7 (Overrides: 0)
+  -> Best Neighbor Obj: 1258 (Delta: 39)
+  -> Global Best Obj: 1440
+[Iter 191] Valid Neighbors: 17 | Tabu Hits: 6 (Overrides: 0)
+  -> Best Neighbor Obj: 1402 (Delta: 144)
+  -> Global Best Obj: 1440
+[Iter 192] Valid Neighbors: 16 | Tabu Hits: 6 (Overrides: 0)
+  -> Best Neighbor Obj: 1360 (Delta: -42)
+  -> Global Best Obj: 1440
+[Iter 193] Valid Neighbors: 30 | Tabu Hits: 13 (Overrides: 0)
+  -> Best Neighbor Obj: 1412 (Delta: 52)
+  -> Global Best Obj: 1440
+[Iter 194] Valid Neighbors: 29 | Tabu Hits: 12 (Overrides: 0)
+  -> Best Neighbor Obj: 1357 (Delta: -55)
+  -> Global Best Obj: 1440
+[Iter 195] Valid Neighbors: 31 | Tabu Hits: 14 (Overrides: 0)
+  -> Best Neighbor Obj: 1299 (Delta: -58)
+  -> Global Best Obj: 1440
+[Iter 196] Valid Neighbors: 31 | Tabu Hits: 13 (Overrides: 0)
+  -> Best Neighbor Obj: 1292 (Delta: -7)
+  -> Global Best Obj: 1440
+[Iter 197] Valid Neighbors: 31 | Tabu Hits: 14 (Overrides: 0)
+  -> Best Neighbor Obj: 1269 (Delta: -23)
+  -> Global Best Obj: 1440
+[Iter 198] Valid Neighbors: 32 | Tabu Hits: 11 (Overrides: 0)
+  -> Best Neighbor Obj: 1319 (Delta: 50)
+  -> Global Best Obj: 1440
+[Iter 199] Valid Neighbors: 18 | Tabu Hits: 6 (Overrides: 0)
+  -> Best Neighbor Obj: 1262 (Delta: -57)
+  -> Global Best Obj: 1440
+[Iter 200] Valid Neighbors: 19 | Tabu Hits: 5 (Overrides: 0)
+  -> Best Neighbor Obj: 1386 (Delta: 124)
+  -> Global Best Obj: 1440
+[Iter 201] Valid Neighbors: 15 | Tabu Hits: 3 (Overrides: 0)
+  -> Best Neighbor Obj: 1347 (Delta: -39)
+  -> Global Best Obj: 1440
+[Iter 202] Valid Neighbors: 15 | Tabu Hits: 4 (Overrides: 0)
+  -> Best Neighbor Obj: 1326 (Delta: -21)
+  -> Global Best Obj: 1440
+[Iter 203] Valid Neighbors: 15 | Tabu Hits: 4 (Overrides: 0)
+  -> Best Neighbor Obj: 1285 (Delta: -41)
+  -> Global Best Obj: 1440
+[Iter 204] Valid Neighbors: 15 | Tabu Hits: 5 (Overrides: 0)
+  -> Best Neighbor Obj: 1199 (Delta: -86)
+  -> Global Best Obj: 1440
+[Iter 205] Valid Neighbors: 15 | Tabu Hits: 5 (Overrides: 0)
+  -> Best Neighbor Obj: 1186 (Delta: -13)
+  -> Global Best Obj: 1440
+[Iter 206] Valid Neighbors: 27 | Tabu Hits: 14 (Overrides: 0)
+  -> Best Neighbor Obj: 1271 (Delta: 85)
+  -> Global Best Obj: 1440
+[Iter 207] Valid Neighbors: 27 | Tabu Hits: 13 (Overrides: 0)
+  -> Best Neighbor Obj: 1313 (Delta: 42)
+  -> Global Best Obj: 1440
+[Iter 208] Valid Neighbors: 15 | Tabu Hits: 6 (Overrides: 0)
+  -> Best Neighbor Obj: 1203 (Delta: -110)
+  -> Global Best Obj: 1440
+[Iter 209] Valid Neighbors: 30 | Tabu Hits: 12 (Overrides: 0)
+  -> Best Neighbor Obj: 1281 (Delta: 78)
+  -> Global Best Obj: 1440
+[Iter 210] Valid Neighbors: 29 | Tabu Hits: 11 (Overrides: 0)
+  -> Best Neighbor Obj: 1295 (Delta: 14)
+  -> Global Best Obj: 1440
+[Iter 211] Valid Neighbors: 29 | Tabu Hits: 11 (Overrides: 0)
+  -> Best Neighbor Obj: 1195 (Delta: -100)
+  -> Global Best Obj: 1440
+[Iter 212] Valid Neighbors: 29 | Tabu Hits: 12 (Overrides: 0)
+  -> Best Neighbor Obj: 1176 (Delta: -19)
+  -> Global Best Obj: 1440
+[Iter 213] Valid Neighbors: 29 | Tabu Hits: 12 (Overrides: 0)
+  -> Best Neighbor Obj: 1238 (Delta: 62)
+  -> Global Best Obj: 1440
+[Iter 214] Valid Neighbors: 30 | Tabu Hits: 14 (Overrides: 0)
+  -> Best Neighbor Obj: 1233 (Delta: -5)
+  -> Global Best Obj: 1440
+  -> [RUIN MODE 2: TIME-WINDOW RUIN] Ejecting near req 16: 21 11 27 25 16 30 
+  -> Total Obj after Ruin: 312
+[Iter 215] Valid Neighbors: 93 | Tabu Hits: 42 (Overrides: 0)
+  -> Best Neighbor Obj: 484 (Delta: 172)
+  -> Global Best Obj: 1440
+[Iter 216] Valid Neighbors: 89 | Tabu Hits: 34 (Overrides: 0)
+  -> Best Neighbor Obj: 656 (Delta: 172)
+  -> Global Best Obj: 1440
+[Iter 217] Valid Neighbors: 70 | Tabu Hits: 27 (Overrides: 0)
+  -> Best Neighbor Obj: 759 (Delta: 103)
+  -> Global Best Obj: 1440
+[Iter 218] Valid Neighbors: 71 | Tabu Hits: 27 (Overrides: 0)
+  -> Best Neighbor Obj: 826 (Delta: 67)
+  -> Global Best Obj: 1440
+[Iter 219] Valid Neighbors: 72 | Tabu Hits: 29 (Overrides: 0)
+  -> Best Neighbor Obj: 850 (Delta: 24)
+  -> Global Best Obj: 1440
+[Iter 220] Valid Neighbors: 74 | Tabu Hits: 30 (Overrides: 0)
+  -> Best Neighbor Obj: 1114 (Delta: 264)
+  -> Global Best Obj: 1440
+[Iter 221] Valid Neighbors: 61 | Tabu Hits: 26 (Overrides: 0)
+  -> Best Neighbor Obj: 1157 (Delta: 43)
+  -> Global Best Obj: 1440
+[Iter 222] Valid Neighbors: 61 | Tabu Hits: 25 (Overrides: 0)
+  -> Best Neighbor Obj: 1097 (Delta: -60)
+  -> Global Best Obj: 1440
+[Iter 223] Valid Neighbors: 60 | Tabu Hits: 25 (Overrides: 0)
+  -> Best Neighbor Obj: 1111 (Delta: 14)
+  -> Global Best Obj: 1440
+[Iter 224] Valid Neighbors: 60 | Tabu Hits: 26 (Overrides: 0)
+  -> Best Neighbor Obj: 1033 (Delta: -78)
+  -> Global Best Obj: 1440
+[Iter 225] Valid Neighbors: 60 | Tabu Hits: 26 (Overrides: 0)
+  -> Best Neighbor Obj: 1073 (Delta: 40)
+  -> Global Best Obj: 1440
+[Iter 226] Valid Neighbors: 44 | Tabu Hits: 19 (Overrides: 0)
+  -> Best Neighbor Obj: 987 (Delta: -86)
+  -> Global Best Obj: 1440
+[Iter 227] Valid Neighbors: 44 | Tabu Hits: 16 (Overrides: 0)
+  -> Best Neighbor Obj: 1008 (Delta: 21)
+  -> Global Best Obj: 1440
+[Iter 228] Valid Neighbors: 44 | Tabu Hits: 14 (Overrides: 0)
+  -> Best Neighbor Obj: 1029 (Delta: 21)
+  -> Global Best Obj: 1440
+[Iter 229] Valid Neighbors: 45 | Tabu Hits: 16 (Overrides: 0)
+  -> Best Neighbor Obj: 987 (Delta: -42)
+  -> Global Best Obj: 1440
+[Iter 230] Valid Neighbors: 47 | Tabu Hits: 18 (Overrides: 0)
+  -> Best Neighbor Obj: 1199 (Delta: 212)
+  -> Global Best Obj: 1440
+[Iter 231] Valid Neighbors: 36 | Tabu Hits: 12 (Overrides: 0)
+  -> Best Neighbor Obj: 1207 (Delta: 8)
+  -> Global Best Obj: 1440
+[Iter 232] Valid Neighbors: 36 | Tabu Hits: 12 (Overrides: 0)
+  -> Best Neighbor Obj: 1207 (Delta: 0)
+  -> Global Best Obj: 1440
+[Iter 233] Valid Neighbors: 35 | Tabu Hits: 13 (Overrides: 0)
+  -> Best Neighbor Obj: 1169 (Delta: -38)
+  -> Global Best Obj: 1440
+[Iter 234] Valid Neighbors: 34 | Tabu Hits: 14 (Overrides: 0)
+  -> Best Neighbor Obj: 1156 (Delta: -13)
+  -> Global Best Obj: 1440
+[Iter 235] Valid Neighbors: 50 | Tabu Hits: 21 (Overrides: 0)
+  -> Best Neighbor Obj: 1293 (Delta: 137)
+  -> Global Best Obj: 1440
+[Iter 236] Valid Neighbors: 51 | Tabu Hits: 21 (Overrides: 0)
+  -> Best Neighbor Obj: 1332 (Delta: 39)
+  -> Global Best Obj: 1440
+[Iter 237] Valid Neighbors: 51 | Tabu Hits: 23 (Overrides: 0)
+  -> Best Neighbor Obj: 1318 (Delta: -14)
+  -> Global Best Obj: 1440
+[Iter 238] Valid Neighbors: 51 | Tabu Hits: 21 (Overrides: 0)
+  -> Best Neighbor Obj: 1275 (Delta: -43)
+  -> Global Best Obj: 1440
+[Iter 239] Valid Neighbors: 52 | Tabu Hits: 22 (Overrides: 0)
+  -> Best Neighbor Obj: 1452 (Delta: 177)
+  -> *** NEW GLOBAL BEST FOUND! ***
+  -> Global Best Obj: 1452
+[Iter 240] Valid Neighbors: 32 | Tabu Hits: 14 (Overrides: 0)
+  -> Best Neighbor Obj: 1402 (Delta: -50)
+  -> Global Best Obj: 1452
+[Iter 241] Valid Neighbors: 33 | Tabu Hits: 13 (Overrides: 0)
+  -> Best Neighbor Obj: 1442 (Delta: 40)
+  -> Global Best Obj: 1452
+[Iter 242] Valid Neighbors: 21 | Tabu Hits: 6 (Overrides: 0)
+  -> Best Neighbor Obj: 1387 (Delta: -55)
+  -> Global Best Obj: 1452
+[Iter 243] Valid Neighbors: 22 | Tabu Hits: 8 (Overrides: 0)
+  -> Best Neighbor Obj: 1331 (Delta: -56)
+  -> Global Best Obj: 1452
+[Iter 244] Valid Neighbors: 20 | Tabu Hits: 7 (Overrides: 0)
+  -> Best Neighbor Obj: 1292 (Delta: -39)
+  -> Global Best Obj: 1452
+[Iter 245] Valid Neighbors: 20 | Tabu Hits: 7 (Overrides: 0)
+  -> Best Neighbor Obj: 1271 (Delta: -21)
+  -> Global Best Obj: 1452
+[Iter 246] Valid Neighbors: 20 | Tabu Hits: 5 (Overrides: 0)
+  -> Best Neighbor Obj: 1230 (Delta: -41)
+  -> Global Best Obj: 1452
+[Iter 247] Valid Neighbors: 20 | Tabu Hits: 6 (Overrides: 0)
+  -> Best Neighbor Obj: 1159 (Delta: -71)
+  -> Global Best Obj: 1452
+[Iter 248] Valid Neighbors: 21 | Tabu Hits: 7 (Overrides: 0)
+  -> Best Neighbor Obj: 1203 (Delta: 44)
+  -> Global Best Obj: 1452
+[Iter 249] Valid Neighbors: 21 | Tabu Hits: 7 (Overrides: 0)
+  -> Best Neighbor Obj: 1133 (Delta: -70)
+  -> Global Best Obj: 1452
+[Iter 250] Valid Neighbors: 33 | Tabu Hits: 15 (Overrides: 0)
+  -> Best Neighbor Obj: 1175 (Delta: 42)
+  -> Global Best Obj: 1452
+[Iter 251] Valid Neighbors: 31 | Tabu Hits: 13 (Overrides: 0)
+  -> Best Neighbor Obj: 1097 (Delta: -78)
+  -> Global Best Obj: 1452
+[Iter 252] Valid Neighbors: 31 | Tabu Hits: 14 (Overrides: 0)
+  -> Best Neighbor Obj: 1086 (Delta: -11)
+  -> Global Best Obj: 1452
+[Iter 253] Valid Neighbors: 32 | Tabu Hits: 16 (Overrides: 0)
+  -> Best Neighbor Obj: 1069 (Delta: -17)
+  -> Global Best Obj: 1452
+[Iter 254] Valid Neighbors: 31 | Tabu Hits: 16 (Overrides: 0)
+  -> Best Neighbor Obj: 1068 (Delta: -1)
+  -> Global Best Obj: 1452
+[Iter 255] Valid Neighbors: 31 | Tabu Hits: 16 (Overrides: 0)
+  -> Best Neighbor Obj: 1060 (Delta: -8)
+  -> Global Best Obj: 1452
+[Iter 256] Valid Neighbors: 33 | Tabu Hits: 18 (Overrides: 0)
+  -> Best Neighbor Obj: 1054 (Delta: -6)
+  -> Global Best Obj: 1452
+[Iter 257] Valid Neighbors: 31 | Tabu Hits: 19 (Overrides: 0)
+  -> Best Neighbor Obj: 1047 (Delta: -7)
+  -> Global Best Obj: 1452
+[Iter 258] Valid Neighbors: 38 | Tabu Hits: 17 (Overrides: 0)
+  -> Best Neighbor Obj: 1148 (Delta: 101)
+  -> Global Best Obj: 1452
+[Iter 259] Valid Neighbors: 38 | Tabu Hits: 15 (Overrides: 0)
+  -> Best Neighbor Obj: 1211 (Delta: 63)
+  -> Global Best Obj: 1452
+[Iter 260] Valid Neighbors: 35 | Tabu Hits: 16 (Overrides: 0)
+  -> Best Neighbor Obj: 1387 (Delta: 176)
+  -> Global Best Obj: 1452
+[Iter 261] Valid Neighbors: 22 | Tabu Hits: 5 (Overrides: 0)
+  -> Best Neighbor Obj: 1348 (Delta: -39)
+  -> Global Best Obj: 1452
+[Iter 262] Valid Neighbors: 22 | Tabu Hits: 6 (Overrides: 0)
+  -> Best Neighbor Obj: 1327 (Delta: -21)
+  -> Global Best Obj: 1452
+[Iter 263] Valid Neighbors: 22 | Tabu Hits: 6 (Overrides: 0)
+  -> Best Neighbor Obj: 1287 (Delta: -40)
+  -> Global Best Obj: 1452
+[Iter 264] Valid Neighbors: 33 | Tabu Hits: 15 (Overrides: 0)
+  -> Best Neighbor Obj: 1337 (Delta: 50)
+  -> Global Best Obj: 1452
+[Iter 265] Valid Neighbors: 32 | Tabu Hits: 14 (Overrides: 0)
+  -> Best Neighbor Obj: 1281 (Delta: -56)
+  -> Global Best Obj: 1452
+[Iter 266] Valid Neighbors: 30 | Tabu Hits: 15 (Overrides: 0)
+  -> Best Neighbor Obj: 1210 (Delta: -71)
+  -> Global Best Obj: 1452
+[Iter 267] Valid Neighbors: 31 | Tabu Hits: 14 (Overrides: 0)
+  -> Best Neighbor Obj: 1265 (Delta: 55)
+  -> Global Best Obj: 1452
+[Iter 268] Valid Neighbors: 33 | Tabu Hits: 15 (Overrides: 0)
+  -> Best Neighbor Obj: 1309 (Delta: 44)
+  -> Global Best Obj: 1452
+[Iter 269] Valid Neighbors: 30 | Tabu Hits: 13 (Overrides: 0)
+  -> Best Neighbor Obj: 1261 (Delta: -48)
+  -> Global Best Obj: 1452
+[Iter 270] Valid Neighbors: 30 | Tabu Hits: 14 (Overrides: 0)
+  -> Best Neighbor Obj: 1315 (Delta: 54)
+  -> Global Best Obj: 1452
+[Iter 271] Valid Neighbors: 30 | Tabu Hits: 18 (Overrides: 1)
+  -> Best Neighbor Obj: 1468 (Delta: 153)
+  -> *** NEW GLOBAL BEST FOUND! ***
+  -> Global Best Obj: 1468
+[Iter 272] Valid Neighbors: 27 | Tabu Hits: 12 (Overrides: 2)
+  -> Best Neighbor Obj: 1528 (Delta: 60)
+  -> *** NEW GLOBAL BEST FOUND! ***
+  -> Global Best Obj: 1528
+[Iter 273] Valid Neighbors: 27 | Tabu Hits: 10 (Overrides: 0)
+  -> Best Neighbor Obj: 1477 (Delta: -51)
+  -> Global Best Obj: 1528
+[Iter 274] Valid Neighbors: 27 | Tabu Hits: 11 (Overrides: 0)
+  -> Best Neighbor Obj: 1391 (Delta: -86)
+  -> Global Best Obj: 1528
+[Iter 275] Valid Neighbors: 27 | Tabu Hits: 11 (Overrides: 0)
+  -> Best Neighbor Obj: 1433 (Delta: 42)
+  -> Global Best Obj: 1528
+[Iter 276] Valid Neighbors: 28 | Tabu Hits: 10 (Overrides: 0)
+  -> Best Neighbor Obj: 1478 (Delta: 45)
+  -> Global Best Obj: 1528
+[Iter 277] Valid Neighbors: 28 | Tabu Hits: 12 (Overrides: 0)
+  -> Best Neighbor Obj: 1518 (Delta: 40)
+  -> Global Best Obj: 1528
+[Iter 278] Valid Neighbors: 17 | Tabu Hits: 6 (Overrides: 0)
+  -> Best Neighbor Obj: 1417 (Delta: -101)
+  -> Global Best Obj: 1528
+[Iter 279] Valid Neighbors: 17 | Tabu Hits: 7 (Overrides: 0)
+  -> Best Neighbor Obj: 1293 (Delta: -124)
+  -> Global Best Obj: 1528
+[Iter 280] Valid Neighbors: 22 | Tabu Hits: 11 (Overrides: 0)
+  -> Best Neighbor Obj: 1341 (Delta: 48)
+  -> Global Best Obj: 1528
+[Iter 281] Valid Neighbors: 21 | Tabu Hits: 11 (Overrides: 0)
+  -> Best Neighbor Obj: 1286 (Delta: -55)
+  -> Global Best Obj: 1528
+[Iter 282] Valid Neighbors: 22 | Tabu Hits: 14 (Overrides: 0)
+  -> Best Neighbor Obj: 1142 (Delta: -144)
+  -> Global Best Obj: 1528
+[Iter 283] Valid Neighbors: 34 | Tabu Hits: 21 (Overrides: 0)
+  -> Best Neighbor Obj: 1151 (Delta: 9)
+  -> Global Best Obj: 1528
+[Iter 284] Valid Neighbors: 29 | Tabu Hits: 15 (Overrides: 0)
+  -> Best Neighbor Obj: 1086 (Delta: -65)
+  -> Global Best Obj: 1528
+[Iter 285] Valid Neighbors: 29 | Tabu Hits: 12 (Overrides: 0)
+  -> Best Neighbor Obj: 1033 (Delta: -53)
+  -> Global Best Obj: 1528
+[Iter 286] Valid Neighbors: 30 | Tabu Hits: 13 (Overrides: 0)
+  -> Best Neighbor Obj: 1014 (Delta: -19)
+  -> Global Best Obj: 1528
+[Iter 287] Valid Neighbors: 30 | Tabu Hits: 10 (Overrides: 0)
+  -> Best Neighbor Obj: 1093 (Delta: 79)
+  -> Global Best Obj: 1528
+[Iter 288] Valid Neighbors: 29 | Tabu Hits: 11 (Overrides: 0)
+  -> Best Neighbor Obj: 1059 (Delta: -34)
+  -> Global Best Obj: 1528
+[Iter 289] Valid Neighbors: 30 | Tabu Hits: 13 (Overrides: 0)
+  -> Best Neighbor Obj: 1003 (Delta: -56)
+  -> Global Best Obj: 1528
+[Iter 290] Valid Neighbors: 28 | Tabu Hits: 13 (Overrides: 0)
+  -> Best Neighbor Obj: 1007 (Delta: 4)
+  -> Global Best Obj: 1528
+[Iter 291] Valid Neighbors: 28 | Tabu Hits: 11 (Overrides: 0)
+  -> Best Neighbor Obj: 1086 (Delta: 79)
+  -> Global Best Obj: 1528
+[Iter 292] Valid Neighbors: 32 | Tabu Hits: 14 (Overrides: 0)
+  -> Best Neighbor Obj: 1331 (Delta: 245)
+  -> Global Best Obj: 1528
+[Iter 293] Valid Neighbors: 20 | Tabu Hits: 8 (Overrides: 0)
+  -> Best Neighbor Obj: 1291 (Delta: -40)
+  -> Global Best Obj: 1528
+[Iter 294] Valid Neighbors: 31 | Tabu Hits: 15 (Overrides: 0)
+  -> Best Neighbor Obj: 1220 (Delta: -71)
+  -> Global Best Obj: 1528
+[Iter 295] Valid Neighbors: 32 | Tabu Hits: 17 (Overrides: 0)
+  -> Best Neighbor Obj: 1270 (Delta: 50)
+  -> Global Best Obj: 1528
+[Iter 296] Valid Neighbors: 31 | Tabu Hits: 16 (Overrides: 0)
+  -> Best Neighbor Obj: 1325 (Delta: 55)
+  -> Global Best Obj: 1528
+[Iter 297] Valid Neighbors: 33 | Tabu Hits: 17 (Overrides: 0)
+  -> Best Neighbor Obj: 1404 (Delta: 79)
+  -> Global Best Obj: 1528
+[Iter 298] Valid Neighbors: 33 | Tabu Hits: 15 (Overrides: 0)
+  -> Best Neighbor Obj: 1375 (Delta: -29)
+  -> Global Best Obj: 1528
+[Iter 299] Valid Neighbors: 30 | Tabu Hits: 13 (Overrides: 0)
+  -> Best Neighbor Obj: 1324 (Delta: -51)
+  -> Global Best Obj: 1528
+[Iter 300] Valid Neighbors: 30 | Tabu Hits: 14 (Overrides: 0)
+  -> Best Neighbor Obj: 1297 (Delta: -27)
+  -> Global Best Obj: 1528
+
+=================== FINAL PROFILING REPORT (300 ITERS) ===================
+1. OPERATORS BREAKDOWN (Trung bình mỗi Iter):
+   - Op1 (Insert)           : 0.035 ms (20.748%)
+   - Op2 (Relocate)         : 0.015 ms (9.149%)
+   - Op3 (Swap same veh)    : 0.061 ms (36.243%)
+   - Op4 (Drop)             : 0.002 ms (1.329%)
+   - Op5 (Inter-route Swap) : 0.017 ms (10.124%)
+   - Apply Move & Tabu Edge : 0.037 ms (22.203%)
+   - Ruin Mechanism         : 0.000 ms (0.205%)
+   -> TỔNG THỜI GIAN/ITER   : 0.169 ms
+
+2. CORE FUNCTIONS BOTTLENECK:
+   - eval_single_route()    : Gọi 166687 lần | Tổng: 10.803 ms | TB: 0.065 us/lần
+   - optimize_route()       : Gọi 8335 lần | Tổng: 4.968 ms | TB: 0.596 us/lần
+   - best_insert()          : Gọi 109145 lần | Tổng: 32.441 ms | TB: 0.297 us/lần
+===============================================================================
+

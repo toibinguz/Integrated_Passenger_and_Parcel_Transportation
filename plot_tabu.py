@@ -361,20 +361,136 @@ def generate_detailed_tour_report(instance_file, solution_file, milestones, repo
     print(f"[+] Da tao ban bao cao chi tiet tung node tai: {report_file}")
 
 # ==============================================================================
+# HÀM HỖ TRỢ ĐỊNH VỊ THƯ MỤC VÀ TESTCASE
+# ==============================================================================
+def find_testcase_file(folder_name):
+    """
+    Tự động tìm file đề bài trong thư mục ./testcases tương ứng với tên testcase ở đầu thư mục output.
+    """
+    tc_dir = "testcases"
+    if not os.path.exists(tc_dir):
+        tc_dir = os.path.join(".", "testcases")
+
+    if os.path.isdir(tc_dir):
+        # Sắp xếp theo độ dài stem giảm dần (ví dụ 'test_106' trước 'test_10') để tránh khớp nhầm tiền tố
+        tc_files = sorted(
+            [f for f in os.listdir(tc_dir) if f.endswith(".txt")],
+            key=lambda f: len(os.path.splitext(f)[0]),
+            reverse=True
+        )
+        for f in tc_files:
+            stem = os.path.splitext(f)[0]
+            # Khớp tên testcase ở đầu tên thư mục (ví dụ 'test_10_tabu_...' khớp 'test_10')
+            if folder_name.startswith(stem + "_") or folder_name.startswith(stem):
+                return os.path.join(tc_dir, f)
+
+    return None
+
+
+def extract_timestamp_key(dir_path):
+    """
+    Trích xuất timestamp từ tên thư mục (định dạng YYYY-MM-DD-HH-MM-SS).
+    Nếu không tìm thấy regex thì fallback về mtime của thư mục.
+    """
+    dirname = os.path.basename(dir_path)
+    m = re.search(r"(\d{4}-\d{2}-\d{2}-\d{2}-\d{2}-\d{2})", dirname)
+    if m:
+        return m.group(1)
+    return str(os.path.getmtime(dir_path))
+
+
+def resolve_output_dir(arg_input=None):
+    """
+    Xác định thư mục output mục tiêu:
+    - Nếu arg_input là thư mục tồn tại: dùng trực tiếp.
+    - Nếu arg_input là tên thư mục bên trong output/: dùng output/arg_input.
+    - Nếu không truyền: MẶC ĐỊNH lấy thư mục có TIMESTAMP MỚI NHẤT trong output/.
+    """
+    if arg_input:
+        if os.path.isdir(arg_input):
+            return os.path.abspath(arg_input)
+        cand = os.path.join("output", arg_input)
+        if os.path.isdir(cand):
+            return os.path.abspath(cand)
+        if os.path.isfile(arg_input):
+            return None
+        print(f"[-] Khong tim thay thu muc: {arg_input}")
+        return None
+
+    # Mặc định quét thư mục output/ và lấy thư mục có timestamp mới nhất
+    if os.path.exists("output"):
+        subdirs = [os.path.join("output", d) for d in os.listdir("output") if os.path.isdir(os.path.join("output", d))]
+        if subdirs:
+            latest_dir = max(subdirs, key=extract_timestamp_key)
+            print(f"[i] Mặc định nhận thư mục có timestamp mới nhất: {latest_dir}")
+            return os.path.abspath(latest_dir)
+        else:
+            print("[-] Thư mục output/ hiện đang trống, không tìm thấy lần chạy nào!")
+    else:
+        print("[-] Chưa tìm thấy thư mục output/!")
+            
+    return None
+
+# ==============================================================================
 # HÀM MAIN THỰC THI TOÀN BỘ
 # ==============================================================================
 if __name__ == '__main__':
-    log_file = sys.argv[1] if len(sys.argv) > 1 else "log_tabu.txt"
-    inst_file = sys.argv[2] if len(sys.argv) > 2 else "testcases/test_500.txt"
-    sol_file = sys.argv[3] if len(sys.argv) > 3 else "ketqua.txt"
-    rep_file = sys.argv[4] if len(sys.argv) > 4 else "tour_report.txt"
-
     print("=" * 70)
     print("      BẮT ĐẦU QUY TRÌNH PHÂN TÍCH TABU SEARCH & XUẤT BÁO CÁO")
     print("=" * 70)
 
+    first_arg = sys.argv[1] if len(sys.argv) > 1 else None
+    target_dir = resolve_output_dir(first_arg)
+
+    if target_dir:
+        folder_base = os.path.basename(target_dir)
+        print(f"[*] Thu muc phan tich : {target_dir}")
+
+        # 1. Tìm file log
+        log_candidates = [f for f in os.listdir(target_dir) if f.endswith("_log.txt") or f == "log.txt"]
+        if not log_candidates:
+            print(f"[-] Khong tim thay file _log.txt trong {target_dir}!")
+            sys.exit(1)
+        log_file = os.path.join(target_dir, log_candidates[0])
+
+        # 2. Tìm file kết quả
+        sol_candidates = [f for f in os.listdir(target_dir) if f.endswith("_ket_qua.txt") or f == "ketqua.txt" or f.endswith("_res.txt")]
+        if not sol_candidates:
+            print(f"[-] Khong tim thay file _ket_qua.txt trong {target_dir}!")
+            sys.exit(1)
+        sol_file = os.path.join(target_dir, sol_candidates[0])
+
+        # 3. Tìm file đề bài
+        if len(sys.argv) > 2 and os.path.isfile(sys.argv[2]):
+            inst_file = sys.argv[2]
+        else:
+            inst_file = find_testcase_file(folder_base)
+
+        if not inst_file or not os.path.isfile(inst_file):
+            print(f"[-] Khong tim thay file de bai phu hop trong ./testcases cho thu muc: {folder_base}!")
+            sys.exit(1)
+
+        # 4. Định nghĩa các file đầu ra nằm trong chính thư mục đó
+        output_img = os.path.join(target_dir, f"{folder_base}_progression.png")
+        report_file = os.path.join(target_dir, f"{folder_base}_tour_report.txt")
+
+        print(f"  * File Log          : {log_file}")
+        print(f"  * File Ket qua      : {sol_file}")
+        print(f"  * File De bai       : {inst_file}")
+        print(f"  * Anh bieu do dau ra: {output_img}")
+        print(f"  * Bao cao tour dau ra: {report_file}")
+        print("-" * 70)
+
+    else:
+        # Fallback chế độ file đơn lẻ truyền thống (backward compatibility)
+        log_file = sys.argv[1] if len(sys.argv) > 1 else "log_tabu.txt"
+        inst_file = sys.argv[2] if len(sys.argv) > 2 else "testcases/test_500.txt"
+        sol_file = sys.argv[3] if len(sys.argv) > 3 else "ketqua.txt"
+        report_file = sys.argv[4] if len(sys.argv) > 4 else "tour_report.txt"
+        output_img = "tabu_progression.png"
+
     # 1. Phân tích Log và vẽ biểu đồ
-    iters, milestones = parse_and_plot_log(log_file, "tabu_progression.png")
+    iters, milestones = parse_and_plot_log(log_file, output_img)
 
     # In nhanh tóm tắt các mốc đột phá lên console
     if milestones:
@@ -384,6 +500,6 @@ if __name__ == '__main__':
             print(f"  -> Iter {m['iter']:4d}: {m['old_val']:4d} -> {m['new_val']:4d} (+{m['delta']:3d}) | {ruin_txt}")
 
     # 2. Tạo báo cáo chi tiết đến từng Node
-    generate_detailed_tour_report(inst_file, sol_file, milestones, rep_file)
+    generate_detailed_tour_report(inst_file, sol_file, milestones, report_file)
 
     print("\n[✔] HOÀN TẤT TOÀN BỘ QUY TRÌNH!")

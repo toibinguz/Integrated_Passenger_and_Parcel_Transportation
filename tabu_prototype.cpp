@@ -279,6 +279,124 @@ pair<long long, vector<int>> best_insert(int k, const vector<int>& rt, int r) {
 // ============================================================================
 // TABU SEARCH ENGINE
 // ============================================================================
+struct SolutionState {
+    long long obj = 0;
+    vector<int> veh_assignment; // size N + M + 1
+    vector<vector<int>> routes;  // size K + 1
+};
+
+const int ELITE_POOL_SIZE = 4;
+vector<SolutionState> elite_pool;
+
+int calc_assignment_dist(const vector<int>& a, const vector<int>& b) {
+    int d = 0;
+    for (int r = 1; r <= N + M; ++r) {
+        if (a[r] != b[r]) d++;
+    }
+    return d;
+}
+
+bool update_elite_pool(const SolutionState& cand, int iter, int epoch_idx, int epoch_iter) {
+    if (cand.obj <= 0) return false;
+    // Reject any candidate below 80% of global best to prevent premature solutions
+    if (global_best_obj > 0 && cand.obj < global_best_obj * 0.80) return false;
+
+    if (elite_pool.empty()) {
+        elite_pool.push_back(cand);
+        cerr << "  -> [ELITE POOL] Initialized Elite #0: Obj=" << cand.obj 
+             << " at Iter " << iter << " (Epoch #" << epoch_idx << " @" << epoch_iter << ")\n";
+        return true;
+    }
+
+    // Check if candidate is an identical clone (dist == 0) of an existing member
+    for (int i = 0; i < (int)elite_pool.size(); ++i) {
+        int d = calc_assignment_dist(cand.veh_assignment, elite_pool[i].veh_assignment);
+        if (d == 0) {
+            if (cand.obj > elite_pool[i].obj) {
+                cerr << "  -> [ELITE POOL] Refined clone Elite #" << i 
+                     << " (OldObj=" << elite_pool[i].obj << " -> NewObj=" << cand.obj << ")\n";
+                elite_pool[i] = cand;
+                return true;
+            }
+            return false; // Identical structure, equal or worse obj
+        }
+    }
+
+    if ((int)elite_pool.size() < ELITE_POOL_SIZE) {
+        elite_pool.push_back(cand);
+        cerr << "  -> [ELITE POOL] Added Diverse Elite #" << elite_pool.size() - 1 
+             << " (Obj=" << cand.obj << ") at Iter " << iter << " (Epoch #" << epoch_idx << " @" << epoch_iter << ")\n";
+        return true;
+    }
+
+    // Pool is FULL: Apply Bi-criterion Biased Fitness Ranking
+    // Pool has ELITE_POOL_SIZE solutions, plus cand = T solutions
+    vector<SolutionState> all_sols = elite_pool;
+    all_sols.push_back(cand);
+    int T = all_sols.size();
+
+    // 1. Fitness Rank R_fit: Rank by Obj descending (1 is best, T is worst)
+    vector<int> fit_order(T);
+    iota(fit_order.begin(), fit_order.end(), 0);
+    sort(fit_order.begin(), fit_order.end(), [&](int a, int b) {
+        return all_sols[a].obj > all_sols[b].obj;
+    });
+    vector<int> r_fit(T);
+    for (int rank = 0; rank < T; ++rank) {
+        r_fit[fit_order[rank]] = rank + 1;
+    }
+
+    // 2. Diversity Score: min distance to any other solution in all_sols
+    vector<int> min_d(T, 1e9);
+    for (int i = 0; i < T; ++i) {
+        for (int j = 0; j < T; ++j) {
+            if (i == j) continue;
+            int d = calc_assignment_dist(all_sols[i].veh_assignment, all_sols[j].veh_assignment);
+            min_d[i] = min(min_d[i], d);
+        }
+    }
+
+    // Diversity Rank R_div: Rank by min_d descending (1 is most isolated/diverse, T is most crowded)
+    vector<int> div_order(T);
+    iota(div_order.begin(), div_order.end(), 0);
+    sort(div_order.begin(), div_order.end(), [&](int a, int b) {
+        return min_d[a] > min_d[b];
+    });
+    vector<int> r_div(T);
+    for (int rank = 0; rank < T; ++rank) {
+        r_div[div_order[rank]] = rank + 1;
+    }
+
+    // 3. Biased Rank: Score = R_fit + R_div (smaller is better, largest is worst/evicted)
+    int evict_idx = -1;
+    int worst_score = -1;
+    int worst_r_fit = -1;
+    for (int i = 0; i < T; ++i) {
+        int score = r_fit[i] + r_div[i];
+        if (score > worst_score || (score == worst_score && r_fit[i] > worst_r_fit)) {
+            worst_score = score;
+            worst_r_fit = r_fit[i];
+            evict_idx = i;
+        }
+    }
+
+    // If the candidate itself is the worst, reject it
+    if (evict_idx == T - 1) {
+        cerr << "  -> [ELITE POOL] Candidate rejected by Biased Fitness (Score=" << worst_score 
+             << " [Rfit=" << r_fit[T - 1] << ", Rdiv=" << r_div[T - 1] << ", MinDist=" << min_d[T - 1] << "])\n";
+        return false;
+    }
+
+    // Replace the evicted member in elite_pool
+    cerr << "  -> [ELITE POOL] Biased Fitness Eviction: Evicted Elite #" << evict_idx 
+         << " (Obj=" << elite_pool[evict_idx].obj << ", Score=" << worst_score 
+         << " [Rfit=" << r_fit[evict_idx] << ", Rdiv=" << r_div[evict_idx] << ", MinDist=" << min_d[evict_idx] << "])"
+         << " -> Admitted New Elite (Obj=" << cand.obj 
+         << " [Rfit=" << r_fit[T - 1] << ", Rdiv=" << r_div[T - 1] << ", MinDist=" << min_d[T - 1] << "])\n";
+    elite_pool[evict_idx] = cand;
+    return true;
+}
+
 struct Move {
     long long delta = -INF;
     int k1 = -1, k2 = -1;
@@ -293,7 +411,13 @@ void run_tabu_search() {
     memset(veh_of, 0, sizeof(veh_of));
     for (int k = 1; k <= K; ++k) route_obj[k] = 0;
     cur_total_obj = 0; global_best_obj = 0;
-    int stagnant_iters = 0;
+    
+    elite_pool.clear();
+    int epoch_idx = 1;
+    int epoch_iter = 0;
+    long long epoch_best_obj = 0;
+    int epoch_stagnant_iters = 0;
+    SolutionState epoch_best_state;
 
     auto apply_edges = [&](int k, const vector<int>& rt, bool add, int iter) {
         int curr = O[k];
@@ -305,6 +429,7 @@ void run_tabu_search() {
     };
 
     for (int iter = 1; iter <= MAX_ITER; ++iter) {
+        epoch_iter++;
         Move best_move;
         int valid_neighbors = 0, tabu_hits = 0, tabu_overrides = 0;
 
@@ -444,29 +569,86 @@ void run_tabu_search() {
             cur_total_obj += best_move.delta;
             cerr << "  -> Best Neighbor Obj: " << cur_total_obj << " (Delta: " << best_move.delta << ")\n";
 
+            if (cur_total_obj > epoch_best_obj) {
+                epoch_best_obj = cur_total_obj;
+                epoch_stagnant_iters = 0;
+                epoch_best_state.obj = cur_total_obj;
+                epoch_best_state.veh_assignment.assign(veh_of, veh_of + N + M + 1);
+                epoch_best_state.routes.resize(K + 1);
+                for (int k = 1; k <= K; ++k) epoch_best_state.routes[k] = routes[k];
+            } else {
+                epoch_stagnant_iters++;
+            }
+
             if (cur_total_obj > global_best_obj) {
                 global_best_obj = cur_total_obj;
                 for (int k = 1; k <= K; ++k) best_routes[k] = routes[k];
                 cerr << "  -> *** NEW GLOBAL BEST FOUND! ***\n";
-                cout << "  -> [Iter " << setw(5) << iter << "] NEW GLOBAL BEST: " << global_best_obj << "\n" << flush;
-                stagnant_iters = 0;
-            } else {
-                stagnant_iters++;
+                cout << "  -> [Iter " << setw(5) << iter 
+                     << " | Epoch " << setw(2) << epoch_idx 
+                     << " @" << setw(3) << epoch_iter 
+                     << "] NEW GLOBAL BEST: " << global_best_obj << "\n" << flush;
             }
         } else {
-            stagnant_iters++;
+            epoch_stagnant_iters++;
             cerr << "  -> No valid neighbor found.\n";
         }
+        cerr << "  -> Epoch Status: Epoch #" << epoch_idx << " (Iter " << epoch_iter 
+             << ") | Peak In Epoch: " << epoch_best_obj 
+             << " | Stagnant: " << epoch_stagnant_iters << "/" << STAGNANT_LIMIT 
+             << " | Elite Pool: " << elite_pool.size() << "/" << ELITE_POOL_SIZE << "\n";
         cerr << "  -> Global Best Obj: " << global_best_obj << "\n";
 
-        // RUIN MECHANISM (Triggered on stagnation)
-        if (stagnant_iters >= STAGNANT_LIMIT) {
-            stagnant_iters = 0;
+        // RUIN MECHANISM (Triggered on epoch stagnation)
+        if (epoch_stagnant_iters >= STAGNANT_LIMIT) {
+            long long prev_epoch_peak = epoch_best_obj;
+            cerr << "  -> [RUIN ACTIVATED] Epoch #" << epoch_idx << " exhausted after " 
+                 << epoch_iter << " iters (Peak: " << prev_epoch_peak << ")\n";
+
+            // Submit this epoch's best state to Elite Pool before ruin
+            if (epoch_best_state.obj > 0) {
+                update_elite_pool(epoch_best_state, iter, epoch_idx, epoch_iter);
+            }
+
+            // 1. Backtrack to an Elite solution from pool
+            int elite_sel = -1;
+            if (!elite_pool.empty()) {
+                int best_elite_idx = 0;
+                for (int i = 1; i < (int)elite_pool.size(); ++i) {
+                    if (elite_pool[i].obj > elite_pool[best_elite_idx].obj) best_elite_idx = i;
+                }
+
+                if (elite_pool.size() > 1 && (rand() % 100 >= 60)) {
+                    vector<int> other_indices;
+                    for (int i = 0; i < (int)elite_pool.size(); ++i) {
+                        if (i != best_elite_idx) other_indices.push_back(i);
+                    }
+                    elite_sel = other_indices[rand() % other_indices.size()];
+                    int d = calc_assignment_dist(elite_pool[elite_sel].veh_assignment, elite_pool[best_elite_idx].veh_assignment);
+                    cerr << "  -> [ELITE BACKTRACK] [DIVERSIFY 40%] Picked Diverse Elite #" << elite_sel 
+                         << " (Obj: " << elite_pool[elite_sel].obj << ", Dist to Best: " << d << ") as seed for Ruin\n";
+                } else {
+                    elite_sel = best_elite_idx;
+                    cerr << "  -> [ELITE BACKTRACK] [INTENSIFY 60%] Picked Best Elite #" << elite_sel 
+                         << " (Obj: " << elite_pool[elite_sel].obj << ") as seed for Ruin\n";
+                }
+
+                for (int k = 1; k <= K; ++k) apply_edges(k, routes[k], false, iter);
+                for (int r = 1; r <= N + M; ++r) veh_of[r] = elite_pool[elite_sel].veh_assignment[r];
+                for (int k = 1; k <= K; ++k) {
+                    routes[k] = elite_pool[elite_sel].routes[k];
+                    apply_edges(k, routes[k], true, iter);
+                    route_obj[k] = eval_single_route(k, routes[k]);
+                }
+                cur_total_obj = elite_pool[elite_sel].obj;
+            }
+
             vector<int> served;
             for (int r = 1; r <= N + M; ++r) if (veh_of[r] != 0) served.push_back(r);
 
             if (!served.empty()) {
-                int strat = rand() % 4;
+                // Round-robin Variety Ruin: Each mode gets a dedicated epoch
+                int strat = (epoch_idx - 1) % 4;
 
                 if (strat == 3) { // Mode 3: Vehicle Dismantle
                     vector<int> busy;
@@ -492,7 +674,9 @@ void run_tabu_search() {
                     });
 
                     int num_to_ruin = min((int)served.size(), RUIN_SIZE);
-                    cerr << "  -> [RUIN MODE " << strat << "] Ejecting near req " << r_seed << ": ";
+                    const char* mode_names[] = {"SPATIAL_COST", "TRAVEL_TIME", "TIME_WINDOW"};
+                    cerr << "  -> [RUIN MODE " << strat << ": " << mode_names[strat] 
+                         << "] Ejecting near req " << r_seed << ": ";
                     for (int step = 0; step < num_to_ruin; ++step) {
                         int pick_idx = rand() % min((int)served.size(), 4);
                         int r = served[pick_idx];
@@ -515,6 +699,21 @@ void run_tabu_search() {
                 for (int k = 1; k <= K; ++k) cur_total_obj += route_obj[k];
                 cerr << "  -> Total Obj after Ruin: " << cur_total_obj << "\n";
             }
+
+            // Start New Epoch
+            epoch_idx++;
+            epoch_iter = 0;
+            epoch_best_obj = cur_total_obj;
+            epoch_best_state.obj = cur_total_obj;
+            epoch_best_state.veh_assignment.assign(veh_of, veh_of + N + M + 1);
+            epoch_best_state.routes.resize(K + 1);
+            for (int k = 1; k <= K; ++k) epoch_best_state.routes[k] = routes[k];
+            epoch_stagnant_iters = 0;
+            cerr << "  -> [EPOCH " << epoch_idx << " STARTED] Initial Obj: " << cur_total_obj << "\n";
+            cout << "  -> [Iter " << setw(5) << iter << "] Epoch " << epoch_idx - 1 
+                 << " Peak: " << prev_epoch_peak 
+                 << " -> Epoch " << epoch_idx << " Started (Ruin Mode " << ((epoch_idx - 2) % 4) 
+                 << ", Seed Elite #" << elite_sel << ")\n" << flush;
         }
     }
 }

@@ -8,13 +8,25 @@ using namespace std;
 namespace fs = std::filesystem;
 
 // ============================================================================
-// HYPERPARAMETERS & CONSTANTS
+// HYPERPARAMETERS & ALGORITHMIC CONTROL KNOBS
 // ============================================================================
-int MAX_ITER = 10000;            // Total iterations for Tabu Search
-int TABU_TENURE_BASE = 5;        // Base Tabu tenure
-int TABU_TENURE_RAND = 10;       // Random amplitude of Tabu tenure
-int STAGNANT_LIMIT = 50;         // Iterations without improvement to trigger Ruin
-int RUIN_SIZE = 6;               // Number of requests ejected per Ruin step
+// 1. Search Iterations & Tabu Tenure
+int MAX_ITER = 10000;                     // Total iterations for Tabu Search
+int TABU_TENURE_BASE = 5;                 // Base Tabu tenure (iterations)
+int TABU_TENURE_RAND = 10;                // Random tenure amplitude [0, TABU_TENURE_RAND)
+
+// 2. Epoch & Stagnation Parameters
+int STAGNANT_LIMIT = 50;                  // Iterations without improvement in current epoch to trigger Ruin
+
+// 3. Ruin Operators Configuration
+int RUIN_SIZE = 6;                        // Number of requests ejected per Ruin step
+int RUIN_MODES_COUNT = 4;                 // Number of Ruin strategies (0: Spatial, 1: Time, 2: Window, 3: Dismantle)
+int RUIN_TOP_CANDIDATE_POOL = 4;          // Window size for stochastic selection among sorted correlated requests
+
+// 4. Elite Pool Configuration (Quality & Diversity Management)
+const int ELITE_POOL_SIZE = 4;            // Maximum capacity of the Elite Pool
+double ELITE_QUALIFICATION_RATIO = 0.80;  // Minimum objective ratio vs Global Best to enter pool (80%)
+int INTENSIFICATION_PROB = 60;            // Probability (%) to seed Ruin from Best Elite (vs Diverse Elite)
 
 const long long INF = 1e18;
 const int MAXV = 1050;
@@ -285,7 +297,6 @@ struct SolutionState {
     vector<vector<int>> routes;  // size K + 1
 };
 
-const int ELITE_POOL_SIZE = 4;
 vector<SolutionState> elite_pool;
 
 int calc_assignment_dist(const vector<int>& a, const vector<int>& b) {
@@ -296,15 +307,75 @@ int calc_assignment_dist(const vector<int>& a, const vector<int>& b) {
     return d;
 }
 
+void log_elite_pool_telemetry(const string& event_desc) {
+    cerr << "  -> [ELITE POOL TELEMETRY] " << event_desc << "\n";
+    cerr << "     +-----+-------------------+---------+---------+------+------+-------+\n";
+    cerr << "     | Idx |   Fitness (Obj)   | MinDist | AvgDist | Rfit | Rdiv | Score |\n";
+    cerr << "     +-----+-------------------+---------+---------+------+------+-------+\n";
+    int P = elite_pool.size();
+    if (P == 0) {
+        cerr << "     | (Pool is empty)                                                 |\n";
+        cerr << "     +-----+-------------------+---------+---------+------+------+-------+\n";
+        return;
+    }
+
+    vector<int> min_d(P, 1e9);
+    vector<double> avg_d(P, 0.0);
+    for (int i = 0; i < P; ++i) {
+        int sum_d = 0;
+        for (int j = 0; j < P; ++j) {
+            if (i == j) continue;
+            int d = calc_assignment_dist(elite_pool[i].veh_assignment, elite_pool[j].veh_assignment);
+            min_d[i] = min(min_d[i], d);
+            sum_d += d;
+        }
+        if (P > 1) avg_d[i] = (double)sum_d / (P - 1);
+        else min_d[i] = 0;
+    }
+
+    vector<int> fit_order(P);
+    iota(fit_order.begin(), fit_order.end(), 0);
+    sort(fit_order.begin(), fit_order.end(), [&](int a, int b) {
+        return elite_pool[a].obj > elite_pool[b].obj;
+    });
+    vector<int> r_fit(P);
+    for (int r = 0; r < P; ++r) r_fit[fit_order[r]] = r + 1;
+
+    vector<int> div_order(P);
+    iota(div_order.begin(), div_order.end(), 0);
+    sort(div_order.begin(), div_order.end(), [&](int a, int b) {
+        return min_d[a] > min_d[b];
+    });
+    vector<int> r_div(P);
+    for (int r = 0; r < P; ++r) r_div[div_order[r]] = r + 1;
+
+    long long sum_obj = 0;
+    double sum_min_d = 0;
+    for (int i = 0; i < P; ++i) {
+        sum_obj += elite_pool[i].obj;
+        sum_min_d += min_d[i];
+        cerr << "     | #" << setw(2) << i << " | " 
+             << setw(17) << elite_pool[i].obj << " | "
+             << setw(7) << min_d[i] << " | "
+             << setw(7) << fixed << setprecision(1) << avg_d[i] << " | "
+             << setw(4) << r_fit[i] << " | "
+             << setw(4) << r_div[i] << " | "
+             << setw(5) << (r_fit[i] + r_div[i]) << " |\n";
+    }
+    cerr << "     +-----+-------------------+---------+---------+------+------+-------+\n";
+    cerr << "     * Summary: " << P << "/" << ELITE_POOL_SIZE 
+         << " Solutions | Avg Fitness: " << (sum_obj / P) 
+         << " | Avg Diversity (MinDist): " << fixed << setprecision(1) << (sum_min_d / P) << "\n";
+}
+
 bool update_elite_pool(const SolutionState& cand, int iter, int epoch_idx, int epoch_iter) {
     if (cand.obj <= 0) return false;
-    // Reject any candidate below 80% of global best to prevent premature solutions
-    if (global_best_obj > 0 && cand.obj < global_best_obj * 0.80) return false;
+    // Reject any candidate below ratio of global best to prevent premature solutions
+    if (global_best_obj > 0 && cand.obj < global_best_obj * ELITE_QUALIFICATION_RATIO) return false;
 
     if (elite_pool.empty()) {
         elite_pool.push_back(cand);
-        cerr << "  -> [ELITE POOL] Initialized Elite #0: Obj=" << cand.obj 
-             << " at Iter " << iter << " (Epoch #" << epoch_idx << " @" << epoch_iter << ")\n";
+        //log_elite_pool_telemetry("Initialized Elite #0 (Obj=" + to_string(cand.obj) + ")");
         return true;
     }
 
@@ -313,9 +384,8 @@ bool update_elite_pool(const SolutionState& cand, int iter, int epoch_idx, int e
         int d = calc_assignment_dist(cand.veh_assignment, elite_pool[i].veh_assignment);
         if (d == 0) {
             if (cand.obj > elite_pool[i].obj) {
-                cerr << "  -> [ELITE POOL] Refined clone Elite #" << i 
-                     << " (OldObj=" << elite_pool[i].obj << " -> NewObj=" << cand.obj << ")\n";
                 elite_pool[i] = cand;
+                //log_elite_pool_telemetry("Refined Clone Elite #" + to_string(i) + " to Obj=" + to_string(cand.obj));
                 return true;
             }
             return false; // Identical structure, equal or worse obj
@@ -324,8 +394,7 @@ bool update_elite_pool(const SolutionState& cand, int iter, int epoch_idx, int e
 
     if ((int)elite_pool.size() < ELITE_POOL_SIZE) {
         elite_pool.push_back(cand);
-        cerr << "  -> [ELITE POOL] Added Diverse Elite #" << elite_pool.size() - 1 
-             << " (Obj=" << cand.obj << ") at Iter " << iter << " (Epoch #" << epoch_idx << " @" << epoch_iter << ")\n";
+        //log_elite_pool_telemetry("Added Diverse Elite #" + to_string(elite_pool.size() - 1) + " (Obj=" + to_string(cand.obj) + ")");
         return true;
     }
 
@@ -388,12 +457,8 @@ bool update_elite_pool(const SolutionState& cand, int iter, int epoch_idx, int e
     }
 
     // Replace the evicted member in elite_pool
-    cerr << "  -> [ELITE POOL] Biased Fitness Eviction: Evicted Elite #" << evict_idx 
-         << " (Obj=" << elite_pool[evict_idx].obj << ", Score=" << worst_score 
-         << " [Rfit=" << r_fit[evict_idx] << ", Rdiv=" << r_div[evict_idx] << ", MinDist=" << min_d[evict_idx] << "])"
-         << " -> Admitted New Elite (Obj=" << cand.obj 
-         << " [Rfit=" << r_fit[T - 1] << ", Rdiv=" << r_div[T - 1] << ", MinDist=" << min_d[T - 1] << "])\n";
     elite_pool[evict_idx] = cand;
+    //log_elite_pool_telemetry("Evicted Elite #" + to_string(evict_idx) + " and Admitted New Elite (Obj=" + to_string(cand.obj) + ")");
     return true;
 }
 
@@ -618,18 +683,18 @@ void run_tabu_search() {
                     if (elite_pool[i].obj > elite_pool[best_elite_idx].obj) best_elite_idx = i;
                 }
 
-                if (elite_pool.size() > 1 && (rand() % 100 >= 60)) {
+                if (elite_pool.size() > 1 && (rand() % 100 >= INTENSIFICATION_PROB)) {
                     vector<int> other_indices;
                     for (int i = 0; i < (int)elite_pool.size(); ++i) {
                         if (i != best_elite_idx) other_indices.push_back(i);
                     }
                     elite_sel = other_indices[rand() % other_indices.size()];
                     int d = calc_assignment_dist(elite_pool[elite_sel].veh_assignment, elite_pool[best_elite_idx].veh_assignment);
-                    cerr << "  -> [ELITE BACKTRACK] [DIVERSIFY 40%] Picked Diverse Elite #" << elite_sel 
+                    cerr << "  -> [ELITE BACKTRACK] [DIVERSIFY " << (100 - INTENSIFICATION_PROB) << "%] Picked Diverse Elite #" << elite_sel 
                          << " (Obj: " << elite_pool[elite_sel].obj << ", Dist to Best: " << d << ") as seed for Ruin\n";
                 } else {
                     elite_sel = best_elite_idx;
-                    cerr << "  -> [ELITE BACKTRACK] [INTENSIFY 60%] Picked Best Elite #" << elite_sel 
+                    cerr << "  -> [ELITE BACKTRACK] [INTENSIFY " << INTENSIFICATION_PROB << "%] Picked Best Elite #" << elite_sel 
                          << " (Obj: " << elite_pool[elite_sel].obj << ") as seed for Ruin\n";
                 }
 
@@ -648,7 +713,7 @@ void run_tabu_search() {
 
             if (!served.empty()) {
                 // Round-robin Variety Ruin: Each mode gets a dedicated epoch
-                int strat = (epoch_idx - 1) % 4;
+                int strat = (epoch_idx - 1) % RUIN_MODES_COUNT;
 
                 if (strat == 3) { // Mode 3: Vehicle Dismantle
                     vector<int> busy;
@@ -678,7 +743,7 @@ void run_tabu_search() {
                     cerr << "  -> [RUIN MODE " << strat << ": " << mode_names[strat] 
                          << "] Ejecting near req " << r_seed << ": ";
                     for (int step = 0; step < num_to_ruin; ++step) {
-                        int pick_idx = rand() % min((int)served.size(), 4);
+                        int pick_idx = rand() % min((int)served.size(), RUIN_TOP_CANDIDATE_POOL);
                         int r = served[pick_idx];
                         served.erase(served.begin() + pick_idx);
 
@@ -712,7 +777,7 @@ void run_tabu_search() {
             cerr << "  -> [EPOCH " << epoch_idx << " STARTED] Initial Obj: " << cur_total_obj << "\n";
             cout << "  -> [Iter " << setw(5) << iter << "] Epoch " << epoch_idx - 1 
                  << " Peak: " << prev_epoch_peak 
-                 << " -> Epoch " << epoch_idx << " Started (Ruin Mode " << ((epoch_idx - 2) % 4) 
+                 << " -> Epoch " << epoch_idx << " Started (Ruin Mode " << ((epoch_idx - 2) % RUIN_MODES_COUNT) 
                  << ", Seed Elite #" << elite_sel << ")\n" << flush;
         }
     }

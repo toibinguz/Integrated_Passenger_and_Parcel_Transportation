@@ -20,11 +20,11 @@ int STAGNANT_LIMIT = 50;                  // Iterations without improvement in c
 
 // 3. Ruin Operators Configuration
 int RUIN_SIZE = 6;                        // Number of requests ejected per Ruin step
-int RUIN_MODES_COUNT = 4;                 // Number of Ruin strategies (0: Spatial, 1: Time, 2: Window, 3: Dismantle)
+int RUIN_MODES_COUNT = 5;                 // Number of Ruin strategies (0: Spatial, 1: Time, 2: Actual Arrival, 3: Dismantle, 4: Random)
 int RUIN_TOP_CANDIDATE_POOL = 4;          // Window size for stochastic selection among sorted correlated requests
 
 // 4. Elite Pool Configuration (Quality & Diversity Management)
-const int ELITE_POOL_SIZE = 4;            // Maximum capacity of the Elite Pool
+const int ELITE_POOL_SIZE = 6;            // Maximum capacity of the Elite Pool
 double ELITE_QUALIFICATION_RATIO = 0.80;  // Minimum objective ratio vs Global Best to enter pool (80%)
 int INTENSIFICATION_PROB = 60;            // Probability (%) to seed Ruin from Best Elite (vs Diverse Elite)
 
@@ -75,6 +75,35 @@ vector<int> remove_req(const vector<int>& rt, int r) {
     vector<int> res;
     for (int t : rt) if (abs(t) != r) res.push_back(t);
     return res;
+}
+
+vector<long long> get_actual_arrival_times() {
+    vector<long long> arr_time(N + M + 1, 0);
+    for (int k = 1; k <= K; ++k) {
+        if (routes[k].empty()) continue;
+        long long time_now = 0;
+        int curr = O[k];
+        for (int task : routes[k]) {
+            int r = abs(task);
+            int v_in = get_v_in(task);
+            int v_out = get_v_out(task);
+            time_now += t_mat[curr][v_in];
+            if (task > 0) {
+                time_now = max(time_now, (long long)E[r]);
+                arr_time[r] = time_now;
+                if (r <= N) {
+                    time_now += S[r] + t_mat[P[r]][D[r]] + S[r];
+                } else {
+                    time_now += S[r];
+                }
+            } else {
+                time_now = max(time_now, (long long)Ed[r]);
+                time_now += S[r];
+            }
+            curr = v_out;
+        }
+    }
+    return arr_time;
 }
 
 string get_current_timestamp() {
@@ -166,10 +195,20 @@ void read_input() {
 // ============================================================================
 // ROUTE EVALUATION & LOCAL SEARCH
 // ============================================================================
+static int picked_tag[MAX_REQ];
+static int dropped_tag[MAX_REQ];
+static int eval_token = 0;
+
 long long eval_single_route(int k, const vector<int>& rt) {
     if (rt.empty()) return 0;
+    eval_token++;
+    if (eval_token >= 2000000000) {
+        eval_token = 1;
+        memset(picked_tag, 0, sizeof(picked_tag));
+        memset(dropped_tag, 0, sizeof(dropped_tag));
+    }
+
     long long time_now = 0; int load = 0; int curr = O[k];
-    vector<bool> picked(N + M + 1, false), dropped(N + M + 1, false);
     long long benefit = 0;
 
     for (int task : rt) {
@@ -180,25 +219,25 @@ long long eval_single_route(int k, const vector<int>& rt) {
         time_now += t_mat[curr][v_in]; benefit -= c_mat[curr][v_in];
         
         if (task > 0) { // Passenger or Pickup
-            if (picked[r]) return -INF;
+            if (picked_tag[r] == eval_token) return -INF;
             time_now = max(time_now, (long long)E[r]);
             if (time_now > L_time[r]) return -INF;
-            picked[r] = true;
+            picked_tag[r] = eval_token;
             
             if (r <= N) { // Passenger macro-node
                 time_now += S[r] + t_mat[P[r]][D[r]]; benefit -= c_mat[P[r]][D[r]];
-                time_now += S[r]; dropped[r] = true; benefit += Rev[r];
+                time_now += S[r]; dropped_tag[r] = eval_token; benefit += Rev[r];
             } else { // Parcel pickup
                 load += W[r];
                 if (load > Q[k]) return -INF;
                 time_now += S[r];
             }
         } else { // Parcel dropoff (-r)
-            if (!picked[r] || dropped[r]) return -INF;
+            if (picked_tag[r] != eval_token || dropped_tag[r] == eval_token) return -INF;
             time_now = max(time_now, (long long)Ed[r]);
             if (time_now > Ld[r]) return -INF;
             load -= W[r];
-            dropped[r] = true; benefit += Rev[r];
+            dropped_tag[r] = eval_token; benefit += Rev[r];
             time_now += S[r];
         }
         curr = v_out;
@@ -667,8 +706,10 @@ void run_tabu_search() {
         // RUIN MECHANISM (Triggered on epoch stagnation)
         if (epoch_stagnant_iters >= STAGNANT_LIMIT) {
             long long prev_epoch_peak = epoch_best_obj;
+            int strat = (epoch_idx - 1) % RUIN_MODES_COUNT;
+            const char* mode_names[] = {"SPATIAL_COST", "TRAVEL_TIME", "ACTUAL_ARRIVAL_TIME", "VEHICLE_DISMANTLE", "RANDOM"};
             cerr << "  -> [RUIN ACTIVATED] Epoch #" << epoch_idx << " exhausted after " 
-                 << epoch_iter << " iters (Peak: " << prev_epoch_peak << ")\n";
+                 << epoch_iter << " iters (Peak: " << prev_epoch_peak << " | Mode " << strat << ": " << mode_names[strat] << ")\n";
 
             // Submit this epoch's best state to Elite Pool before ruin
             if (epoch_best_state.obj > 0) {
@@ -712,9 +753,6 @@ void run_tabu_search() {
             for (int r = 1; r <= N + M; ++r) if (veh_of[r] != 0) served.push_back(r);
 
             if (!served.empty()) {
-                // Round-robin Variety Ruin: Each mode gets a dedicated epoch
-                int strat = (epoch_idx - 1) % RUIN_MODES_COUNT;
-
                 if (strat == 3) { // Mode 3: Vehicle Dismantle
                     vector<int> busy;
                     for (int k = 1; k <= K; ++k) if (!routes[k].empty()) busy.push_back(k);
@@ -722,31 +760,39 @@ void run_tabu_search() {
                         int k_tgt = busy[rand() % busy.size()];
                         cerr << "  -> [RUIN MODE 3: VEHICLE DISMANTLE] Clearing vehicle #" << k_tgt << ": ";
                         apply_edges(k_tgt, routes[k_tgt], false, iter);
-                        for (int t : routes[k_tgt]) {
-                            veh_of[abs(t)] = 0;
-                            cerr << abs(t) << " ";
-                        }
+                        for (int t : routes[k_tgt]) { veh_of[abs(t)] = 0; cerr << abs(t) << " "; }
                         routes[k_tgt].clear();
                         route_obj[k_tgt] = 0;
                         cerr << "\n";
                     }
-                } else { // Modes 0, 1, 2: Correlated Request Ruin
-                    int r_seed = served[rand() % served.size()];
-                    sort(served.begin(), served.end(), [&](int a, int b) {
-                        if (strat == 0) return c_mat[P[r_seed]][P[a]] < c_mat[P[r_seed]][P[b]];
-                        if (strat == 1) return t_mat[P[r_seed]][P[a]] < t_mat[P[r_seed]][P[b]];
-                        return abs(E[r_seed] - E[a]) < abs(E[r_seed] - E[b]);
-                    });
-
+                } else {
+                    vector<int> to_eject;
                     int num_to_ruin = min((int)served.size(), RUIN_SIZE);
-                    const char* mode_names[] = {"SPATIAL_COST", "TRAVEL_TIME", "TIME_WINDOW"};
-                    cerr << "  -> [RUIN MODE " << strat << ": " << mode_names[strat] 
-                         << "] Ejecting near req " << r_seed << ": ";
-                    for (int step = 0; step < num_to_ruin; ++step) {
-                        int pick_idx = rand() % min((int)served.size(), RUIN_TOP_CANDIDATE_POOL);
-                        int r = served[pick_idx];
-                        served.erase(served.begin() + pick_idx);
 
+                    if (strat == 4) { // Mode 4: Pure Random
+                        for (int i = 0; i < num_to_ruin; ++i) {
+                            swap(served[i], served[i + rand() % (served.size() - i)]);
+                            to_eject.push_back(served[i]);
+                        }
+                    } else { // Modes 0, 1, 2: Correlated by seed
+                        int r_seed = served[rand() % served.size()];
+                        vector<long long> arr_time = (strat == 2) ? get_actual_arrival_times() : vector<long long>();
+                        auto metric = [&](int u) -> long long {
+                            if (strat == 0) return c_mat[P[r_seed]][P[u]];
+                            if (strat == 1) return t_mat[P[r_seed]][P[u]];
+                            return abs(arr_time[r_seed] - arr_time[u]);
+                        };
+                        sort(served.begin(), served.end(), [&](int a, int b) { return metric(a) < metric(b); });
+
+                        for (int step = 0; step < num_to_ruin; ++step) {
+                            int pick = rand() % min((int)served.size(), RUIN_TOP_CANDIDATE_POOL);
+                            to_eject.push_back(served[pick]);
+                            served.erase(served.begin() + pick);
+                        }
+                    }
+
+                    cerr << "  -> [RUIN MODE " << strat << ": " << mode_names[strat] << "] Ejecting: ";
+                    for (int r : to_eject) {
                         int k = veh_of[r];
                         if (k != 0) {
                             apply_edges(k, routes[k], false, iter);
@@ -777,7 +823,7 @@ void run_tabu_search() {
             cerr << "  -> [EPOCH " << epoch_idx << " STARTED] Initial Obj: " << cur_total_obj << "\n";
             cout << "  -> [Iter " << setw(5) << iter << "] Epoch " << epoch_idx - 1 
                  << " Peak: " << prev_epoch_peak 
-                 << " -> Epoch " << epoch_idx << " Started (Ruin Mode " << ((epoch_idx - 2) % RUIN_MODES_COUNT) 
+                 << " -> Epoch " << epoch_idx << " Started (Ruin Mode " << strat << ": " << mode_names[strat] 
                  << ", Seed Elite #" << elite_sel << ")\n" << flush;
         }
     }

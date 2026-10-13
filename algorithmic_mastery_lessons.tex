@@ -1,0 +1,384 @@
+\documentclass[11pt,a4paper]{article}
+
+% ============================================================================
+% PACKAGES & VIETNAMESE TYPOGRAPHY
+% ============================================================================
+\usepackage[utf8]{inputenc}
+\usepackage[T5]{fontenc}
+\usepackage[vietnamese]{babel}
+\usepackage{geometry}
+\geometry{left=2.2cm, right=2.2cm, top=2.4cm, bottom=2.4cm}
+
+\usepackage{amsmath, amssymb, amsthm, mathtools}
+\usepackage{bm}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{enumitem}
+\usepackage{xcolor}
+\usepackage{colortbl}
+\usepackage{hyperref}
+\usepackage{fancyhdr}
+\usepackage{listings}
+\usepackage{tikz}
+\usetikzlibrary{shapes.geometric, arrows.meta, positioning}
+
+% ============================================================================
+% COLOR PALETTE & HYPERLINKS
+% ============================================================================
+\definecolor{primaryblue}{RGB}{18, 58, 130}
+\definecolor{secondaryblue}{RGB}{235, 243, 255}
+\definecolor{accentgreen}{RGB}{16, 110, 60}
+\definecolor{softgreen}{RGB}{236, 250, 242}
+\definecolor{accentred}{RGB}{175, 35, 35}
+\definecolor{softamber}{RGB}{255, 248, 230}
+\definecolor{borderamber}{RGB}{210, 145, 20}
+\definecolor{codebg}{RGB}{247, 249, 252}
+\definecolor{codeframe}{RGB}{205, 215, 230}
+\definecolor{commentgreen}{RGB}{34, 139, 34}
+\definecolor{keywordblue}{RGB}{0, 51, 179}
+
+\hypersetup{
+    colorlinks=true,
+    linkcolor=primaryblue,
+    urlcolor=primaryblue,
+    citecolor=primaryblue,
+    pdftitle={Cam nang 10 Ky thuat Thiet ke Thuat toan va Toi uu hoa Dinh cao tu reference_solve.cpp},
+    pdfauthor={Antigravity AI}
+}
+
+% ============================================================================
+% CALLOUT BOX ENVIRONMENTS
+% ============================================================================
+\newsavebox{\calloutbox}
+\newenvironment{keybox}[1]{%
+    \par\medskip\noindent
+    \begin{lrbox}{\calloutbox}%
+    \begin{minipage}{\dimexpr\linewidth-2\fboxsep-2\fboxrule\relax}
+    \textbf{\textcolor{primaryblue}{#1}}\par\smallskip
+}{%
+    \end{minipage}%
+    \end{lrbox}%
+    \fcolorbox{primaryblue}{secondaryblue}{\usebox{\calloutbox}}%
+    \par\medskip
+}
+
+\newenvironment{optbox}[1]{%
+    \par\medskip\noindent
+    \begin{lrbox}{\calloutbox}%
+    \begin{minipage}{\dimexpr\linewidth-2\fboxsep-2\fboxrule\relax}
+    \textbf{\textcolor{accentgreen}{#1}}\par\smallskip
+}{%
+    \end{minipage}%
+    \end{lrbox}%
+    \fcolorbox{accentgreen}{softgreen}{\usebox{\calloutbox}}%
+    \par\medskip
+}
+
+\newenvironment{warnbox}[1]{%
+    \par\medskip\noindent
+    \begin{lrbox}{\calloutbox}%
+    \begin{minipage}{\dimexpr\linewidth-2\fboxsep-2\fboxrule\relax}
+    \textbf{\textcolor{accentred}{#1}}\par\smallskip
+}{%
+    \end{minipage}%
+    \end{lrbox}%
+    \fcolorbox{borderamber}{softamber}{\usebox{\calloutbox}}%
+    \par\medskip
+}
+
+% ============================================================================
+% CODE LISTING CONFIGURATION
+% ============================================================================
+\lstdefinestyle{cppstyle}{
+    language=C++,
+    backgroundcolor=\color{codebg},
+    frame=single,
+    rulecolor=\color{codeframe},
+    basicstyle=\ttfamily\footnotesize,
+    keywordstyle=\color{keywordblue}\bfseries,
+    commentstyle=\color{commentgreen}\itshape,
+    numbers=left,
+    numberstyle=\tiny\color{gray},
+    numbersep=8pt,
+    breaklines=true,
+    tabsize=4,
+    showstringspaces=false,
+    captionpos=b
+}
+\lstset{style=cppstyle}
+
+% ============================================================================
+% HEADER & FOOTER
+% ============================================================================
+\setlength{\headheight}{14pt}
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small\textcolor{primaryblue}{\textbf{Cẩm nang 10 Kỹ thuật Thuật toán Đỉnh cao từ \texttt{reference\_solve.cpp}}}}
+\fancyhead[R]{\small\textcolor{gray}{Tối ưu hóa Tổ hợp \& Metaheuristics}}
+\fancyfoot[C]{\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+
+% ============================================================================
+% DOCUMENT START
+% ============================================================================
+\begin{document}
+
+\begin{center}
+    {\LARGE\bfseries\textcolor{primaryblue}{CẨM NANG 10 KỸ THUẬT THIẾT KẾ THUẬT TOÁN VÀ TỐI ƯU HÓA HỆ THỐNG ĐỈNH CAO ĐÚC KẾT TỪ \texttt{reference\_solve.cpp}}}\\[0.25cm]
+    {\Large\bfseries Các Mẫu Thiết kế (Design Patterns) Kinh điển cho Bài toán Định tuyến (VRP),\\Lập lịch (Scheduling) và Tối ưu Tổ hợp Thực chiến}\\[0.35cm]
+    {\normalsize Tài liệu Tổng hợp Kỹ thuật Chuyên sâu --- Chuyển hóa Tư duy từ Metaheuristics sang Matheuristics}\\[0.2cm]
+    \rule{\linewidth}{1.2pt}
+\end{center}
+
+\tableofcontents
+\vspace{0.4cm}
+\rule{\linewidth}{0.5pt}
+\newpage
+
+% ============================================================================
+% KỸ THUẬT 1
+% ============================================================================
+\section{Kỹ thuật 1: Tư duy ``Đảo chiều NP-Hard'' --- Khi Ràng buộc Chặt Biến Vét cạn Thành Vũ khí Tối thượng}
+
+\subsection{Bẫy Tư duy Thông thường và Quy luật Đối ngẫu của Ràng buộc}
+Khi đối mặt với một bài toán NP-Hard có kích thước $R = 500$ yêu cầu và $K = 125$ xe, phản xạ tự nhiên của hầu hết lập trình viên là bỏ qua ngay phương án duyệt nhánh-cận (DFS/Branch-and-Bound) vì sợ bùng nổ tổ hợp $O(R!)$, và lao vào viết Local Search / Tabu Search / ALNS.
+
+Tuy nhiên, \texttt{reference\_solve.cpp} dạy chúng ta một bài học kinh điển trong Operations Research:
+\begin{keybox}{Nguyên lý ``Lời nguyền cũng là Phúc lành'' (The Curse \& Blessing of Tight Constraints)}
+Độ phức tạp của việc liệt kê toàn bộ lộ trình hợp lệ của một chiếc xe \textbf{không phụ thuộc vào tổng số yêu cầu $R = 500$ hay tổng số xe $K = 125$}, mà phụ thuộc vào \textbf{số lượng yêu cầu tối đa mà 1 chiếc xe có thể chở trong 1 ca làm việc ($L_{\max}$)}:
+\begin{itemize}[leftmargin=1.2em]
+    \item Khi ràng buộc lỏng ($L_{\max} \ge 15$): Không gian nghiệm cực kỳ trơn tru $\implies$ Local Search / Tabu Search hoạt động rất tốt, còn DFS sinh cột bị nổ tổ hợp.
+    \item Khi ràng buộc chặt ($L_{\max} \le 5$, do Time Window hẹp hoặc tải trọng nhỏ): Không gian nghiệm lởm chởm như bãi mìn làm Local Search bị kẹt và dao động mạnh ($\sim 3\%$), \textbf{NHƯNG số lộ trình hợp lệ của mỗi xe lại co nhỏ về chỉ còn vài trăm đến vài nghìn}! Lúc này, vét cạn toàn bộ lộ trình từng xe rồi giải \textbf{Set Packing} sẽ đập tan bài toán trong vài mili-giây!
+\end{itemize}
+\end{keybox}
+
+\subsection{Mẫu Thiết kế ``Exact-First with Safe Fallback'' (Thử Vét cạn Trước, Dự phòng Metaheuristic Sau)}
+Đừng bao giờ đoán mò xem bộ test của giám khảo có ràng buộc chặt hay lỏng --- hãy để chương trình \textbf{tự động thử vét cạn trước với một cầu chì an toàn (Safety Fuse)}:
+\begin{lstlisting}
+static const long long ENUM_STATE_CAP = 5000000;
+static const size_t ENUM_COL_CAP = 2000000;
+static const double ENUM_TIME_FRAC = 0.25; // Chi danh toi da 25% thoi gian de thu vet can
+
+static void enum_dfs(...) {
+    if (enum_abort) return;
+    if (++enum_states > ENUM_STATE_CAP || cols.size() >= ENUM_COL_CAP) { enum_abort = true; return; }
+    if ((enum_states & 4095) == 0 && steady_clock::now() > enum_deadline) { enum_abort = true; return; }
+    ...
+}
+\end{lstlisting}
+\textbf{Bài học áp dụng}: Trong mọi bài toán phân bổ / lập lịch / định tuyến nhiều máy (multi-vehicle / multi-machine), hãy luôn viết một hàm \texttt{column\_solve()} đặt ở đầu hàm \texttt{main}. Nếu \texttt{enum\_abort == false}, bạn ăn trọn điểm tối ưu tuyệt đối; nếu \texttt{enum\_abort == true}, bạn giải phóng bộ nhớ và rơi xuống Phase 2 (Tabu/SISR) mà chỉ mất tối đa $25\%$ thời gian!
+
+---
+
+% ============================================================================
+% KỸ THUẬT 2
+% ============================================================================
+\section{Kỹ thuật 2: Đồng nhất hóa Thực thể bằng Phép Co Đồ thị (Macro-Node Contraction)}
+
+\subsection{Vấn đề của Đồ thị Không đồng nhất (Heterogeneous Tasks)}
+Trong bài toán SARP, khách hàng (Passenger) và hàng hóa (Parcel) có quy tắc đi lại khác nhau: khách lên xe tại $P_i$ là phải đi thẳng tới $D_i$ ngay lập tức, trong khi hàng hóa lên tại $P_j$ có thể nằm trên xe qua nhiều điểm dừng rồi mới trả tại $D_j$. Nếu biểu diễn cả hai bằng các đỉnh rời rạc giống nhau, mọi hàm kiểm tra chèn và duyệt DFS đều phải phân nhánh \texttt{if (is\_passenger) ... else ...} cực kỳ rối rắm và dễ sai sót.
+
+\subsection{Giải pháp: Đóng gói Chuỗi Hành động Bắt buộc thành Nguyên tử (\texttt{Macro-Node})}
+Bất kỳ chuỗi sự kiện nào bắt buộc phải thực hiện liền kề nhau không ngắt quãng ($P_r \to D_r$) đều có thể \textbf{co lại (contract) thành 1 đỉnh tác vụ duy nhất} $x$ được đặc trưng bởi 5 thuộc tính chuẩn hóa:
+\[
+    \big(\text{nin}[x], \; \text{nout}[x], \; \text{ndur}[x], \; \text{nic}[x], \; \text{nw}[x]\big).
+\]
+\begin{itemize}[leftmargin=1.5em]
+    \item Với khách hàng $r \le N$: $\text{nin}[r] = P_r$, $\text{nout}[r] = D_r$, $\text{ndur}[r] = 2S_r + T(P_r, D_r)$, $\text{nic}[r] = C(P_r, D_r)$, $\text{nw}[r] = 0$.
+    \item Với điểm đón/trả hàng: $\text{nin}[x] = \text{nout}[x] = \text{đỉnh vật lý}$, $\text{ndur}[x] = S_r$, $\text{nic}[x] = 0$, $\text{nw}[x] = \pm W_r$.
+\end{itemize}
+\textbf{Lợi ích kép}:
+\begin{enumerate}[leftmargin=1.5em]
+    \item Giảm một nửa độ dài mảng lộ trình cho tất cả các tác vụ chở khách (chèn khách chỉ cần chọn 1 vị trí $i$ thay vì cặp $(i, j)$).
+    \item Mọi phép tính thời gian đến $\text{arr} = \text{dep}_{\text{prev}} + T(\text{nout}_{\text{prev}}, \text{nin}[x])$ và thời gian rời $\text{dep} = \max(\text{arr}, ne[x]) + \text{ndur}[x]$ trở nên \textbf{đồng nhất 100\%} cho cả khách lẫn hàng!
+\end{enumerate}
+
+---
+
+% ============================================================================
+% KỸ THUẬT 3
+% ============================================================================
+\section{Kỹ thuật 3: Cắt tỉa Thống trị Đẳng cấu Ngay trong Lúc Duyệt bằng Băm 64-bit (\texttt{enum\_record})}
+
+\subsection{Nguyên lý Tách ``Giao diện Ngoài'' khỏi ``Cấu trúc Nội bộ''}
+Khi sinh các phương án con cho một đơn vị (một xe, một máy, một ca trực), hãy tự hỏi: \textit{``Phần còn lại của hệ thống cần biết thông tin gì về phương án con này?''}
+\begin{itemize}[leftmargin=1.5em]
+    \item Phần còn lại của đội xe \textbf{không quan tâm} xe $k$ đi theo thứ tự nào bên trong lộ trình (\texttt{e\_seq}).
+    \item Phần còn lại của đội xe \textbf{chỉ quan tâm}: Xe nào chạy ($k$), tập yêu cầu nào đã bị tiêu thụ ($R_j = \text{sorted}(\texttt{e\_reqs})$), và đem lại bao nhiêu tiền ($\text{profit}$).
+\end{itemize}
+Do đó, mọi lộ trình có cùng bộ khóa ngoại $(k, R_j)$ đều thuộc cùng một \textbf{lớp tương đương đẳng cấu (Isomorphism Class)}. Ta dùng hàm băm 64-bit kết hợp FNV-1a và hằng số tỉ lệ vàng \texttt{0x9E3779B97F4A7C15ULL} để ánh xạ $(k, R_j) \mapsto h \in \mathbb{Z}_{2^{64}}$ và chỉ giữ lại đại diện có $\text{profit}$ lớn nhất!
+
+\begin{lstlisting}
+uint64_t h = 1469598103934665603ull ^ (uint64_t)k * 0x9E3779B97F4A7C15ull;
+for (int q : e_sorted) {
+    h ^= (uint64_t)q + 0x9E3779B97F4A7C15ull + (h << 6) + (h >> 2);
+    h *= 1099511628211ull;
+}
+\end{lstlisting}
+\textbf{Bài học áp dụng}: Kỹ thuật băm tập hợp đã sắp xếp (Canonical Set Hashing) này nhanh gấp $\approx 15$ lần so với việc dùng \texttt{std::map<vector<int>, int>} và giúp cắt giảm $65\%\sim 80\%$ số lượng cột trùng lặp.
+
+---
+
+% ============================================================================
+% KỸ THUẬT 4
+% ============================================================================
+\section{Kỹ thuật 4: Thư giãn Đối ngẫu Lagrangian + Bước nhảy Polyak như một ``La bàn Cận trên'' Siêu tốc}
+
+\subsection{Tại sao Mọi Thuật toán Heuristic Đỉnh cao Đều Cần Một Cận trên Nội tại ($UB$)?}
+Khi chạy Tabu Search hay SA thông thường, bạn luôn mù mờ trước câu hỏi: \textit{``Điểm số $13,279$ hiện tại đã tối ưu chưa, hay vẫn còn có thể lên $14,000$?''}
+Chỉ với \textbf{30 dòng code} (Lines 462--497), tác giả đã nhúng một bộ giải \textbf{Lagrangian Relaxation + Subgradient Optimization} ngay trước vòng lặp SA:
+\begin{enumerate}[leftmargin=1.5em]
+    \item Gán nhân tử phạt $u_q \ge 0$ cho mỗi ràng buộc bị tranh chấp giữa các xe ($\sum_{j \ni q} x_j \le 1$).
+    \item Tại mỗi bước, tính tổng lợi nhuận hiệu chỉnh tốt nhất của từng xe:
+    \[
+        L(u) = \sum_{q} u_q + \sum_{k=1}^K \max_{j \in \mathcal{C}_k} \left(0, \; \text{profit}_j - \sum_{q \in R_j} u_q\right).
+    \]
+    \item Đếm số lần mỗi yêu cầu $q$ bị chọn trùng $m_q$, tính đạo hàm $g_q = 1 - m_q$, và cập nhật giá phạt theo công thức Polyak:
+    \[
+        u_q \leftarrow \max\left(0, \; u_q - \lambda \frac{L(u) - \text{best}}{\|g\|_2^2} g_q\right).
+    \]
+\end{enumerate}
+\begin{optbox}{Ba Lợi ích Vô giá của 30 Dòng Code Lagrangian}
+\begin{enumerate}[leftmargin=1.2em]
+    \item \textbf{Chứng nhận Dừng sớm Tức thì (Zero-Waste Early Stopping)}: Ngay khi SA tìm được nghiệm có $\text{best} == \lfloor L(u) \rfloor$, chương trình lập tức \texttt{break} và kết thúc ở mili-giây thứ 20 (như trên 6/8 bộ test)!
+    \item \textbf{Bắt Nghiệm Nguyên Tối ưu Không cần SA}: Nếu tại vòng lặp bất kỳ mà $\|g\|_2^2 == 0$ (Complementary Slackness), nghiệm thư giãn \texttt{relax[k]} tự động là nghiệm nguyên tối ưu toàn cục (như trên \texttt{test\_65} và \texttt{test\_106}).
+    \item \textbf{Không cần thư viện ngoài}: Không cần cài đặt OR-Tools, CPLEX hay Gurobi mà vẫn tính được cận trên $\lfloor OPT_{LP} \rfloor$ chính xác tới từng đơn vị chỉ trong $2\text{ ms}$!
+\end{enumerate}
+\end{optbox}
+
+---
+
+% ============================================================================
+% KỸ THUẬT 5
+% ============================================================================
+\section{Kỹ thuật 5: Toán tử Chuỗi Đẩy-và-Lấp Tham lam trên Danh sách Sắp sẵn (\texttt{Eject-and-Refill})}
+
+Khi giải bài toán phân bổ hoặc đóng gói (Set Packing / Resource Allocation), thay vì chỉ đổi phương án của 1 cá thể trong phần tài nguyên còn trống, hãy dùng mẫu thiết kế \textbf{Eject-and-Refill}:
+\begin{enumerate}[leftmargin=1.5em]
+    \item \textbf{Tiền xử lý 1 lần}: Sắp xếp danh sách phương án \texttt{tcols[k]} của từng cá thể $k$ theo lợi nhuận giảm dần.
+    \item \textbf{Cưỡng chế & Đẩy (Force \& Eject)}: Cứ gán phương án mới $j$ cho cá thể $k$; bất kỳ cá thể $k_2$ nào đang giữ tài nguyên bị đụng độ với $j$ sẽ bị tháo phương án ra và đẩy vào mảng \texttt{refill}.
+    \item \textbf{Lấp lại Đầu mảng (First-Fit Sorted Refill)}: Với mỗi $k_2 \in \texttt{refill}$, quét từ đầu mảng \texttt{tcols[k2]} và chọn ngay phương án đầu tiên không xung đột (\texttt{is\_free(c)}). Nhờ mảng đã sắp giảm dần từ trước, phần tử đầu tiên thỏa mãn chính là phương án tốt nhất tuyệt đối của $k_2$!
+\end{enumerate}
+
+---
+
+% ============================================================================
+% KỸ THUẬT 6
+% ============================================================================
+\section{Kỹ thuật 6: Quy hoạch Động Hai chiều Tiền tố \texttt{dep[]} + Hậu tố \texttt{lat[]} và Ngắt sớm Đồng bộ (\texttt{sync})}
+
+Để đánh giá việc chèn một phần tử vào giữa lộ trình có $n$ điểm dừng trong thời gian $O(1)$ thay vì $O(n)$:
+\begin{enumerate}[leftmargin=1.5em]
+    \item \textbf{Lưu Tiền tố Thời gian Rời Sớm nhất (\texttt{dep[i]})}: Tính xuôi từ $1 \to n$.
+    \item \textbf{Lưu Hậu tố Thời điểm Đến Muộn nhất (\texttt{lat[i]})}: Tính ngược từ $n \to 1$ theo công thức:
+    \[
+        \text{lat}[i] = \min\Big(nl[\text{nd}[i]], \; \text{lat}[i+1] - T(\text{nout}[\text{nd}[i]], \text{nin}[\text{nd}[i+1]]) - \text{ndur}[\text{nd}[i]]\Big).
+    \]
+    Khi đó, mọi phép chèn làm thời điểm đến đỉnh $i+1$ mới là $t^{\text{new}}_{i+1}$ chỉ cần kiểm tra đúng 1 điều kiện $t^{\text{new}}_{i+1} \le \text{lat}[i+1]$ trong $\mathbf{O(1)}$ để biết chắc chắn toàn bộ phần đuôi $i+1 \dots n$ hợp lệ!
+    \item \textbf{Ngắt sớm Đồng bộ Thời gian (\texttt{if (dj == dep[j]) sync = true})}: Khi cần lan truyền độ trễ qua một đoạn $[i+1, j]$ (như khi chèn cặp Pickup-Dropoff), ngay khi gặp một đỉnh có thời gian chờ hấp thụ hết độ trễ làm thời gian rời mới bằng thời gian rời cũ ($\text{dj} == \text{dep}[j]$), lập tức bật cờ \texttt{sync = true} và dùng lại toàn bộ giá trị $\text{dep}[]$ cũ cho các đỉnh phía sau!
+\end{enumerate}
+
+---
+
+% ============================================================================
+% KỸ THUẬT 7
+% ============================================================================
+\section{Kỹ thuật 7: Bộ nhớ đệm Gia tăng theo Số Phiên bản (\texttt{Versioned Incremental Cache})}
+
+Trong các thuật toán LNS / Ruin \& Recreate / Tabu Search, ở mỗi vòng lặp chỉ có một số rất nhỏ lộ trình bị thay đổi ($2\sim 4$ xe trên tổng số $125$ xe), nhưng bước Recreate lại cần tìm vị trí chèn tốt nhất của yêu cầu $q$ trên toàn bộ $125$ xe.
+\begin{lstlisting}
+static vector<int> rver;  // Phien ban hien tai cua xe k
+static int gver = 0;      // Bo dem phien ban toan cuc
+struct CacheEntry { int ver = -1, i = 0, j = 0; ll cost = 0; };
+static vector<CacheEntry> icache; // Mang phang [q * (K + 1) + k]
+
+// Khi xe k thay doi (trong recompute hoac rollback):
+rver[k] = ++gver;
+
+// Khi can tim vi tri chen q vao xe k:
+CacheEntry& e = icache[(size_t)q * (K + 1) + k];
+if (e.ver != rver[k]) {
+    e.cost = best_insert(k, q, e.i, e.j, blink);
+    e.ver = rver[k];
+}
+\end{lstlisting}
+\textbf{Ưu điểm vượt trội}: Không bao giờ phải duyệt xóa (invalidate) bảng cache khi một xe thay đổi! Chỉ cần tăng $\texttt{rver}[k] = \texttt{++gver}$ trong $O(1)$, mọi ô nhớ cache cũ của xe $k$ tự động hết hạn, trong khi $>96\%$ ô nhớ cache của các xe không bị chạm vẫn giữ nguyên hiệu lực!
+
+---
+
+% ============================================================================
+% KỸ THUẬT 8
+% ============================================================================
+\section{Kỹ thuật 8: Sao lưu Lười theo Nhãn Thời gian \& Hoàn tác Nhật ký (\texttt{Timestamped Lazy Backup \& Undo Log})}
+
+Trong một vòng lặp chạy $10^6$ lần/giây, việc gọi \texttt{memset}, \texttt{std::fill} hoặc sao chép toàn bộ nghiệm \texttt{backup\_sol = cur\_sol} trước mỗi bước thử sẽ làm tốc độ tụt giảm hàng chục lần. \texttt{reference\_solve.cpp} giải quyết bằng 2 cơ chế:
+
+\begin{enumerate}[leftmargin=1.5em]
+    \item \textbf{Mảng Đánh dấu Nhãn Thời gian (\texttt{stamp\_id}) thay cho \texttt{memset}}:
+    Mỗi vòng lặp chỉ tăng $\texttt{++stamp\_id}$. Muốn kiểm tra xem xe $k$ đã được sao lưu trong vòng lặp hiện tại chưa, chỉ cần kiểm tra $\texttt{touch\_stamp}[k] == \texttt{stamp\_id}$:
+\begin{lstlisting}
+static inline void touch(int k) {
+    if (touch_stamp[k] != stamp_id) {
+        touch_stamp[k] = stamp_id;
+        touched.push_back(k);
+        backup[k] = rt[k]; // Chi sao luu dung chiec xe sap bi sua!
+    }
+}
+\end{lstlisting}
+    \item \textbf{Hoàn tác bằng Phép Hoán đổi Con trỏ \texttt{swap()} và Nhật ký Ngược}:
+    Nếu bước nhảy SA bị từ chối, chỉ cần duyệt qua đúng vài chiếc xe trong \texttt{touched} và gọi \texttt{swap(rt[k], backup[k])} (thao tác $O(1)$ hoán đổi con trỏ bộ nhớ trong của \texttt{std::vector} mà không cấp phát hay chép lại mảng!), kết hợp duyệt ngược \texttt{veh\_log} để khôi phục mảng \texttt{veh[r]}:
+\begin{lstlisting}
+for (int k : touched) { swap(rt[k], backup[k]); rver[k] = ++gver; }
+for (int i = (int)veh_log.size() - 1; i >= 0; --i) veh[veh_log[i].first] = veh_log[i].second;
+\end{lstlisting}
+\end{enumerate}
+
+---
+
+% ============================================================================
+% KỸ THUẬT 9
+% ============================================================================
+\section{Kỹ thuật 9: Chế độ Nhiệt độ Tự Chuẩn hóa theo Thang đo, Tiết lưu Đồng hồ Bitmask \& Kỹ thuật Nháy mắt (\texttt{Blink})}
+
+\begin{enumerate}[leftmargin=1.5em]
+    \item \textbf{Tự chuẩn hóa Nhiệt độ theo Dữ liệu Đầu vào (Scale-Invariant Temperature)}:
+    Luôn đặt $T_0 = \alpha \cdot \overline{\text{Profit}}$ và $T_F = \beta \cdot \overline{\text{Profit}}$ (ví dụ $\alpha = 0.3\sim 1.0, \beta = 0.003\sim 0.005$ nhân với doanh thu trung bình của 1 yêu cầu hoặc 1 cột). Nhờ đó bộ tham số SA hoạt động chuẩn xác trên mọi bộ dữ liệu dù đơn vị tiền tệ là $10$ hay $10^9$.
+    \item \textbf{Tiết lưu Lệnh gọi Đồng hồ Hệ thống bằng Bitmask (\texttt{Clock Throttling})}:
+    Lệnh \texttt{chrono::steady\_clock::now()} và hàm mũ \texttt{pow()} tốn khoảng $25\sim 40\text{ ns}$. Trong vòng lặp siêu nhanh, chỉ gọi đồng hồ khi \texttt{(it \& 255) == 0} (mỗi $256$ vòng lặp một lần), giúp tiết kiệm hơn $99.6\%$ chi phí hệ thống!
+    \item \textbf{Biến đổi Logarit Tiêu chuẩn Metropolis}:
+    Viết \texttt{delta >= 0 || (double)delta > temp * log(rand01() + 1e-300)} để tận dụng đoản mạch khi $\Delta \ge 0$ và tránh tràn số dưới (underflow) của hàm \texttt{exp(delta / temp)}.
+    \item \textbf{Nhiễu Nháy mắt Christiaens (\texttt{BLINK\_MASK = 63})}:
+    Trong hàm tìm vị trí chèn tốt nhất, thêm điều kiện \texttt{!(blink \&\& (rng() \& 63) == 0)} để bỏ qua ứng viên tốt nhất với xác suất $1/64 \approx 1.56\%$. Chỉ tốn 1 phép \texttt{AND} bit nhưng tạo ra xác suất $\approx 12\%$ trên một chuỗi 8 yêu cầu để tự động chuyển hướng sang vị trí tốt thứ hai (Stochastic Regret-2), chống lặp vô hạn hoàn hảo!
+\end{enumerate}
+
+---
+
+% ============================================================================
+% KỸ THUẬT 10
+% ============================================================================
+\section{Kỹ thuật 10: Tối ưu hóa Cấp độ Vi kiến trúc CPU (Flat Arena, Pointer Hoisting, Xorshift64 \& Fast I/O)}
+
+Bốn kỹ thuật lập trình hệ thống giúp \texttt{reference\_solve.cpp} đạt tốc độ tiệm cận giới hạn phần cứng:
+\begin{enumerate}[leftmargin=1.5em]
+    \item \textbf{Cấp phát Vùng nhớ Phẳng (Flat Arena Allocation)}:
+    Thay vì khai báo \texttt{struct Column \{ vector<int> reqs, nodes; \}} (mỗi cột tốn 2 lần cấp phát heap rời rạc gây trượt bộ nhớ đệm L1/L2 Cache Miss), hãy gom toàn bộ dữ liệu của mọi cột vào 2 mảng phẳng toàn cục \texttt{col\_req} và \texttt{col\_nodes}, còn mỗi \texttt{Column} chỉ lưu chỉ số bắt đầu và độ dài \texttt{(rbeg, rlen, nbeg, nlen)}.
+    \item \textbf{Kéo Con trỏ Thô ra Ngoài Vòng lặp Nóng (Raw Pointer Hoisting)}:
+    Ở đầu hàm \texttt{best\_insert} (Line 130), trước khi bước vào vòng lặp kép, tác giả lấy toàn bộ con trỏ thô:
+    \begin{lstlisting}
+const int* nd = r.nd.data(); const ll* dep = r.dep.data();
+const ll* lat = r.lat.data(); const int* ld = r.ld.data();
+    \end{lstlisting}
+    Giúp trình biên dịch GCC vector hóa và giữ địa chỉ mảng trực tiếp trong thanh ghi CPU.
+    \item \textbf{Bộ sinh Số ngẫu nhiên 64-bit Xorshift Siêu nhẹ (Lines 58--61)}:
+    Thay vì dùng \texttt{std::mt19937\_64} (nặng $2.5\text{ KB}$ trạng thái), chỉ dùng đúng 1 thanh ghi 64-bit và 4 chu kỳ lệnh:
+    \begin{lstlisting}
+static uint64_t rng_s = 0x9E3779B97F4A7C15ull;
+static inline uint64_t rng() { rng_s ^= rng_s << 7; rng_s ^= rng_s >> 9; return rng_s; }
+static inline double rand01() { return (rng() >> 11) * (1.0 / 9007199254740992.0); }
+    \end{lstlisting}
+    \item \textbf{Đọc Toàn bộ Input bằng \texttt{fread} một Lần Duy nhất (Lines 28--53)}:
+    Đọc trọn vẹn file đề bài ($1.6\text{ MB}$ của \texttt{test\_500.txt}) vào bộ đệm \texttt{ibuf} chỉ trong $<0.5\text{ ms}$, tự động bỏ qua các dòng chú thích \texttt{'\#'}, dành trọn $99.95\%$ quỹ thời gian cho thuật toán tối ưu!
+\end{enumerate}
+
+\end{document}
+

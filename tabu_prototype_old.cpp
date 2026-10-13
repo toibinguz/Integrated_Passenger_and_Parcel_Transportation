@@ -28,6 +28,11 @@ const int ELITE_POOL_SIZE = 6;            // Maximum capacity of the Elite Pool
 double ELITE_QUALIFICATION_RATIO = 0.80;  // Minimum objective ratio vs Global Best to enter pool (80%)
 int INTENSIFICATION_PROB = 60;            // Probability (%) to seed Ruin from Best Elite (vs Diverse Elite)
 
+random_device rd;
+mt19937 rng(rd());
+
+
+
 const long long INF = 1e18;
 const int MAXV = 1050;
 const int MAX_REQ = 1050;
@@ -488,7 +493,7 @@ void run_tabu_search() {
         int curr = O[k];
         for (int v : get_physical_route(rt)) {
             has_edge[curr][v] = add;
-            tabu_add[curr][v] = iter + TABU_TENURE_BASE + rand() % TABU_TENURE_RAND;
+            tabu_add[curr][v] = iter + TABU_TENURE_BASE + rng() % TABU_TENURE_RAND;
             curr = v;
         }
     };
@@ -529,7 +534,7 @@ void run_tabu_search() {
                 else return; // Rejected by Tabu tenure
             }
 
-            if (delta > best_move.delta || (delta == best_move.delta && rand() % 2 == 0)) {
+            if (delta > best_move.delta || (delta == best_move.delta && rng() % 2 == 0)) {
                 best_move = {delta, k1, k2, rt1, rt2, r_in, r_out, type};
             }
         };
@@ -683,12 +688,12 @@ void run_tabu_search() {
                     if (elite_pool[i].obj > elite_pool[best_elite_idx].obj) best_elite_idx = i;
                 }
 
-                if (elite_pool.size() > 1 && (rand() % 100 >= INTENSIFICATION_PROB)) {
+                if (elite_pool.size() > 1 && (rng() % 100 >= INTENSIFICATION_PROB)) {
                     vector<int> other_indices;
                     for (int i = 0; i < (int)elite_pool.size(); ++i) {
                         if (i != best_elite_idx) other_indices.push_back(i);
                     }
-                    elite_sel = other_indices[rand() % other_indices.size()];
+                    elite_sel = other_indices[rng() % other_indices.size()];
                     int d = calc_assignment_dist(elite_pool[elite_sel].veh_assignment, elite_pool[best_elite_idx].veh_assignment);
                     cerr << "  -> [ELITE BACKTRACK] [DIVERSIFY " << (100 - INTENSIFICATION_PROB) << "%] Picked Diverse Elite #" << elite_sel 
                          << " (Obj: " << elite_pool[elite_sel].obj << ", Dist to Best: " << d << ") as seed for Ruin\n";
@@ -719,7 +724,7 @@ void run_tabu_search() {
                     vector<int> busy;
                     for (int k = 1; k <= K; ++k) if (!routes[k].empty()) busy.push_back(k);
                     if (!busy.empty()) {
-                        int k_tgt = busy[rand() % busy.size()];
+                        int k_tgt = busy[rng() % busy.size()];
                         cerr << "  -> [RUIN MODE 3: VEHICLE DISMANTLE] Clearing vehicle #" << k_tgt << ": ";
                         apply_edges(k_tgt, routes[k_tgt], false, iter);
                         for (int t : routes[k_tgt]) {
@@ -731,7 +736,7 @@ void run_tabu_search() {
                         cerr << "\n";
                     }
                 } else { // Modes 0, 1, 2: Correlated Request Ruin
-                    int r_seed = served[rand() % served.size()];
+                    int r_seed = served[rng() % served.size()];
                     sort(served.begin(), served.end(), [&](int a, int b) {
                         if (strat == 0) return c_mat[P[r_seed]][P[a]] < c_mat[P[r_seed]][P[b]];
                         if (strat == 1) return t_mat[P[r_seed]][P[a]] < t_mat[P[r_seed]][P[b]];
@@ -743,7 +748,7 @@ void run_tabu_search() {
                     cerr << "  -> [RUIN MODE " << strat << ": " << mode_names[strat] 
                          << "] Ejecting near req " << r_seed << ": ";
                     for (int step = 0; step < num_to_ruin; ++step) {
-                        int pick_idx = rand() % min((int)served.size(), RUIN_TOP_CANDIDATE_POOL);
+                        int pick_idx = rng() % min((int)served.size(), RUIN_TOP_CANDIDATE_POOL);
                         int r = served[pick_idx];
                         served.erase(served.begin() + pick_idx);
 

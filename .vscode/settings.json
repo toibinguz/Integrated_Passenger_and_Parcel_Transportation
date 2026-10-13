@@ -28,4 +28,29 @@
     "C_Cpp.loggingLevel": "None",
     "C_Cpp.autocomplete": "default",
     "python-envs.defaultEnvManager": "ms-python.python:system",
+    "latex-workshop.latex.tools": [
+        {
+            "name": "pdflatex",
+            "command": "pdflatex",
+            "args": [
+                "-synctex=1",
+                "-interaction=nonstopmode",
+                "-file-line-error",
+                "-output-directory=%OUTDIR%",
+                "%DOC%"
+            ],
+            "env": {}
+        }
+    ],
+    "latex-workshop.latex.recipes": [
+        {
+            "name": "MiKTeX - pdfLaTeX",
+            "tools": [
+                "pdflatex"
+            ]
+        }
+    ],
+    "latex-workshop.latex.recipe.default": "MiKTeX - pdfLaTeX",
+    "latex-workshop.view.pdf.viewer": "tab",
+    "latex-workshop.latex.autoBuild.run": "onSave"
 }

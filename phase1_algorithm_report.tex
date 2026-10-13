@@ -1,0 +1,943 @@
+\documentclass[11pt,a4paper]{article}
+
+% ============================================================================
+% PACKAGES & VIETNAMESE TYPOGRAPHY
+% ============================================================================
+\usepackage[utf8]{inputenc}
+\usepackage[T5]{fontenc}
+\usepackage[vietnamese]{babel}
+\usepackage{geometry}
+\geometry{left=2.2cm, right=2.2cm, top=2.4cm, bottom=2.4cm}
+
+\usepackage{amsmath, amssymb, amsthm, mathtools}
+\usepackage{bm}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{multirow}
+\usepackage{longtable}
+\usepackage{enumitem}
+\usepackage{xcolor}
+\usepackage{colortbl}
+\usepackage{hyperref}
+\usepackage{fancyhdr}
+\usepackage{titlesec}
+\usepackage{listings}
+\usepackage{tikz}
+\usetikzlibrary{shapes.geometric, arrows.meta, positioning, calc, fit, backgrounds}
+
+% ============================================================================
+% COLOR PALETTE & HYPERLINKS
+% ============================================================================
+\definecolor{primaryblue}{RGB}{18, 58, 130}
+\definecolor{secondaryblue}{RGB}{235, 243, 255}
+\definecolor{accentgreen}{RGB}{16, 110, 60}
+\definecolor{softgreen}{RGB}{236, 250, 242}
+\definecolor{accentred}{RGB}{175, 35, 35}
+\definecolor{softamber}{RGB}{255, 248, 230}
+\definecolor{borderamber}{RGB}{210, 145, 20}
+\definecolor{codebg}{RGB}{247, 249, 252}
+\definecolor{codeframe}{RGB}{205, 215, 230}
+\definecolor{commentgreen}{RGB}{34, 139, 34}
+\definecolor{keywordblue}{RGB}{0, 51, 179}
+
+\hypersetup{
+    colorlinks=true,
+    linkcolor=primaryblue,
+    urlcolor=primaryblue,
+    citecolor=primaryblue,
+    pdftitle={Giai phau Chi tiet Thuat toan Phase 1 - Exact Route Enumeration, Lagrangian Relaxation va Set Packing SA},
+    pdfauthor={Antigravity AI}
+}
+
+% ============================================================================
+% THEOREM & BOX ENVIRONMENTS
+% ============================================================================
+\newtheorem{theorem}{Định lý}[section]
+\newtheorem{lemma}[theorem]{Bổ đề}
+\newtheorem{proposition}[theorem]{Mệnh đề}
+\newtheorem{corollary}[theorem]{Hệ quả}
+\theoremstyle{definition}
+\newtheorem{definition}{Định nghĩa}[section]
+\newtheorem{subproblem}{Bài toán con}[section]
+\newtheorem{remark}{Nhận xét}[section]
+
+% Custom framed callout boxes using lrbox + fcolorbox
+\newsavebox{\calloutbox}
+\newenvironment{keybox}[1]{%
+    \par\medskip\noindent
+    \begin{lrbox}{\calloutbox}%
+    \begin{minipage}{\dimexpr\linewidth-2\fboxsep-2\fboxrule\relax}
+    \textbf{\textcolor{primaryblue}{#1}}\par\smallskip
+}{%
+    \end{minipage}%
+    \end{lrbox}%
+    \fcolorbox{primaryblue}{secondaryblue}{\usebox{\calloutbox}}%
+    \par\medskip
+}
+
+\newenvironment{warnbox}[1]{%
+    \par\medskip\noindent
+    \begin{lrbox}{\calloutbox}%
+    \begin{minipage}{\dimexpr\linewidth-2\fboxsep-2\fboxrule\relax}
+    \textbf{\textcolor{accentred}{#1}}\par\smallskip
+}{%
+    \end{minipage}%
+    \end{lrbox}%
+    \fcolorbox{borderamber}{softamber}{\usebox{\calloutbox}}%
+    \par\medskip
+}
+
+\newenvironment{optbox}[1]{%
+    \par\medskip\noindent
+    \begin{lrbox}{\calloutbox}%
+    \begin{minipage}{\dimexpr\linewidth-2\fboxsep-2\fboxrule\relax}
+    \textbf{\textcolor{accentgreen}{#1}}\par\smallskip
+}{%
+    \end{minipage}%
+    \end{lrbox}%
+    \fcolorbox{accentgreen}{softgreen}{\usebox{\calloutbox}}%
+    \par\medskip
+}
+
+% ============================================================================
+% CODE LISTING CONFIGURATION
+% ============================================================================
+\lstdefinestyle{cppstyle}{
+    language=C++,
+    backgroundcolor=\color{codebg},
+    frame=single,
+    rulecolor=\color{codeframe},
+    basicstyle=\ttfamily\footnotesize,
+    keywordstyle=\color{keywordblue}\bfseries,
+    commentstyle=\color{commentgreen}\itshape,
+    numbers=left,
+    numberstyle=\tiny\color{gray},
+    numbersep=8pt,
+    breaklines=true,
+    tabsize=4,
+    showstringspaces=false,
+    captionpos=b
+}
+\lstset{style=cppstyle}
+
+% ============================================================================
+% HEADER & FOOTER
+% ============================================================================
+\setlength{\headheight}{14pt}
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small\textcolor{primaryblue}{\textbf{Phân tích Chuyên sâu Thuật toán Phase 1 (\texttt{reference\_solve.cpp})}}}
+\fancyhead[R]{\small\textcolor{gray}{Bài toán Share-a-Ride (SARP)}}
+\fancyfoot[C]{\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+
+% ============================================================================
+% DOCUMENT START
+% ============================================================================
+\begin{document}
+
+% ----------------------------------------------------------------------------
+% TITLE BLOCK
+% ----------------------------------------------------------------------------
+\begin{center}
+    {\LARGE\bfseries\textcolor{primaryblue}{GIẢI PHẪU CHI TIẾT THUẬT TOÁN PHASE 1 TRONG \texttt{reference\_solve.cpp}}}\\[0.3cm]
+    {\Large\bfseries Vét cạn Lộ trình Nhánh-Cận, Cắt tỉa Thống trị, Thư giãn Đối ngẫu Lagrangian\\và Luyện kim Mô phỏng Đẩy-Lấp trên Không gian Đóng gói Tập hợp (Set Packing)}\\[0.4cm]
+    {\normalsize Tài liệu Kỹ thuật \& Chứng minh Toán học Chi tiết --- Dự án Tối ưu hóa Lộ trình Ghép xe Khách \& Hàng (SARP)}\\[0.2cm]
+    \rule{\linewidth}{1.2pt}
+\end{center}
+
+\tableofcontents
+\vspace{0.4cm}
+\rule{\linewidth}{0.5pt}
+\newpage
+
+% ============================================================================
+% SECTION 1: TỔNG QUAN TƯ TƯỞNG & TRIẾT LÝ THIẾT KẾ
+% ============================================================================
+\section{Tổng quan Tư tưởng và Triết lý Thiết kế Phase 1}
+
+\subsection{Bản chất Hình học của Bài toán SARP với Khung thời gian Hẹp}
+Bài toán \textbf{Share-a-Ride Problem (SARP)} yêu cầu điều phối một đội gồm $K$ xe taxi xuất phát từ các bến đỗ $O_k$ với tải trọng tối đa $Q_k$ để phục vụ hai nhóm yêu cầu:
+\begin{itemize}[leftmargin=1.5em]
+    \item \textbf{$N$ yêu cầu chở khách (Passengers)}: Đón tại $P_i$ trong khung thời gian $[e_i, l_i]$ và phải chở \textbf{trực tiếp ngay lập tức} tới điểm trả $D_i$ (không được phép ghé bất kỳ điểm dừng trung gian nào khác khi khách đang ngồi trên xe).
+    \item \textbf{$M$ yêu cầu chở hàng (Parcels)}: Đón gói hàng nặng $W_j$ tại $P_j$ trong khung thời gian $[e^p_j, l^p_j]$ và trả tại $D_j$ trong khung thời gian $[e^d_j, l^d_j]$, cho phép ghép chung nhiều gói hàng hoặc chở xen kẽ khách hàng giữa lúc đón và trả hàng nếu không vượt tải trọng $Q_k$.
+\end{itemize}
+Mục tiêu của bài toán là \textbf{tối đa hóa tổng lợi nhuận ròng (Total Net Benefit)}: tổng doanh thu $\text{Rev}_r$ của các yêu cầu được phục vụ trừ đi tổng chi phí di chuyển $C(u, v)$ trên toàn đội xe.
+
+\begin{keybox}{Nhận xét Cốt lõi Quyết định Kiến trúc Thuật toán}
+Trong các bộ dữ liệu thực tế của bài toán SARP (từ \texttt{test\_10.txt} đến \texttt{test\_500.txt}), khung thời gian $[e_r, l_r]$ rất chặt so với thời gian di chuyển $T(u,v)$ và thời gian phục vụ $S_r$. Hệ quả là \textbf{mỗi xe chỉ có thể phục vụ tối đa từ $2$ đến $5$ yêu cầu trong suốt hành trình}.
+\begin{itemize}[leftmargin=1.2em]
+    \item \textbf{Điểm yếu của Local Search / ALNS / Tabu Search trên lộ trình}: Khi lộ trình chỉ dài $3\sim 4$ yêu cầu, mỗi yêu cầu chiếm tới $25\%\sim 33\%$ lợi nhuận của xe. Một phép nhiễu (Ruin) tháo $15\%$ số yêu cầu sẽ dễ dàng phá hỏng các tổ hợp ghép chéo duy nhất, tạo ra dao động phương sai $\approx 2.5\%\sim 3.0\%$ quanh đỉnh tối ưu.
+    \item \textbf{Điểm yếu của MILP trực tiếp theo cạnh (Arc-Based MILP)}: Ràng buộc nối thời gian qua hằng số $\text{Big-}M$ ($t_v \ge t_u + S_u + T_{u,v} - M(1 - x_{k,u,v})$) làm nghiệm thư giãn tuyến tính (LP Relaxation) bị suy biến nặng, khiến cây Branch-and-Bound bùng nổ.
+    \item \textbf{Ưu thế tuyệt đối của Phân rã Dantzig-Wolfe (Phase 1)}: Vì mỗi xe chỉ ghép được một số lượng rất nhỏ yêu cầu, tổng số lộ trình hợp lệ của một xe chỉ vào khoảng vài trăm đến vài nghìn. Ta có thể \textbf{vét cạn chính xác $100\%$ mọi lộ trình hợp lệ của từng xe} trong vài mili-giây, biến bài toán định tuyến phức tạp thành bài toán \textbf{Đóng gói Tập hợp có Trọng số (Maximum Weight Set Packing)} thuần túy!
+\end{itemize}
+\end{keybox}
+
+\subsection{Sơ đồ Chuỗi 5 Bài toán con trong Phase 1 (\texttt{column\_solve})}
+Thuật toán Phase 1 trong \texttt{reference\_solve.cpp} phân rã bài toán SARP thành một chuỗi \textbf{5 bài toán con nối tiếp nhau} (Hình \ref{fig:phase1_pipeline}):
+
+\begin{figure}[htbp]
+\centering
+\resizebox{\linewidth}{!}{%
+\begin{tikzpicture}[
+    node distance=0.65cm,
+    box/.style={rectangle, rounded corners=4pt, draw=primaryblue, fill=secondaryblue, thick, minimum width=15.5cm, minimum height=1.05cm, align=center, font=\small},
+    arrow/.style={-Stealth, thick, draw=primaryblue}
+]
+    \node[box] (sp0) {\textbf{Bài toán con 0: Đồng nhất hóa Đồ thị Tác vụ (Macro-Node Contraction)}\\Gộp mỗi Passenger thành 1 Macro-Node $r \in [1, N]$; tách mỗi Parcel thành Pickup $r \in [N+1, R]$ và Dropoff $R+r \in [R+N+1, 2R]$.};
+    
+    \node[box, below=of sp0] (sp1) {\textbf{Bài toán con 1: Vét cạn Lộ trình Nhánh-Cận theo từng Xe (\texttt{enum\_dfs})}\\Duyệt DFS từ $O_k$ với 5 quy tắc cắt tỉa chính xác: \texttt{lower\_bound} hạn chót đón, tải trọng $Q_k$, đi thẳng trả hàng, và nhìn trước \texttt{open\_ok}.};
+    
+    \node[box, below=of sp1] (sp2) {\textbf{Bài toán con 2: Cắt tỉa Thống trị Đẳng cấu Tập Yêu cầu (\texttt{enum\_record})}\\Băm 64-bit bộ $(k, \text{sorted}(R_j))$. Trong các lộ trình của cùng xe $k$ phục vụ cùng tập yêu cầu $R_j$, chỉ giữ lại lộ trình có $\text{profit}$ cực đại.};
+    
+    \node[box, below=of sp2] (sp3) {\textbf{Bài toán con 3: Khởi tạo Tham lam trên Không gian Cột (\texttt{Greedy Set Packing})}\\Sắp xếp toàn bộ $NC$ cột theo $\text{profit}_j$ giảm dần, gán tham lam các cột không xung đột để lấy cận dưới khởi tạo $\text{best}$.};
+    
+    \node[box, below=of sp3] (sp4) {\textbf{Bài toán con 4: Thư giãn Đối ngẫu Lagrangian \& Tối ưu hóa Dưới đạo hàm}\\Thư giãn ràng buộc $\sum_{j \ni q} x_j \le 1$ với nhân tử $u_q \ge 0$. Giải $K$ bài toán con độc lập tìm cận trên lý thuyết $UB = \lfloor L(u^*) \rfloor$.};
+    
+    \node[box, below=of sp4] (sp5) {\textbf{Bài toán con 5: Luyện kim Mô phỏng Set Packing với Toán tử Đẩy-và-Lấp (\texttt{Eject-and-Refill SA})}\\Chạy SA tốc độ cao ($>5\times 10^6$ iter/s): gán cột mới $j$ cho xe $k$, đẩy các xe xung đột $k_2$ và lấp lại cột tốt nhất khả thi cho $k_2$.};
+
+    \draw[arrow] (sp0) -- (sp1);
+    \draw[arrow] (sp1) -- (sp2);
+    \draw[arrow] (sp2) -- (sp3);
+    \draw[arrow] (sp3) -- (sp4);
+    \draw[arrow] (sp4) -- (sp5);
+\end{tikzpicture}%
+}
+\caption{Kiến trúc 5 bài toán con nối tiếp trong Phase 1 (\texttt{column\_solve}) của \texttt{reference\_solve.cpp}.}
+\label{fig:phase1_pipeline}
+\end{figure}
+
+---
+
+% ============================================================================
+% SECTION 2: BÀI TOÁN CON 0 - BIỂU DIỄN ĐỒ THỊ TÁC VỤ ĐỒNG NHẤT
+% ============================================================================
+\section{Bài toán con 0: Đồng nhất hóa Đồ thị Tác vụ (Macro-Node Contraction)}
+
+\subsection{Động cơ Toán học của Phép Co Đỉnh (Node Contraction)}
+Trong phát biểu gốc, cả khách hàng $i \in [1, N]$ lẫn kiện hàng $j \in [N+1, N+M]$ đều có hai đỉnh vật lý là điểm đón $P$ và điểm trả $D$. Tuy nhiên, ràng buộc nghiệp vụ của hai loại yêu cầu này hoàn toàn khác nhau:
+\begin{enumerate}[leftmargin=1.5em]
+    \item Với \textbf{khách hàng $r \in [1, N]$}: Sau khi xe đến đỉnh đón $P_r$ tại thời điểm $t_{\text{arr}} \le l_r$, xe bắt đầu phục vụ tại $\max(t_{\text{arr}}, e_r)$, mất $S_r$ đơn vị thời gian để khách lên xe, đi thẳng tới $D_r$ mất $T(P_r, D_r)$ với chi phí $C(P_r, D_r)$, và mất thêm $S_r$ đơn vị thời gian để khách xuống xe tại $D_r$. Trong suốt quá trình từ $P_r$ đến $D_r$, xe \textbf{tuyệt đối không được rẽ đi đâu khác}.
+    \item Với \textbf{kiện hàng $r \in [N+1, R]$} ($R = N+M$): Giữa sự kiện đón hàng tại $P_r$ và trả hàng tại $D_r$, xe có thể ghé thăm tùy ý các điểm đón/trả của khách hoặc của kiện hàng khác miễn là tổng tải trọng không vượt $Q_k$ và kịp trả hàng trong $[e^d_r, l^d_r]$.
+\end{enumerate}
+
+\begin{subproblem}[Biến đổi Đồ thị Vật lý sang Đồ thị Tác vụ $2R$ Đỉnh]
+Biểu diễn mọi hành động đón/trả khách và hàng về một không gian chỉ số tác vụ thống nhất $x \in \{1, \dots, 2R\}$ sao cho mỗi chỉ số $x$ đóng vai trò một ``nguyên tử định tuyến'' (routing atom) có điểm vào, điểm ra, thời lượng nội bộ, chi phí nội bộ và biến thiên tải trọng xác định.
+\end{subproblem}
+
+\subsection{Công thức Ánh xạ Tường minh (Lines 574--604)}
+Thuật toán định nghĩa $2R$ node tác vụ thông qua 6 mảng thuộc tính $\text{nin}[x], \text{nout}[x], \text{ndur}[x], \text{nic}[x], \text{nw}[x]$ và $[ne[x], nl[x]]$ như trong Bảng \ref{tab:macronode}:
+
+\begin{table}[htbp]
+\centering
+\renewcommand{\arraystretch}{1.35}
+\resizebox{\linewidth}{!}{%
+\begin{tabular}{>{\bfseries}l l c c c}
+\toprule
+Mảng C++ & Ý nghĩa Vật lý / Toán học & \textbf{Khách hàng} & \textbf{Đón hàng (Pickup)} & \textbf{Trả hàng (Dropoff)} \\
+ & & $x = r \in [1, N]$ & $x = r \in [N+1, R]$ & $x = R+r \in [R+N+1, 2R]$ \\
+\midrule
+\texttt{nin[x]} & Đỉnh đồ thị vật lý khi xe đi vào node $x$ & $P_r$ & $P_r$ & $D_r$ \\
+\texttt{nout[x]} & Đỉnh đồ thị vật lý khi xe rời khỏi node $x$ & $D_r$ & $P_r$ & $D_r$ \\
+\texttt{ndur[x]} & Tổng thời gian thực hiện bên trong node $x$ & $2S_r + T(P_r, D_r)$ & $S_r$ & $S_r$ \\
+\texttt{nic[x]} & Chi phí di chuyển nội bộ bên trong node $x$ & $C(P_r, D_r)$ & $0$ & $0$ \\
+\texttt{nw[x]} & Biến thiên tải trọng hàng hóa khi qua $x$ & $0$ & $+W_r$ & $-W_r$ \\
+\texttt{ne[x]} & Thời điểm sớm nhất bắt đầu tại \texttt{nin[x]} & $e_r$ & $e^p_r$ & $e^d_r$ \\
+\texttt{nl[x]} & Thời điểm muộn nhất phải đến \texttt{nin[x]} & $l_r$ & $l^p_r$ & $l^d_r$ \\
+\bottomrule
+\end{tabular}%
+}
+\caption{Bảng ánh xạ đồng nhất hóa Passenger (1 Macro-Node) và Parcel (2 Split-Nodes).}
+\label{tab:macronode}
+\end{table}
+
+\begin{proposition}[Tính bất biến của Phương trình Chuyển trạng thái]
+Với cách định nghĩa trên, khi xe đang ở đỉnh vật lý $\text{last}$ tại thời điểm $\text{time}$ và quyết định đi tới bất kỳ node tác vụ $x \in [1, 2R]$ (dù $x$ là khách hàng, điểm đón hàng hay điểm trả hàng), phương trình cập nhật thời gian đến ($\text{arr}$) và thời điểm hoàn tất rời khỏi $\text{nout}[x]$ ($\text{dep}$) có dạng \textbf{hoàn toàn giống nhau}:
+\begin{align}
+    \text{arr}(x) &= \text{time} + T(\text{last}, \text{nin}[x]) \label{eq:arr}\\
+    \text{Feasibility}(x) &\iff \text{arr}(x) \le nl[x] \label{eq:feas}\\
+    \text{dep}(x) &= \max\big(\text{arr}(x), ne[x]\big) + \text{ndur}[x] \label{eq:dep}
+\end{align}
+\end{proposition}
+\begin{proof}
+Kiểm tra trực tiếp cho trường hợp khách hàng $x = r \in [1, N]$:
+Xe đến $P_r = \text{nin}[r]$ lúc $\text{arr} = \text{time} + T(\text{last}, P_r) \le l_r$. Xe bắt đầu đón khách lúc $t_{\text{start}} = \max(\text{arr}, e_r)$, rời $P_r$ lúc $t_{\text{start}} + S_r$, đến $D_r$ lúc $t_{\text{start}} + S_r + T(P_r, D_r)$ và hoàn tất trả khách tại $D_r = \text{nout}[r]$ đúng vào lúc:
+\[
+    t_{\text{finish}} = \max(\text{arr}, e_r) + \underbrace{2S_r + T(P_r, D_r)}_{\text{ndur}[r]} = \text{dep}(r).
+\]
+Chi phí phát sinh trên chặng này gồm chi phí đi từ $\text{last}$ tới $P_r$ cộng chi phí đi từ $P_r$ tới $D_r$, tức là $C(\text{last}, \text{nin}[r]) + \text{nic}[r]$. Do đó phép co Macro-Node bảo toàn chính xác $100\%$ thời gian và chi phí!
+\end{proof}
+
+Ngoài ra, bước tiền xử lý thực hiện lọc khả thi tĩnh (\texttt{servable[r]}):
+\[
+    \text{servable}[r] = \begin{cases}
+    0, & \text{nếu } (r \le N \land e_r > l_r) \lor (r > N \land (e^p_r > l^p_r \lor e^d_r > l^d_r \lor W_r > \max_{k} Q_k)),\\
+    1, & \text{ngược lại.}
+    \end{cases}
+\]
+Mọi yêu cầu có $\text{servable}[r] = 1$ được đưa vào danh sách \texttt{servable\_list}.
+
+---
+
+% ============================================================================
+% SECTION 3: BÀI TOÁN CON 1 - VÉT CẠN LỘ TRÌNH NHÁNH-CẬN (ENUM_DFS)
+% ============================================================================
+\section{Bài toán con 1: Vét cạn Lộ trình Nhánh-Cận theo từng Xe (\texttt{enum\_dfs})}
+
+\subsection{Phát biểu Toán học của Bài toán Sinh Cột Đơn Xe}
+\begin{subproblem}[Single-Vehicle Exact Route Enumeration]
+Cho xe $k \in \{1, \dots, K\}$ xuất phát từ đỉnh $O_k$ tại thời điểm $t_0 = 0$ với tải trọng ban đầu $\text{load}_0 = 0$. Hãy liệt kê toàn bộ các chuỗi tác vụ hợp lệ $\sigma = (x_1, x_2, \dots, x_m)$ ($m \ge 1, x_s \in [1, 2R]$) thỏa mãn đồng thời 5 điều kiện:
+\begin{enumerate}[label=(C\arabic*), leftmargin=2.2em]
+    \item \textbf{Tính đơn nhất (Simple Requests)}: Mỗi yêu cầu $q \in \mathcal{R}$ được đón tối đa $1$ lần trong $\sigma$.
+    \item \textbf{Tính đóng của Hàng hóa (Parcel Pairing \& Precedence)}: Mọi kiện hàng $q \in [N+1, R]$ xuất hiện trong $\sigma$ đều phải có node trả $R+q$ nằm sau node đón $q$ trong $\sigma$. Khi kết thúc lộ trình $\sigma$, trên xe không còn kiện hàng nào chưa trả ($\text{e\_open} = \emptyset$).
+    \item \textbf{Ràng buộc Khung thời gian (Time Windows)}: Tại mọi bước $s = 1, \dots, m$, thời điểm đến $t^{\text{arr}}_s$ và rời $t^{\text{dep}}_s$ xác định đệ quy theo \eqref{eq:arr}--\eqref{eq:dep} (với $\text{nout}[x_0] \equiv O_k, t^{\text{dep}}_0 = 0$) phải thỏa mãn $t^{\text{arr}}_s \le nl[x_s]$.
+    \item \textbf{Ràng buộc Tải trọng (Capacity)}: Tại mọi bước $s = 1, \dots, m$, tải trọng tích lũy $\text{load}_s = \sum_{i=1}^s \text{nw}[x_i] \le Q_k$.
+    \item \textbf{Tính Sinh lời Ròng (Positive Net Profit)}: Lợi nhuận ròng của lộ trình phải dương nghiêm ngặt:
+    \begin{equation}
+        \text{profit}(\sigma) = \sum_{q \in \mathcal{S}(\sigma)} \text{Rev}_q - \sum_{s=1}^m \Big( C(\text{nout}[x_{s-1}], \text{nin}[x_s]) + \text{nic}[x_s] \Big) > 0,
+        \label{eq:col_profit}
+    \end{equation}
+    trong đó $\mathcal{S}(\sigma) = \{x_s \in \sigma : x_s \le R\}$ là tập các yêu cầu được phục vụ bởi $\sigma$.
+\end{enumerate}
+\end{subproblem}
+
+\subsection{Cấu trúc Trạng thái Đệ quy trong \texttt{enum\_dfs} (Lines 378--407)}
+Hàm đệ quy được khai báo với chữ ký:
+\begin{lstlisting}
+static void enum_dfs(int k, int last, ll time, int load, ll profit)
+\end{lstlisting}
+Trong đó:
+\begin{itemize}[leftmargin=1.5em]
+    \item \texttt{k}: Chỉ số xe hiện tại ($1 \le k \le K$).
+    \item \texttt{last}: Đỉnh vật lý nơi xe vừa hoàn tất tác vụ gần nhất (khởi tạo $\texttt{last} = O_k$).
+    \item \texttt{time}: Thời điểm sớm nhất xe sẵn sàng rời khỏi \texttt{last} (khởi tạo $\texttt{time} = 0$).
+    \item \texttt{load}: Tổng khối lượng hàng hóa đang nằm trên xe (khởi tạo $\texttt{load} = 0$).
+    \item \texttt{profit}: Tổng doanh thu đã ghi nhận trừ đi tổng chi phí di chuyển tính đến thời điểm hiện tại (khởi tạo $\texttt{profit} = 0$).
+\end{itemize}
+Đi kèm là 4 cấu trúc dữ liệu trạng thái toàn cục được cập nhật theo cơ chế \textit{backtracking} ($O(1)$ push/pop):
+\begin{itemize}[leftmargin=1.5em]
+    \item \texttt{e\_seq}: Vector lưu chuỗi các node tác vụ $(x_1, x_2, \dots)$ đã đi qua từ đầu lộ trình.
+    \item \texttt{e\_reqs}: Vector lưu tập các mã yêu cầu $q \in [1, R]$ đã được xe đón.
+    \item \texttt{e\_open}: Vector lưu danh sách các kiện hàng $q \in [N+1, R]$ \textbf{đã đón lên xe nhưng chưa trả}.
+    \item \texttt{e\_used[q]}: Mảng đánh dấu nhị phân $\in \{0, 1\}$ cho biết yêu cầu $q$ đã xuất hiện trong lộ trình hiện tại hay chưa.
+\end{itemize}
+
+\begin{warnbox}{Lưu ý Quan trọng về Dấu của \texttt{profit} tại các Trạng thái Trung gian}
+Trong \texttt{enum\_dfs}:
+\begin{itemize}[leftmargin=1.2em]
+    \item Khi xe \textbf{đón một khách hàng} $q \le N$ (Line 403): vì khách được chở thẳng từ $P_q$ tới $D_q$ trong cùng Macro-Node $q$, doanh thu được cộng ngay lập tức:
+    \[
+        \text{profit}_{\text{new}} = \text{profit} - C(\text{last}, \text{nin}[q]) - \text{nic}[q] + \text{Rev}[q].
+    \]
+    \item Khi xe \textbf{đón một kiện hàng} $q > N$ (Line 404): hàng mới chỉ lên xe chứ chưa giao xong, nên thuật toán \textbf{chỉ trừ chi phí đi đón hàng} mà chưa cộng doanh thu:
+    \[
+        \text{profit}_{\text{new}} = \text{profit} - C(\text{last}, \text{nin}[q]).
+    \]
+    \item Khi xe \textbf{trả kiện hàng đó} tại $x = R + q$ (Line 390): lúc này doanh thu $\text{Rev}[q]$ mới được cộng vào:
+    \[
+        \text{profit}_{\text{new}} = \text{profit} - C(\text{last}, \text{nin}[R+q]) + \text{Rev}[q].
+    \]
+\end{itemize}
+Do đó, tại các bước trung gian (hoặc ngay cả khi vừa phục vụ một yêu cầu đầu tiên ở xa depot làm chi phí rỗng đầu tuyến lớn), $\text{profit}$ có thể \textbf{nhận giá trị âm}, rồi sau khi ghép thêm các yêu cầu tiếp theo mới trở thành dương! Vì vậy, \texttt{enum\_dfs} \textbf{tuyệt đối không cắt nhánh khi $\text{profit} \le 0$}, mà chỉ kiểm tra điều kiện $\text{profit} > 0$ khi ghi nhận một cột hoàn chỉnh tại Line 382:
+\begin{center}
+    \texttt{if (e\_open.empty() \&\& !e\_seq.empty() \&\& profit > 0) enum\_record(k, profit);}
+\end{center}
+\end{warnbox}
+
+\subsection{Hệ thống 4 Định lý Cắt tỉa Chính xác (Exact Branch-and-Bound Pruning)}
+Sức mạnh giúp \texttt{enum\_dfs} duyệt toàn bộ đề bài $500$ yêu cầu chỉ trong $65,265$ trạng thái ($9.5\text{ ms}$) nằm ở 4 nhát cắt bảo toàn tính tối ưu sau đây:
+
+\subsubsection{Nhát cắt 1: Cắt tỉa Tìm kiếm Nhị phân theo Hạn chót Đón (\texttt{lower\_bound})}
+Trước khi bắt đầu gọi \texttt{enum\_dfs}, thuật toán sắp xếp toàn bộ các yêu cầu khả thi \texttt{e\_by\_l} theo thứ tự không giảm của hạn chót đón $nl[q]$ (Lines 411--413):
+\[
+    nl[\text{e\_by\_l}[0]] \le nl[\text{e\_by\_l}[1]] \le \dots \le nl[\text{e\_by\_l}[|\mathcal{R}|-1]],
+\]
+và lưu mảng giá trị tương ứng vào $\texttt{e\_l}[i] = nl[\text{e\_by\_l}[i]]$.
+
+\begin{lemma}[Cắt tỉa Tiền tố Quá hạn bằng Tìm kiếm Nhị phân]
+Giả sử thời gian di chuyển giữa mọi cặp đỉnh là không âm: $T(u, v) \ge 0, \forall u, v$. Tại trạng thái đệ quy có thời điểm hiện tại là $\text{time}$, mọi yêu cầu $q$ có $nl[q] < \text{time}$ đều không thể đón kịp.
+\end{lemma}
+\begin{proof}
+Thời điểm xe đến điểm đón $\text{nin}[q]$ là $\text{arr} = \text{time} + T(\text{last}, \text{nin}[q])$. Vì $T(\text{last}, \text{nin}[q]) \ge 0$ nên $\text{arr} \ge \text{time} > nl[q]$, vi phạm điều kiện \eqref{eq:feas}.
+\end{proof}
+Nhờ Bổ đề này, tại Line 394, thay vì duyệt toàn bộ $R$ yêu cầu từ $0$ đến $R-1$, vòng lặp mở rộng yêu cầu mới nhảy thẳng tới vị trí đầu tiên có $nl[q] \ge \text{time}$ bằng tìm kiếm nhị phân trong $O(\log R)$:
+\begin{lstlisting}
+for (size_t idx = lower_bound(e_l.begin(), e_l.end(), time) - e_l.begin(); idx < e_by_l.size(); ++idx)
+\end{lstlisting}
+Khi $\text{time}$ tăng dần dọc theo độ sâu của lộ trình, chỉ số \texttt{idx} tiến nhanh về phía cuối mảng \texttt{e\_by\_l}, làm hệ số phân nhánh (branching factor) giảm theo cấp số nhân!
+
+\subsubsection{Nhát cắt 2: Cắt tỉa Tải trọng Tức thời (Capacity Check)}
+Tại Line 400, khi thử đón một kiện hàng $q > N$:
+\[
+    \text{load} + \text{nw}[q] > Q_k \implies \text{continue (cắt nhánh).}
+\]
+Vì khách hàng $q \le N$ có $\text{nw}[q] = 0$, phép kiểm tra này chỉ cần thực hiện khi $q > N$.
+
+\subsubsection{Nhát cắt 3: Cắt tỉa Khả năng Giao thẳng của Kiện hàng Mới (Self Reachability)}
+Khi thử đón một kiện hàng $q > N$, giả sử xe đến kịp điểm đón ($\text{arr} \le nl[q]$) và hoàn tất bốc hàng tại thời điểm $\text{dep} = \max(\text{arr}, ne[q]) + \text{ndur}[q]$. Để kiện hàng $q$ có thể được trả hợp lệ tại $R+q$ ở một bước nào đó trong tương lai, ít nhất nếu xe đi thẳng ngay lập tức từ điểm đón $\text{nout}[q] = P_q$ tới điểm trả $\text{nin}[R+q] = D_q$, xe phải đến trước hạn chót trả hàng $nl[R+q]$:
+\begin{equation}
+    \text{dep} + T(\text{nout}[q], \text{nin}[R+q]) > nl[R+q] \implies \text{continue (cắt nhánh - Line 400).}
+\end{equation}
+
+\subsubsection{Nhát cắt 4: Cắt tỉa Nhìn trước Tập Hàng đang Mở (\texttt{open\_ok} Lookahead)}
+Đây là nhát cắt tinh tế nhất của \texttt{enum\_dfs} (Lines 374--377):
+\begin{lstlisting}
+// every still-open parcel (except `skip`) must remain deliverable directly from (v, dep)
+static inline bool open_ok(ll dep, int v, int skip) {
+    for (int o : e_open) if (o != skip && dep + T(v, nin[R + o]) > nl[R + o]) return false;
+    return true;
+}
+\end{lstlisting}
+
+\begin{proposition}[Tính đúng đắn của Cắt tỉa \texttt{open\_ok}]
+Giả sử ma trận thời gian $T$ thỏa mãn bất đẳng thức tam giác ($T(v, w) + T(w, u) \ge T(v, u)$). Khi xe chuẩn bị thực hiện một bước chuyển tới đỉnh tác vụ tiếp theo (kết thúc tại đỉnh vật lý $v$ vào thời điểm $\text{dep}$), nếu tồn tại bất kỳ kiện hàng nào $o \in \text{e\_open}$ đang nằm trên xe mà:
+\begin{equation}
+    \text{dep} + T(v, \text{nin}[R+o]) > nl[R+o],
+    \label{eq:open_ok}
+\end{equation}
+thì không tồn tại bất kỳ cách mở rộng lộ trình hợp lệ nào có thể trả được kiện hàng $o$ đúng hạn.
+\end{proposition}
+\begin{proof}
+Trong mọi lộ trình hoàn chỉnh mở rộng từ trạng thái $(v, \text{dep})$, kiện hàng $o \in \text{e\_open}$ bắt buộc phải được trả tại đỉnh $\text{nin}[R+o]$ ở một bước $s \ge 1$ nào đó sau khi rời $v$. Do thời gian phục vụ $\text{ndur} \ge 0$, thời gian chờ $\ge 0$ và bất đẳng thức tam giác của $T$, thời điểm đến $\text{nin}[R+o]$ trong mọi lộ trình mở rộng luôn thỏa mãn:
+\[
+    t^{\text{arr}}(R+o) \ge \text{dep} + T(v, \text{nin}[R+o]) > nl[R+o],
+\]
+tức kiện hàng $o$ chắc chắn bị trễ hạn trả. Do đó cắt bỏ nhánh này bảo toàn $100\%$ tập lộ trình hợp lệ.
+\end{proof}
+Hàm \texttt{open\_ok} được gọi tại cả 2 nhánh:
+\begin{itemize}[leftmargin=1.5em]
+    \item Khi thử trả kiện hàng $q \in \text{e\_open}$ (Line 388): Gọi \texttt{open\_ok(dep, nout[R+q], q)} để đảm bảo việc đi trả $q$ không làm các kiện hàng khác $o \neq q$ đang trên xe bị quá hạn trả.
+    \item Khi thử đón yêu cầu mới $q$ (Line 401): Gọi \texttt{open\_ok(dep, nout[q], -1)} để đảm bảo việc rẽ đi đón $q$ không làm bất kỳ kiện hàng nào đang nằm trên xe bị quá hạn trả.
+\end{itemize}
+
+---
+
+% ============================================================================
+% SECTION 4: BÀI TOÁN CON 2 - CẮT TỈA THỐNG TRỊ & BĂM 64-BIT (ENUM_RECORD)
+% ============================================================================
+\section{Bài toán con 2: Cắt tỉa Thống trị Đẳng cấu Tập Yêu cầu (\texttt{enum\_record})}
+
+\subsection{Định lý Thống trị Cột trên Không gian Set Packing}
+Một tập gồm $m$ yêu cầu trên cùng một xe $k$ có thể có nhiều thứ tự đón/trả hợp lệ khác nhau (ví dụ: đón hàng $A \to$ đón hàng $B \to$ trả $A \to$ trả $B$, hoặc đón $A \to$ đón $B \to$ trả $B \to$ trả $A$, hoặc đón khách $C \to$ đón hàng $A \to$ trả hàng $A$). Nếu giữ lại tất cả các hoán vị này, số lượng cột trong bài toán Set Packing sẽ bị phình to không cần thiết.
+
+\begin{theorem}[Định lý Thống trị Đẳng cấu Tập Yêu cầu --- Column Dominance]
+Xét hai lộ trình hoàn chỉnh hợp lệ $\sigma_1$ và $\sigma_2$ của cùng một xe $k \in \{1, \dots, K\}$. Giả sử $\sigma_1$ và $\sigma_2$ phục vụ đúng cùng một tập hợp các yêu cầu:
+\[
+    \mathcal{S}(\sigma_1) = \mathcal{S}(\sigma_2) = R_j \subseteq \{1, \dots, R\},
+\]
+và $\text{profit}(\sigma_1) \ge \text{profit}(\sigma_2)$. Khi đó, tồn tại nghiệm tối ưu toàn cục của bài toán SARP không sử dụng lộ trình $\sigma_2$ (nói cách khác, $\sigma_1$ \textbf{thống trị hoàn toàn} $\sigma_2$).
+\end{theorem}
+\begin{proof}
+Giả sử tồn tại một phương án điều phối toàn đội xe $\Pi = (\pi_1, \dots, \pi_K)$ hợp lệ sử dụng lộ trình $\pi_k = \sigma_2$ trên xe $k$. Vì tính hợp lệ giữa các xe khác nhau chỉ phụ thuộc vào việc các tập yêu cầu $\mathcal{S}(\pi_1), \dots, \mathcal{S}(\pi_K)$ đôi một rời nhau ($\mathcal{S}(\pi_u) \cap \mathcal{S}(\pi_v) = \emptyset, \forall u \neq v$), khi ta thay thế $\pi_k = \sigma_2$ bằng $\pi'_k = \sigma_1$:
+\begin{enumerate}[leftmargin=1.5em]
+    \item Lộ trình $\sigma_1$ đã hợp lệ nội bộ trên xe $k$ (được chứng nhận bởi \texttt{enum\_dfs}).
+    \item Tập yêu cầu tiêu thụ trên xe $k$ không đổi: $\mathcal{S}(\sigma_1) = \mathcal{S}(\sigma_2) = R_j$, nên không gây ra bất kỳ xung đột mới nào với các xe $u \neq k$.
+    \item Tổng lợi nhuận toàn đội xe thay đổi một lượng $\Delta = \text{profit}(\sigma_1) - \text{profit}(\sigma_2) \ge 0$.
+\end{enumerate}
+Do đó ta có thể loại bỏ hoàn toàn $\sigma_2$ ngay tại thời điểm sinh cột mà không làm suy giảm giá trị tối ưu toàn cục!
+\end{proof}
+
+\subsection{Cơ chế Băm 64-bit và Tổ chức Bộ nhớ Phẳng (Lines 345--372)}
+Để thực thi Định lý trên trong thời gian trung bình $O(|R_j| \log |R_j|)$ cho mỗi lộ trình tìm được, hàm \texttt{enum\_record(int k, ll profit)} thực hiện:
+
+\begin{enumerate}[leftmargin=1.5em]
+    \item \textbf{Chuẩn hóa Tập yêu cầu (Canonical Representation)}: Sao chép vector \texttt{e\_reqs} sang \texttt{e\_sorted} và sắp xếp tăng dần:
+    \[
+        \texttt{e\_sorted} = (q_1, q_2, \dots, q_r) \quad \text{với } 1 \le q_1 < q_2 < \dots < q_r \le R.
+    \]
+    \item \textbf{Hàm băm 64-bit kết hợp FNV-1a và Golden-Ratio Mixing (\texttt{boost::hash\_combine})}:
+    Khởi tạo hạt giống băm từ hằng số FNV offset basis trộn với mã xe $k$:
+    \begin{equation}
+        h_0 = \texttt{1469598103934665603ULL} \oplus \big(k \times \texttt{0x9E3779B97F4A7C15ULL}\big).
+    \end{equation}
+    Sau đó với mỗi yêu cầu $q \in \texttt{e\_sorted}$, cập nhật trạng thái băm:
+    \begin{equation}
+        h \leftarrow \Big(h \oplus \big(q + \texttt{0x9E3779B97F4A7C15ULL} + (h \ll 6) + (h \gg 2)\big)\Big) \times \texttt{1099511628211ULL}.
+    \end{equation}
+    \item \textbf{Tra cứu và Cập nhật Thống trị trong Bảng băm \texttt{col\_index}}:
+    \begin{itemize}[leftmargin=1.2em]
+        \item Nếu khóa $h$ \textbf{chưa tồn tại} trong \texttt{col\_index}: Tạo một \texttt{Column} mới tại chỉ số $j = \texttt{cols.size()}$, nối $\texttt{e\_sorted}$ vào cuối mảng phẳng \texttt{col\_req} (từ vị trí \texttt{rbeg}, độ dài \texttt{rlen}), và nối chuỗi hành trình \texttt{e\_seq} vào cuối mảng phẳng \texttt{col\_nodes} (từ vị trí \texttt{nbeg}, độ dài \texttt{nlen}).
+        \item Nếu khóa $h$ \textbf{đã tồn tại} tại cột $c = \texttt{cols[it->second]}$: Kiểm tra khớp chính xác bộ $(k, \text{e\_sorted})$. Nếu $\text{profit} > c.\text{profit}$, cập nhật $c.\text{profit} \leftarrow \text{profit}$ và ghi đè trực tiếp chuỗi hành trình mới \texttt{e\_seq} vào vùng nhớ \texttt{col\_nodes[c.nbeg ... c.nbeg + c.nlen - 1]} (vì hai lộ trình phục vụ cùng tập yêu cầu trên cùng một xe luôn có cùng số lượng node tác vụ $\texttt{nlen} = \texttt{e\_seq.size()}$!).
+    \end{itemize}
+\end{enumerate}
+
+\begin{keybox}{Hiệu quả Nén Thống trị và Tối ưu Bộ nhớ Đệm (Cache Locality)}
+\begin{itemize}[leftmargin=1.2em]
+    \item \textbf{Tỷ lệ nén thực tế}: Trên \texttt{test\_500.txt}, \texttt{enum\_dfs} duyệt qua $65,265$ trạng thái nhưng sau khi qua bộ lọc thống trị \texttt{enum\_record}, chỉ còn lại đúng $\mathbf{NC = 21,461}$ cột phân biệt (nén bỏ hơn $67\%$ số trạng thái dư thừa).
+    \item \textbf{Thiết kế Mảng Phẳng (Flat Arena)}: Toàn bộ cấu trúc \texttt{struct Column \{ int k; ll profit; int rbeg, rlen, nbeg, nlen; \}} chỉ nặng đúng $\mathbf{32\text{ bytes}}$ và không chứa bất kỳ con trỏ cấp phát động nào. Mọi tập yêu cầu của tất cả $21,461$ cột nằm liền kề nhau trên một mảng \texttt{vector<int> col\_req} duy nhất ($\approx 240\text{ KB}$), nằm gọn hoàn toàn trong bộ nhớ đệm L2/L3 của CPU!
+\end{itemize}
+\end{keybox}
+
+---
+
+% ============================================================================
+% SECTION 5: BÀI TOÁN CHỦ (MASTER PROBLEM) & BÀI TOÁN CON 3 (GREEDY START)
+% ============================================================================
+\section{Bài toán Chủ (Master Problem) và Bài toán con 3: Khởi tạo Tham lam}
+
+\subsection{Mô hình Quy hoạch Nguyên Đóng gói Tập hợp (Set Packing Master Problem)}
+Sau khi Bài toán con 1 và 2 kết thúc với $\texttt{enum\_abort} = \texttt{false}$, ta thu được tập hợp đầy đủ gồm $NC$ cột $\mathcal{C} = \{0, 1, \dots, NC-1\}$. Phân hoạch $\mathcal{C}$ theo từng xe:
+\[
+    \mathcal{C} = \bigcup_{k=1}^K \mathcal{C}_k, \qquad \mathcal{C}_k = \{j \in \mathcal{C} : \text{cols}[j].k = k\}.
+\]
+Với mỗi cột $j \in \mathcal{C}$, ký hiệu $R_j \subseteq \{1, \dots, R\}$ là tập các yêu cầu mà cột $j$ phục vụ, và đặt hệ số ma trận nhị phân:
+\[
+    a_{q, j} = \begin{cases}
+    1, & \text{nếu } q \in R_j,\\
+    0, & \text{nếu } q \notin R_j.
+    \end{cases}
+\]
+Gọi $x_j \in \{0, 1\}$ là biến quyết định bằng $1$ nếu cột $j$ được chọn vào phương án điều phối cuối cùng, và bằng $0$ nếu ngược lại. Bài toán SARP ban đầu tương đương chính xác $100\%$ với bài toán \textbf{Master Problem (MP)} sau đây:
+
+\begin{align}
+    (\text{MP}) \qquad OPT_{IP} = \max_{x} \quad & \sum_{j=0}^{NC-1} \text{profit}_j \cdot x_j \label{eq:mp_obj}\\
+    \text{s.t.} \quad & \sum_{j \in \mathcal{C}_k} x_j \le 1, \qquad \forall k \in \{1, \dots, K\} \quad \text{(Mỗi xe chạy tối đa 1 lộ trình)} \label{eq:mp_veh}\\
+    & \sum_{j=0}^{NC-1} a_{q, j} x_j \le 1, \qquad \forall q \in \{1, \dots, R\} \quad \text{(Mỗi yêu cầu phục vụ tối đa 1 lần)} \label{eq:mp_req}\\
+    & x_j \in \{0, 1\}, \qquad \forall j \in \{0, \dots, NC-1\}. \label{eq:mp_bin}
+\end{align}
+
+\subsection{Bài toán con 3: Khởi tạo Tham lam theo Lợi nhuận (\texttt{Greedy Set Packing}, Lines 432--459)}
+Trước khi giải đối ngẫu Lagrangian và chạy SA, thuật toán xây dựng cấu trúc quản lý trạng thái đóng gói trong $O(1)$:
+\begin{itemize}[leftmargin=1.5em]
+    \item \texttt{chosen[k]} ($\forall k \in [1, K]$): Lưu chỉ số cột $j \in \mathcal{C}_k$ đang được gán cho xe $k$ (hoặc $-1$ nếu xe $k$ đang nghỉ rỗng).
+    \item \texttt{owner[q]} ($\forall q \in [1, R]$): Lưu chỉ số cột $j$ đang phục vụ yêu cầu $q$ (hoặc $-1$ nếu yêu cầu $q$ chưa có xe nào nhận).
+    \item \texttt{cur}: Tổng lợi nhuận của các cột đang được chọn.
+\end{itemize}
+Ba phép toán cơ sở thao tác trực tiếp trên mảng phẳng \texttt{col\_req}:
+\begin{enumerate}[leftmargin=1.5em]
+    \item \texttt{is\_free(j)}: Kiểm tra $\forall i \in [0, \text{rlen}_j - 1]: \texttt{owner}[\texttt{col\_req}[\text{rbeg}_j + i]] < 0$. Độ phức tạp $O(|R_j|) \approx O(1)$ (vì $|R_j| \le 5$).
+    \item \texttt{assign(k, j)}: Gán $\texttt{chosen}[k] \leftarrow j$, đánh dấu $\texttt{owner}[q] \leftarrow j$ ($\forall q \in R_j$) và cộng $\texttt{cur} \mathrel{+}= \text{profit}_j$.
+    \item \texttt{unassign(k)}: Giải phóng $\texttt{owner}[q] \leftarrow -1$ ($\forall q \in R_{\texttt{chosen}[k]}$), trừ $\texttt{cur} \mathrel{-}= \text{profit}_{\texttt{chosen}[k]}$ và đặt $\texttt{chosen}[k] \leftarrow -1$.
+\end{enumerate}
+
+\textbf{Quy trình Khởi tạo Tham lam (Lines 453--459)}:
+\begin{enumerate}[leftmargin=1.5em]
+    \item Tạo mảng chỉ số $\texttt{ord} = [0, 1, \dots, NC-1]$ và sắp xếp sao cho $\text{profit}_{\texttt{ord}[0]} \ge \text{profit}_{\texttt{ord}[1]} \ge \dots \ge \text{profit}_{\texttt{ord}[NC-1]}$.
+    \item Duyệt $j \in \texttt{ord}$: nếu xe $k = \text{cols}[j].k$ chưa có cột ($\texttt{chosen}[k] < 0$) và cột $j$ hoàn toàn không trùng yêu cầu với các cột đã chọn ($\texttt{is\_free}(j) = \texttt{true}$), gọi $\texttt{assign}(k, j)$.
+    \item Lưu nghiệm tham lam này vào kỷ lục ban đầu: $\texttt{best} = \texttt{cur}$ và $\texttt{best\_choice} = \texttt{chosen}$.
+\end{enumerate}
+Nghiệm tham lam này đóng vai trò cực kỳ quan trọng: nó cung cấp một \textbf{cận dưới khả thi ban đầu} ($\text{best} = LB_0$) rất sát nghiệm tối ưu (ví dụ đạt $12,774 / 13,279 \approx 96.2\%$ trên \texttt{test\_500.txt}), giúp công thức bước nhảy Polyak ở Bài toán con 4 hội tụ cực nhanh!
+
+---
+
+% ============================================================================
+% SECTION 6: BÀI TOÁN CON 4 - THƯ GIÃN ĐỐI NGẪU LAGRANGIAN
+% ============================================================================
+\section{Bài toán con 4: Thư giãn Đối ngẫu Lagrangian và Tối ưu hóa Dưới đạo hàm}
+
+\subsection{Xây dựng Bài toán Thư giãn Lagrangian $LR(u)$}
+Trong bài toán chủ (MP) tại \eqref{eq:mp_obj}--\eqref{eq:mp_bin}, có hai nhóm ràng buộc:
+\begin{itemize}[leftmargin=1.5em]
+    \item Nhóm ràng buộc (1) theo từng xe: $\sum_{j \in \mathcal{C}_k} x_j \le 1$ (tách biệt hoàn toàn giữa các xe $k = 1, \dots, K$).
+    \item Nhóm ràng buộc (2) ghép chéo giữa các xe: $\sum_{j=0}^{NC-1} a_{q, j} x_j \le 1$ (gây xung đột khi nhiều xe cùng muốn nhận một yêu cầu $q$ béo bở).
+\end{itemize}
+
+\begin{subproblem}[Bài toán Thư giãn Lagrangian theo Ràng buộc Yêu cầu]
+Đưa nhóm ràng buộc xung đột yêu cầu \eqref{eq:mp_req} lên hàm mục tiêu bằng véc-tơ nhân tử Lagrange không âm $u = (u_1, u_2, \dots, u_R)^T \ge 0$ (trong đó $u_q$ mang ý nghĩa kinh tế là \textbf{mức phí phạt / giá thuê tài nguyên} khi một xe sử dụng yêu cầu $q$), đồng thời giữ nguyên ràng buộc phân công xe \eqref{eq:mp_veh}.
+\end{subproblem}
+
+Với một véc-tơ nhân tử $u \ge 0$ cố định, hàm đối ngẫu Lagrangian $L(u)$ được định nghĩa là:
+\begin{align}
+    L(u) &= \max_{x \in \mathcal{X}} \left\{ \sum_{j=0}^{NC-1} \text{profit}_j \cdot x_j + \sum_{q \in \mathcal{R}_{\text{servable}}} u_q \left( 1 - \sum_{j=0}^{NC-1} a_{q, j} x_j \right) \right\} \nonumber\\
+    &= \sum_{q \in \mathcal{R}_{\text{servable}}} u_q + \max_{x \in \mathcal{X}} \sum_{k=1}^K \sum_{j \in \mathcal{C}_k} \left( \text{profit}_j - \sum_{q \in R_j} u_q \right) x_j, \label{eq:lagr_expand}
+\end{align}
+trong đó miền ràng buộc còn lại là tích Descartes của $K$ miền độc lập theo từng xe:
+\[
+    \mathcal{X} = \mathcal{X}_1 \times \mathcal{X}_2 \times \dots \times \mathcal{X}_K, \qquad \mathcal{X}_k = \left\{ x_{\mathcal{C}_k} \in \{0, 1\}^{|\mathcal{C}_k|} : \sum_{j \in \mathcal{C}_k} x_j \le 1 \right\}.
+\]
+
+\subsection{Phân rã thành $K$ Bài toán con Độc lập Tuyệt đối (Lines 472--481)}
+Nhờ cấu trúc tách biến trong \eqref{eq:lagr_expand}, cực đại trên $\mathcal{X}$ phân rã thành tổng của $K$ bài toán con hoàn toàn độc lập cho từng xe $k \in \{1, \dots, K\}$:
+\begin{equation}
+    L(u) = \sum_{q \in \mathcal{R}_{\text{servable}}} u_q + \sum_{k=1}^K bv_k(u),
+    \label{eq:lagr_decomp}
+\end{equation}
+với bài toán con của xe $k$ chỉ đơn giản là tìm cột $j \in \mathcal{C}_k$ có \textbf{lợi nhuận hiệu chỉnh (Reduced Profit)} lớn nhất và dương:
+\begin{equation}
+    bv_k(u) = \max\left\{ 0, \; \max_{j \in \mathcal{C}_k} \left( \text{profit}_j - \sum_{q \in R_j} u_q \right) \right\}, \qquad bj_k(u) = \arg\max_{j \in \mathcal{C}_k} \left( \text{profit}_j - \sum_{q \in R_j} u_q \right).
+    \label{eq:veh_subproblem}
+\end{equation}
+Nếu mọi cột $j \in \mathcal{C}_k$ đều có lợi nhuận hiệu chỉnh $\le 0$, xe $k$ chọn phương án nghỉ ($bv_k(u) = 0, bj_k(u) = -1$).
+
+Đoạn mã C++ giải toàn bộ $K$ bài toán con này chỉ trong vài dòng lệnh cực kỳ cô đọng (Lines 472--481):
+\begin{lstlisting}
+for (int k = 1; k <= K; ++k) {
+    double bv = 0; int bj = -1;
+    for (int j : tcols[k]) {
+        double v = (double)cols[j].profit;
+        for (int i = 0; i < cols[j].rlen; ++i) v -= u[col_req[cols[j].rbeg + i]];
+        if (v > bv) { bv = v; bj = j; }
+    }
+    L += bv; relax[k] = bj;
+    if (bj >= 0) for (int i = 0; i < cols[bj].rlen; ++i) g[col_req[cols[bj].rbeg + i]] -= 1.0;
+}
+\end{lstlisting}
+
+\subsection{Các Định lý Toán học về Cận trên Đối ngẫu và Độ lệch bù}
+
+\begin{theorem}[Định lý Đối ngẫu Yếu và Cận trên Nguyên]
+Với mọi véc-tơ nhân tử $u \ge 0$, giá trị $L(u)$ luôn là một cận trên của nghiệm nguyên tối ưu $OPT_{IP}$. Hơn nữa, vì lợi nhuận $\text{profit}_j \in \mathbb{Z}$ và $x_j \in \{0, 1\}$ nên $OPT_{IP}$ luôn là một số nguyên, suy ra:
+\begin{equation}
+    OPT_{IP} \le \lfloor L(u) \rfloor, \qquad \forall u \ge 0.
+\end{equation}
+\end{theorem}
+\begin{proof}
+Gọi $x^* \in \mathcal{X}$ là nghiệm tối ưu toàn cục của bài toán (MP). Vì $x^*$ thỏa mãn ràng buộc \eqref{eq:mp_req} nên $1 - \sum_{j=0}^{NC-1} a_{q, j} x^*_j \ge 0$ với mọi $q$. Kết hợp với $u_q \ge 0$, ta có:
+\[
+    OPT_{IP} = \sum_{j=0}^{NC-1} \text{profit}_j x^*_j \le \sum_{j=0}^{NC-1} \text{profit}_j x^*_j + \sum_{q} u_q \left(1 - \sum_{j} a_{q, j} x^*_j\right) \le \max_{x \in \mathcal{X}} \{\dots\} = L(u).
+\]
+Lấy phần nguyên dưới hai vế ta được $OPT_{IP} \le \lfloor L(u) \rfloor$.
+\end{proof}
+
+\begin{theorem}[Định lý Geoffrion 1974 --- Sự trùng khớp giữa Cận Đối ngẫu Lagrangian và Cận Thư giãn Tuyến tính LP]
+Gọi $OPT_{LP}$ là giá trị tối ưu của bài toán Thư giãn Tuyến tính (LP Relaxation) của (MP) khi thay điều kiện nguyên $x_j \in \{0, 1\}$ bằng điều kiện liên tục $x_j \in [0, 1]$. Khi đó:
+\begin{equation}
+    \min_{u \ge 0} L(u) = OPT_{LP}.
+\end{equation}
+\end{theorem}
+\begin{proof}
+Xét bao lồi của miền ràng buộc bài toán con trên mỗi xe $k$: $\text{conv}(\mathcal{X}_k) = \{ x \in \mathbb{R}_+^{|\mathcal{C}_k|} : \sum_{j \in \mathcal{C}_k} x_j \le 1 \}$. Đây là một đơn hình chuẩn (standard simplex) có mọi đỉnh cực biên đều là các véc-tơ đơn vị nguyên $0\text{-}1$. Do đó bài toán con $\max_{x \in \mathcal{X}} (\dots)$ có \textbf{Tính chất Nguyên (Integrality Property)}: việc giải bài toán con trên miền nguyên $x \in \{0, 1\}$ hay trên miền liên tục $x \in [0, 1]$ luôn cho cùng một giá trị tối ưu $L(u)$. Theo Định lý Đối ngẫu Tuyến tính và Định lý Geoffrion (1974), giá trị đối ngẫu tối ưu $\min_{u \ge 0} L(u)$ bằng chính xác giá trị tối ưu của bài toán LP Relaxation $OPT_{LP}$.
+\end{proof}
+
+\begin{theorem}[Điều kiện Đủ Tối ưu Toàn cục qua Độ lệch bù --- Complementary Slackness, Lines 484--491]
+Tại một vòng lặp bất kỳ với nhân tử $u \ge 0$, gọi $\text{relax}[k] = bj_k(u)$ là tập các cột được chọn bởi $K$ bài toán con độc lập, và đặt số lần yêu cầu $q$ được chọn là $m_q = \sum_{k=1}^K \mathbb{I}(q \in R_{\text{relax}[k]})$. Xét véc-tơ dưới đạo hàm có chiếu biên (projected subgradient) $\tilde{g}$ xác định bởi:
+\begin{equation}
+    g_q = 1 - m_q, \qquad \tilde{g}_q = \begin{cases}
+    0, & \text{nếu } u_q = 0 \text{ và } g_q > 0,\\
+    g_q, & \text{ngược lại.}
+    \end{cases}
+\end{equation}
+Nếu $\|\tilde{g}\|_2^2 = \sum_{q} \tilde{g}_q^2 = 0$ (trong code kiểm tra $\texttt{norm < 1e-12}$), thì nghiệm $\text{relax}[1\dots K]$ là một \textbf{nghiệm hợp lệ của bài toán gốc (MP)} và \textbf{đạt tối ưu toàn cục tuyệt đối} ($\text{cur} = OPT_{IP} = L(u)$)!
+\end{theorem}
+\begin{proof}
+Khi $\tilde{g}_q = 0$ với mọi $q \in \mathcal{R}_{\text{servable}}$:
+\begin{enumerate}[leftmargin=1.5em]
+    \item Không thể tồn tại $q$ nào có $g_q < 0$ (vì nếu $g_q < 0$ thì $\tilde{g}_q = g_q \neq 0$). Mà $g_q = 1 - m_q \ge 0 \implies m_q \le 1, \forall q$. Tức là mọi yêu cầu $q$ được chọn tối đa $1$ lần trong $\text{relax}[1\dots K]$ $\implies$ \textbf{nghiệm $\text{relax}[1\dots K]$ hoàn toàn hợp lệ (feasible)}!
+    \item Với mọi yêu cầu $q$ có nhân tử dương $u_q > 0$: vì $u_q > 0$ nên $\tilde{g}_q = g_q = 0 \implies m_q = 1$. Do đó $u_q (1 - m_q) = 0, \forall q$ (\textbf{thỏa mãn điều kiện độ lệch bù Complementary Slackness}).
+\end{enumerate}
+Suy ra tổng lợi nhuận thực tế của nghiệm $\text{relax}[1\dots K]$ bằng đúng cận trên đối ngẫu $L(u)$, tức đạt tối ưu toàn cục $OPT_{IP}$! (Trên thực tế, điều kiện này đã kích hoạt và chốt nghiệm tối ưu tức thì trên \texttt{test\_65.txt} và \texttt{test\_106.txt} mà không cần chạy một vòng SA nào).
+\end{proof}
+
+\subsection{Thuật toán Tối ưu hóa Dưới đạo hàm với Bước nhảy Polyak (Lines 465--496)}
+Để tìm $\min_{u \ge 0} L(u)$, hàm $L(u)$ là một hàm lồi từng khúc (piecewise linear convex function) nhưng không khả vi tại các điểm giao giữa hai cột cùng đạt lợi nhuận hiệu chỉnh cực đại. Thuật toán sử dụng phương pháp \textbf{Subgradient Descent với Bước nhảy Polyak}:
+
+\begin{enumerate}[leftmargin=1.5em]
+    \item \textbf{Khởi tạo}: Đặt $u^{(0)}_q = 0$ ($\forall q$), hệ số bước nhảy $\lambda = 2.0$, cận trên tốt nhất $\text{best\_bound} = +\infty$, bộ đếm trì trệ $\text{stall} = 0$. Số vòng lặp tối đa:
+    \[
+        \text{max\_it} = \min\left( \texttt{LAGR\_MAX\_IT}, \; \left\lfloor \frac{\texttt{LAGR\_WORK}}{\max(1, |\texttt{col\_req}|)} \right\rfloor \right).
+    \]
+    \item \textbf{Tại mỗi vòng lặp $t = 0, \dots, \text{max\_it}-1$}:
+    \begin{itemize}[leftmargin=1.2em]
+        \item Giải $K$ bài toán con theo \eqref{eq:veh_subproblem} để tính $L(u^{(t)})$ và véc-tơ dưới đạo hàm $g^{(t)}_q = 1 - m^{(t)}_q$.
+        \item \textbf{Ý nghĩa trực giác của $g^{(t)}_q$}:
+        \begin{itemize}
+            \item Nếu $m^{(t)}_q \ge 2$ (có từ 2 xe trở lên cùng tranh giành yêu cầu $q$): $g^{(t)}_q = 1 - m^{(t)}_q \le -1 < 0$. Khi cập nhật $u_q \leftarrow u_q - \text{step} \cdot g_q$, giá phạt $u_q$ sẽ \textbf{tăng lên}, làm giảm độ hấp dẫn của yêu cầu $q$ ở vòng sau để triệt tiêu xung đột!
+            \item Nếu $m^{(t)}_q = 0$ (không có xe nào chọn yêu cầu $q$): $g^{(t)}_q = +1 > 0$. Giá phạt $u_q$ sẽ \textbf{giảm xuống} (về phía $0$), khuyến khích các xe đưa yêu cầu $q$ vào lộ trình.
+            \item Nếu $m^{(t)}_q = 1$ (yêu cầu $q$ được phục vụ bởi đúng 1 xe): $g^{(t)}_q = 0$, giá phạt $u_q$ giữ nguyên ở trạng thái cân bằng.
+        \end{itemize}
+        \item Cập nhật $\text{best\_bound} \leftarrow \min(\text{best\_bound}, L(u^{(t)}))$. Nếu không cải thiện trong $10$ vòng liên tiếp ($\texttt{++stall >= 10}$), giảm một nửa hệ số bước nhảy: $\lambda \leftarrow 0.5\lambda$, đặt lại $\text{stall} = 0$.
+        \item \textbf{Dừng sớm theo Cận Nguyên (Line 483)}: Nếu $\text{best\_bound} < \text{best} + 1 - 10^{-6}$, suy ra $\lfloor \text{best\_bound} \rfloor \le \text{best}$, tức nghiệm hiện tại $\text{best}$ đã chạm trần lý thuyết $\implies \texttt{break}$!
+        \item Tính chuẩn chiếu $\text{norm} = \|\tilde{g}^{(t)}\|_2^2$. Nếu $\text{norm} < 10^{-12}$, thu hoạch nghiệm nguyên từ $\text{relax}[1\dots K]$ theo Định lý Độ lệch bù và dừng.
+        \item Cập nhật nhân tử theo công thức Polyak:
+        \begin{equation}
+            \text{step}^{(t)} = \lambda \frac{L(u^{(t)}) - \text{best}}{\|\tilde{g}^{(t)}\|_2^2}, \qquad u_q^{(t+1)} = \max\Big(0.0, \; u_q^{(t)} - \text{step}^{(t)} \cdot \tilde{g}_q^{(t)}\Big).
+        \end{equation}
+    \end{itemize}
+    \item \textbf{Chốt Cận trên Nguyên}: Sau khi thoát vòng lặp, gán $\texttt{ub} = \lfloor \text{best\_bound} + 10^{-6} \rfloor$.
+\end{enumerate}
+
+---
+
+% ============================================================================
+% SECTION 7: BÀI TOÁN CON 5 - SET PACKING SIMULATED ANNEALING
+% ============================================================================
+\section{Bài toán con 5: Luyện kim Mô phỏng trên Không gian Cột với Toán tử Đẩy-và-Lấp (\texttt{Eject-and-Refill SA})}
+
+\subsection{Bản chất của Toán tử Láng giềng Đẩy-và-Lấp (Eject-and-Refill Operator)}
+Khi $\text{best} < \text{ub}$, thuật toán chuyển sang giải bài toán (MP) bằng Simulated Annealing (Lines 503--550). Hãy xét câu hỏi thiết kế quan trọng nhất: \textit{Làm thế nào để di chuyển hiệu quả giữa các nghiệm hợp lệ của bài toán Set Packing?}
+
+\begin{itemize}[leftmargin=1.5em]
+    \item \textbf{Cách ngây thơ (Simple Swap)}: Chọn xe $k$ và chỉ thử gán một cột $j \in \mathcal{C}_k$ nếu $j$ hoàn toàn không đụng độ với bất kỳ xe nào khác ($\texttt{is\_free}(j) = \texttt{true}$). Cách này thất bại ngay lập tức vì ở trạng thái cận tối ưu, hơn $95\%$ các yêu cầu có lợi nhuận cao đã có chủ ($\texttt{owner}[q] \ge 0$), khiến gần như mọi cột tốt $j \in \mathcal{C}_k$ đều bị khóa!
+    \item \textbf{Toán tử Chuỗi Đẩy-và-Lấp (Eject-and-Refill Chain Move)}: Cho phép xe $k$ \textbf{cưỡng chế chiếm lấy} cột mục tiêu $j \in \mathcal{C}_k$ bằng cách đẩy (eject) toàn bộ các cột đang xung đột trên các xe $k_2$ khác ra ngoài, sau đó lập tức \textbf{tái cấu trúc tham lam (greedy refill)} cho từng xe $k_2$ vừa bị mất cột bằng cột tốt nhất còn trống của riêng xe $k_2$!
+\end{itemize}
+
+\begin{figure}[htbp]
+\centering
+\resizebox{\linewidth}{!}{%
+\begin{tikzpicture}[
+    box/.style={rectangle, rounded corners=3pt, draw=primaryblue, fill=white, thick, minimum width=3.4cm, minimum height=0.8cm, align=center, font=\footnotesize},
+    act/.style={rectangle, rounded corners=3pt, draw=accentgreen, fill=softgreen, thick, minimum width=3.8cm, minimum height=0.8cm, align=center, font=\footnotesize\bfseries},
+    ej/.style={rectangle, rounded corners=3pt, draw=accentred, fill=softamber, thick, minimum width=3.8cm, minimum height=0.8cm, align=center, font=\footnotesize},
+    arrow/.style={-Stealth, thick, draw=primaryblue}
+]
+    \node[act] (s1) at (0, 0) {1. Chọn xe $k$ \& cột mới $j$\\(50\% Top-16, 50\% Toàn bộ)};
+    \node[ej] (s2) at (4.6, 0) {2. Quét $q \in R_j$: Đẩy các xe\\$k_2$ đang giữ $q$ vào \texttt{refill}};
+    \node[act] (s3) at (9.2, 0) {3. Gán cột $j$ cho xe $k$\\(\texttt{set\_col(k, j)})};
+    \node[box] (s4) at (13.6, 0) {4. Với mỗi $k_2 \in \texttt{refill}$:\\Lấp cột đầu tiên \texttt{is\_free}};
+
+    \draw[arrow] (s1) -- (s2);
+    \draw[arrow] (s2) -- (s3);
+    \draw[arrow] (s3) -- (s4);
+\end{tikzpicture}%
+}
+\caption{Chuỗi biến đổi liên hoàn của một bước nhảy \texttt{Eject-and-Refill} trong Set Packing SA.}
+\end{figure}
+
+\subsection{Giải phẫu Từng Bước trong 1 Vòng lặp Set Packing SA (Lines 505--550)}
+
+\subsubsection{Bước 1: Chuẩn bị Danh sách Cột theo Thứ tự Lợi nhuận (\texttt{tcols[k]})}
+Ngay từ đầu hàm \texttt{column\_solve} (Lines 432--434), toàn bộ các cột thuộc về xe $k$ được gom vào $\texttt{tcols}[k]$ và \textbf{sắp xếp giảm dần theo lợi nhuận}:
+\[
+    \text{profit}_{\texttt{tcols}[k][0]} \ge \text{profit}_{\texttt{tcols}[k][1]} \ge \dots \ge \text{profit}_{\texttt{tcols}[k][|\mathcal{C}_k|-1]}.
+\]
+Các xe có $\texttt{tcols}[k] \neq \emptyset$ được đưa vào danh sách \texttt{busy}.
+
+\subsubsection{Bước 2: Lấy mẫu Cột Ứng viên Đa tầng (Biased Candidate Sampling, Lines 522--526)}
+Chọn ngẫu nhiên một xe $k \in \texttt{busy}$. Cột ứng viên $j$ của xe $k$ được chọn theo phân phối hỗn hợp giữa Khai thác sâu (Exploitation) và Khám phá rộng (Exploration):
+\begin{equation}
+    j = \begin{cases}
+    -1 \text{ (Tháo rỗng xe } k\text{)}, & \text{với xác suất } \frac{1}{16} = 6.25\%,\\[0.2cm]
+    \texttt{tcols}[k]\big[\text{ Uniform}\big(0, \min(|\mathcal{C}_k|, 16) - 1\big)\big], & \text{với xác suất } \frac{15}{32} = 46.875\% \quad (\text{Top-16 cột tốt nhất}),\\[0.2cm]
+    \texttt{tcols}[k]\big[\text{ Uniform}\big(0, |\mathcal{C}_k| - 1\big)\big], & \text{với xác suất } \frac{15}{32} = 46.875\% \quad (\text{Toàn bộ tập cột}).
+    \end{cases}
+\end{equation}
+Nếu $j == \texttt{chosen}[k]$ (trùng cột đang chạy), bỏ qua vòng lặp này (\texttt{continue}).
+
+\subsubsection{Bước 3: Thực thi Chuỗi Đẩy-và-Lấp có Ghi Nhật ký Hoàn tác (Lines 527--538)}
+Mọi phép thay đổi cột thông qua hàm lambda \texttt{set\_col(k, j)} đều tự động đẩy cặp trạng thái cũ \texttt{(k, chosen[k])} vào ngăn xếp nhật ký \texttt{log\_}:
+\begin{lstlisting}
+ll before = cur;
+log_.clear(); refill.clear();
+set_col(k, -1);                                         // 1. Thao cot cu cua xe k
+if (j >= 0) {
+    for (int i = 0; i < cols[j].rlen; ++i) {            // 2. Quet cac yeu cau trong cot moi j
+        int c = owner[col_req[cols[j].rbeg + i]];
+        if (c >= 0) {                                   // Neu yeu cau dang thuoc ve cot c cua xe k2:
+            int k2 = cols[c].k;
+            set_col(k2, -1);                            // -> Day (eject) cot c khoi xe k2
+            refill.push_back(k2);                       // -> Dua k2 vao danh sach can lap lai
+        }
+    }
+    set_col(k, j);                                      // 3. Gan cot moi j cho xe k
+}
+for (int k2 : refill)                                   // 4. Lap lai tham lam cho tung xe k2 bi day:
+    for (int c : tcols[k2]) if (is_free(c)) { set_col(k2, c); break; }
+\end{lstlisting}
+
+\begin{keybox}{Tại sao Vòng lặp Refill (Line 537--538) vừa Nhanh vừa Cực kỳ Chính xác?}
+Khi xe $k_2$ bị đẩy mất cột cũ, ta cần tìm cho $k_2$ một cột mới không xung đột với các xe hiện tại và có lợi nhuận cao nhất. Vì mảng $\texttt{tcols}[k_2]$ \textbf{đã được sắp xếp giảm dần theo $\text{profit}$ từ trước}, cột đầu tiên $c \in \texttt{tcols}[k_2]$ thỏa mãn $\texttt{is\_free}(c) == \texttt{true}$ chính là \textbf{cột hợp lệ có lợi nhuận lớn nhất tuyệt đối của xe $k_2$} trong bối cảnh hiện tại! Ngay khi tìm thấy, lệnh \texttt{break} thoát vòng lặp ngay lập tức.
+\end{keybox}
+
+\subsubsection{Bước 4: Tiêu chuẩn Chấp nhận Metropolis, Làm nguội Hàm mũ và Hoàn tác $O(1)$}
+\begin{itemize}[leftmargin=1.5em]
+    \item \textbf{Lịch nhiệt độ (Exponential Cooling Schedule)}:
+    Gọi $\overline{p} = \frac{1}{NC}\sum_{j=0}^{NC-1} \text{profit}_j$ là lợi nhuận trung bình của một cột. Nhiệt độ bắt đầu và kết thúc được chuẩn hóa tự động theo thang điểm của từng bộ dữ liệu:
+    \[
+        T_0 = 0.3 \cdot \overline{p}, \qquad T_F = 0.003 \cdot \overline{p}, \qquad T(t) = T_0 \left(\frac{T_F}{T_0}\right)^{\frac{t - s_0}{\text{budget}}}.
+    \]
+    Để tránh chi phí gọi hàm đồng hồ hệ thống \texttt{steady\_clock::now()}, nhiệt độ và thời gian chỉ được cập nhật mỗi $256$ vòng lặp (\texttt{if ((it \& 255) == 0)}).
+    \item \textbf{Quy tắc Chấp nhận Metropolis (Line 540)}:
+    Đặt $\Delta = \text{cur} - \text{before}$. Bước chuyển được chấp nhận nếu:
+    \begin{equation}
+        \Delta \ge 0 \quad \text{hoặc} \quad \Delta > T(t) \cdot \ln(\text{rand01}() + 10^{-300}).
+    \end{equation}
+    (Lưu ý: Viết $\Delta > T \ln U$ thay vì $\exp(\Delta / T) > U$ giúp tránh phép tính hàm mũ \texttt{exp()} đắt đỏ khi $\Delta < 0$ rất lớn).
+    \item \textbf{Cập nhật Kỷ lục và Chứng nhận Tối ưu Tức thì (Lines 541--545)}:
+    Nếu $\text{cur} > \text{best}$, cập nhật $\text{best} \leftarrow \text{cur}, \text{best\_choice} \leftarrow \text{chosen}$. Đặc biệt, nếu $\text{best} \ge \text{ub}$, thuật toán lập tức thoát vòng lặp (\texttt{break}) vì nghiệm $\text{best}$ đã chạm cận trên lý thuyết $\implies$ \textbf{chứng minh tối ưu toàn cục}!
+    \item \textbf{Hoàn tác Ngược Nhật ký khi Từ chối (Rollback, Line 547)}:
+    Nếu bước chuyển bị từ chối, chỉ cần duyệt ngược mảng \texttt{log\_} từ cuối về đầu để khôi phục chính xác trạng thái trước bước nhảy:
+    \begin{lstlisting}
+for (int i = (int)log_.size() - 1; i >= 0; --i) {
+    unassign(log_[i].first);
+    assign(log_[i].first, log_[i].second);
+}
+    \end{lstlisting}
+    Vì mỗi bước nhảy chỉ chạm vào $1 + |\texttt{refill}| \approx 2\sim 4$ xe, quá trình thử và hoàn tác chỉ mất chưa tới $200\text{ nanoseconds}$, cho phép thực hiện từ $\mathbf{3.5\text{ triệu đến } 7.3\text{ triệu vòng lặp SA mỗi giây}}$!
+\end{itemize}
+
+---
+
+% ============================================================================
+% SECTION 8: THỰC NGHIỆM TOÀN DIỆN & CHỨNG MINH TỐI ƯU TOÀN CỤC
+% ============================================================================
+\section{Thực nghiệm Toàn diện và Chứng minh Tối ưu Toàn cục trên 8 Bộ Test}
+
+\subsection{Phương pháp Kiểm chứng Độc lập bằng Quy hoạch Tuyến tính (\texttt{GLOP}) và Quy hoạch Nguyên (\texttt{SCIP})}
+Để đánh giá chính xác tuyệt đối chất lượng của Phase 1 trong \texttt{reference\_solve.cpp}, bên cạnh việc kiểm tra tính hợp lệ bằng \texttt{validator.py}, chúng ta trích xuất toàn bộ ma trận cột $\mathcal{C}$ sinh ra sau Bài toán con 2 và giải trực tiếp bài toán chủ (MP) \eqref{eq:mp_obj}--\eqref{eq:mp_bin} bằng hai bộ giải toán học độc lập trong \textbf{Google OR-Tools}:
+\begin{enumerate}[leftmargin=1.5em]
+    \item \textbf{Bộ giải \texttt{GLOP} (Exact LP Relaxation)}: Giải bài toán (MP) với biến liên tục $x_j \in [0, 1]$ để tìm giá trị tối ưu phân số chính xác $OPT_{LP}$.
+    \item \textbf{Bộ giải \texttt{SCIP} (Exact Integer Programming)}: Giải bài toán (MP) với biến nhị phân $x_j \in \{0, 1\}$ cho tới khi đóng kín hoàn toàn khoảng cách tối ưu ($\text{Gap} = 0.00\%, \texttt{status == OPTIMAL}$) để tìm nghiệm nguyên tối ưu toàn cục tuyệt đối $OPT_{IP}$.
+\end{enumerate}
+
+\subsection{Bảng Tổng hợp Kết quả Thực nghiệm trên Toàn bộ 8 Testcase}
+
+\begin{table}[htbp]
+\centering
+\renewcommand{\arraystretch}{1.35}
+\resizebox{\linewidth}{!}{%
+\begin{tabular}{l c r r c r r r r r c}
+\toprule
+\textbf{Testcase} & \textbf{Quy mô} & \textbf{Trạng thái} & \textbf{Số cột} & \textbf{Thời gian} & \textbf{Tham lam} & \textbf{Cận LP} & \textbf{Cận Lagr.} & \textbf{Tối ưu IP} & \textbf{Điểm Phase 1} & \textbf{Sai số so với} \\
+ & $(K, N, M)$ & \texttt{enum\_states} & \texttt{NC} & \texttt{enum\_time} & \texttt{greedy} & $\lfloor OPT_{LP}\rfloor$ & \texttt{lagr\_UB} & $OPT_{IP}$ \textbf{(SCIP)} & \texttt{ref\_solve} & $OPT_{IP}$ \\
+\midrule
+\texttt{test\_10.txt}  & $(3, 5, 5)$     & $28$     & $11$     & $0.00\text{ ms}$ & $217$    & $217$    & $217$    & $\mathbf{217}$    & $\mathbf{217}$    & $\mathbf{0.00\%}$ \\
+\texttt{test\_14.txt}  & $(3, 7, 7)$     & $16$     & $6$      & $0.00\text{ ms}$ & $283$    & $283$    & $283$    & $\mathbf{283}$    & $\mathbf{283}$    & $\mathbf{0.00\%}$ \\
+\texttt{test\_23.txt}  & $(5, 12, 11)$   & $43$     & $14$     & $0.00\text{ ms}$ & $491$    & $491$    & $491$    & $\mathbf{491}$    & $\mathbf{491}$    & $\mathbf{0.00\%}$ \\
+\texttt{test\_65.txt}  & $(15, 35, 30)$  & $292$    & $118$    & $0.00\text{ ms}$ & $1,528$  & $1,530$  & $1,530$  & $\mathbf{1,530}$  & $\mathbf{1,530}$  & $\mathbf{0.00\%}$ \\
+\texttt{test\_106.txt} & $(25, 56, 50)$  & $706$    & $257$    & $0.10\text{ ms}$ & $2,163$  & $2,168$  & $2,168$  & $\mathbf{2,168}$  & $\mathbf{2,168}$  & $\mathbf{0.00\%}$ \\
+\texttt{test\_200.txt} & $(50, 100, 100)$& $8,938$  & $2,293$  & $1.90\text{ ms}$ & $5,457$  & $5,702$  & $5,702$  & $\mathbf{5,702}$  & $\mathbf{5,702}$  & $\mathbf{0.00\%}$ \\
+\texttt{test\_210.txt} & $(50, 110, 100)$& $7,979$  & $2,271$  & $0.80\text{ ms}$ & $4,227$  & $4,332$  & $4,332$  & $\mathbf{4,285}$  & $\mathbf{4,285}$  & $\mathbf{0.00\%}$ \\
+\texttt{test\_500.txt} & $(125, 250, 250)$&$65,265$ & $21,461$ & $9.50\text{ ms}$ & $12,774$ & $13,311$ & $13,311$ & $\mathbf{13,279}$ & $\mathbf{13,279}$ & $\mathbf{0.00\%}$ \\
+\bottomrule
+\end{tabular}%
+}
+\caption{Bảng đối chiếu toàn diện giữa Phase 1 (\texttt{reference\_solve.cpp}), Cận trên LP (\texttt{GLOP}) và Nghiệm nguyên Tối ưu Toàn cục (\texttt{SCIP}) trên toàn bộ 8 bộ test.}
+\label{tab:full_benchmark}
+\end{table}
+
+\subsection{Phân tích Chuyên sâu Kết quả Thực nghiệm}
+
+\begin{optbox}{Kết luận Thực nghiệm Quan trọng Nhất}
+\begin{enumerate}[leftmargin=1.5em]
+    \item \textbf{$100\%$ các bộ test (8/8) kết thúc trọn vẹn ngay tại Phase 1}: Không có bất kỳ bộ test nào chạm ngưỡng hủy \texttt{enum\_abort} để phải chuyển sang Phase 2 (SISR). Ngay cả trên bộ test lớn nhất \texttt{test\_500.txt} ($125$ xe, $500$ yêu cầu), toàn bộ không gian lộ trình của $125$ xe được vét cạn $100\%$ chỉ sau $65,265$ trạng thái trong $\mathbf{9.5\text{ mili-giây}}$.
+    \item \textbf{Đạt Tối ưu Toàn cục Tuyệt đối ($OPT_{IP}$) trên cả 8/8 bộ test}: Điểm số do Phase 1 của \texttt{reference\_solve.cpp} tìm ra trong $<1$ giây khớp chính xác $100\%$ tới từng đơn vị với nghiệm nguyên tối ưu toàn cục $OPT_{IP}$ của bộ giải \texttt{SCIP} trên cả 8 bộ dữ liệu!
+    \item \textbf{Sự hội tụ chính xác của Cận trên Lagrangian}: Cận trên \texttt{lagr\_UB} do thuật toán Subgradient tìm ra khớp chính xác tuyệt đối với phần nguyên dưới của nghiệm thư giãn tuyến tính $\lfloor OPT_{LP} \rfloor$ trên cả 8/8 bộ test (ví dụ trên \texttt{test\_210.txt}: $OPT_{LP} = 4332.8333 \implies \texttt{lagr\_UB} = 4332$; trên \texttt{test\_500.txt}: $OPT_{LP} = 13311.6667 \implies \texttt{lagr\_UB} = 13311$).
+    \item \textbf{Giải thích Khoảng cách Nguyên (Integrality Gap) trên \texttt{test\_210} và \texttt{test\_500}}:
+    \begin{itemize}[leftmargin=1.2em]
+        \item Trên 6 bộ test đầu tiên (\texttt{test\_10} $\to$ \texttt{test\_200}), đa diện LP không có khoảng cách nguyên ($\lfloor OPT_{LP} \rfloor = OPT_{IP}$), nên thuật toán tự chứng minh được tính tối ưu toàn cục (\texttt{best == ub}) chỉ trong $1\sim 62\text{ ms}$. Đặc biệt ở \texttt{test\_65} và \texttt{test\_106}, nghiệm đối ngẫu Lagrangian thỏa mãn điều kiện độ lệch bù (Complementary Slackness) và nhảy thẳng tới đỉnh tối ưu nguyên mà không cần chạy vòng lặp SA nào (\texttt{sa\_iters = 0}).
+        \item Trên \texttt{test\_210.txt} và \texttt{test\_500.txt}, tồn tại các cấu trúc chu trình lẻ (odd-cycle packing) trên đồ thị xung đột yêu cầu khiến nghiệm phân số $OPT_{LP}$ cao hơn nghiệm nguyên tối ưu $OPT_{IP}$ một lượng nhỏ gọi là \textbf{Integrality Gap}: $4332 - 4285 = 47$ điểm ($1.08\%$) trên \texttt{test\_210.txt} và $13311 - 13279 = 32$ điểm ($0.24\%$) trên \texttt{test\_500.txt}. Nghiệm $4,285$ và $13,279$ mà Set Packing SA tìm ra thực chất \textbf{đã là trần tối ưu nguyên cao nhất có thể tồn tại}.
+    \end{itemize}
+\end{enumerate}
+\end{optbox}
+
+---
+
+% ============================================================================
+% SECTION 9: CÁC ĐIỀU KIỆN CẦN VÀ ĐỦ ĐỂ PHASE 1 CHẠY CHÍNH XÁC TUYỆT ĐỐI
+% ============================================================================
+\section{Xác định Chặt chẽ các Ràng buộc và Điều kiện để Phase 1 Đảm bảo Tính Chính xác Tuyệt đối}
+
+Mặc dù Phase 1 (\texttt{column\_solve}) đạt nghiệm tối ưu toàn cục $100\%$ trên toàn bộ 8 bộ test chuẩn, về mặt lý thuyết toán học, thuật toán sinh cột và cắt tỉa trong \texttt{reference\_solve.cpp} dựa trên \textbf{6 giả thiết cấu trúc và ràng buộc ngầm định (Implicit Structural Assumptions)}. Nếu đem thuật toán áp dụng sang một biến thể bài toán khác mà vi phạm một trong 6 điều kiện dưới đây, tính chính xác (exactness) hoặc tính đầy đủ (completeness) của tập cột sẽ bị phá vỡ.
+
+\subsection{Điều kiện 1: Bất đẳng thức Tam giác Thời gian Mạnh (Time Triangle Inequality)}
+Tại hàm cắt tỉa nhìn trước \texttt{open\_ok(dep, v, skip)} (Line 375) và điều kiện kiểm tra kiện hàng mới (Line 400):
+\[
+    \text{dep} + T(v, \text{nin}[R+o]) > nl[R+o] \implies \text{cắt bỏ nhánh đệ quy.}
+\]
+\begin{itemize}[leftmargin=1.5em]
+    \item \textbf{Ràng buộc Toán học bắt buộc}: Ma trận thời gian di chuyển $T$ và thời lượng phục vụ $\text{ndur}$ phải thỏa mãn bất đẳng thức tam giác mở rộng với mọi bộ ba đỉnh vật lý $(v, w, u)$:
+    \begin{equation}
+        T(v, w) + \text{ndur}(w) + T(w, u) \ge T(v, u), \qquad \forall v, w, u \in V.
+        \label{eq:cond_triangle}
+    \end{equation}
+    \item \textbf{Phản ví dụ (Counterexample) nếu vi phạm}: Giả sử dữ liệu đầu vào là đồ thị có trọng số thời gian không thỏa mãn bất đẳng thức tam giác: từ $v$ đi thẳng tới điểm trả hàng $D_o$ mất $T(v, D_o) = 50$ phút (làm $\text{dep} + 50 > nl[R+o]$), nhưng nếu đi vòng qua đỉnh đón khách $w$ với $\text{ndur}(w) = 2$ lại chỉ mất $T(v, w) + 2 + T(w, D_o) = 10 + 2 + 10 = 22$ phút (kịp giờ!). Khi đó, hàm \texttt{open\_ok} sẽ \textbf{cắt nhầm} nhánh đi qua $w$ và đánh mất nghiệm hợp lệ.
+    \item \textbf{Cách khắc phục nếu đồ thị vi phạm \eqref{eq:cond_triangle}}: Thay $T(v, \text{nin}[R+o])$ trong \texttt{open\_ok} bằng khoảng cách đường đi ngắn nhất $\text{dist}_T(v, \text{nin}[R+o])$ tính trước bằng thuật toán Floyd-Warshall trong $O(V^3)$ ở bước tiền xử lý!
+\end{itemize}
+
+\subsection{Điều kiện 2: Tính Đơn điệu Không âm của Thời gian Di chuyển và Phục vụ}
+Nhát cắt tìm kiếm nhị phân tại Line 394:
+\begin{lstlisting}
+for (size_t idx = lower_bound(e_l.begin(), e_l.end(), time) - e_l.begin(); idx < e_by_l.size(); ++idx)
+\end{lstlisting}
+bỏ qua toàn bộ các yêu cầu $q$ có hạn chót đón $nl[q] < \text{time}$.
+\begin{itemize}[leftmargin=1.5em]
+    \item \textbf{Ràng buộc Toán học bắt buộc}: Mọi cạnh di chuyển phải có thời gian không âm:
+    \begin{equation}
+        T(u, v) \ge 0, \quad \forall u, v \in V \qquad \text{và} \qquad \text{ndur}[x] \ge 0, \quad \forall x \in [1, 2R].
+    \end{equation}
+    Khi đó $\text{arr} = \text{time} + T(\text{last}, \text{nin}[q]) \ge \text{time}$, đảm bảo biến thời gian $\text{time}$ đơn điệu không giảm dọc theo mọi nhánh của cây DFS.
+\end{itemize}
+
+\subsection{Điều kiện 3: Cấu trúc Khung Thời gian của Khách hàng trong Phép Co Macro-Node}
+Phép biến đổi Macro-Node (Lines 596--599) gộp điểm đón khách $P_r$ và điểm trả khách $D_r$ thành một tác vụ nguyên tử duy nhất $r \in [1, N]$ với:
+\[
+    \text{ne}[r] = e_r, \quad \text{nl}[r] = l_r, \quad \text{ndur}[r] = 2S_r + T(P_r, D_r).
+\]
+\begin{itemize}[leftmargin=1.5em]
+    \item \textbf{Ràng buộc Nghiệp vụ bắt buộc}:
+    \begin{enumerate}[label=(3\alph*)]
+        \item Khách hàng phải được phục vụ theo chế độ \textbf{Direct-Ride tuyệt đối} (không cho phép ghép chung 2 khách cùng lúc hoặc đón/trả hàng khi khách đang trên xe).
+        \item Đề bài \textbf{chỉ quy định khung thời gian $[e_r, l_r]$ tại điểm đón $P_r$} của khách hàng, hoặc nếu có khung thời gian $[e^d_r, l^d_r]$ tại điểm trả $D_r$ thì không phát sinh thời gian chờ tại $D_r$.
+    \end{enumerate}
+    \item \textbf{Cách hiệu chỉnh nếu Khách hàng có thêm Khung thời gian tại Điểm trả $[e^d_r, l^d_r]$}:
+    Nếu xe không được phép bắt đầu trả khách trước $e^d_r$ và không được đến $D_r$ muộn hơn $l^d_r$, công thức Macro-Node cần phải quy đổi ngược (backward projection) về điểm đón $P_r$:
+    \[
+        nl'[r] = \min\Big(l_r, \; l^d_r - S_r - T(P_r, D_r)\Big), \qquad ne'[r] = \max\Big(e_r, \; e^d_r - S_r - T(P_r, D_r)\Big) \quad (\text{nếu cấm chờ tại } D_r).
+    \]
+\end{itemize}
+
+\subsection{Điều kiện 4: Tính Độc lập Hoàn toàn Giữa các Xe cho Định lý Thống trị Cột (\texttt{enum\_record})}
+Trong hàm \texttt{enum\_record} (Lines 356--366), khi hai lộ trình $\sigma_1$ và $\sigma_2$ của cùng xe $k$ phục vụ cùng tập yêu cầu $R_j$, thuật toán \textbf{chỉ so sánh duy nhất một tiêu chí là $\text{profit}$} và xóa bỏ hoàn toàn lộ trình có $\text{profit}$ thấp hơn (không lưu lại thời điểm kết thúc lộ trình $\text{time}$ hay đỉnh kết thúc $\text{last}$).
+\begin{itemize}[leftmargin=1.5em]
+    \item \textbf{Ràng buộc Toán học bắt buộc}: Giữa các xe $k \in \{1, \dots, K\}$ chỉ tương tác với nhau qua ràng buộc phân hoạch yêu cầu $\sum_{j \ni q} x_j \le 1$. Cụ thể:
+    \begin{enumerate}[label=(4\alph*)]
+        \item Không có ràng buộc tổng thời gian hoạt động toàn đội xe (Global Fleet Time Budget).
+        \item Không có cơ chế trung chuyển hàng hóa giữa hai xe (Inter-Vehicle Transshipment, nơi xe $k_1$ phải giao hàng đến điểm hẹn trước giờ xe $k_2$ xuất phát).
+        \item Việc ghi nhận lợi nhuận chỉ xảy ra tại các trạng thái \textbf{Rỗng Hàng ($\text{e\_open} = \emptyset$)} (Line 382), đảm bảo mọi cột được đem so sánh thống trị đều là các lộ trình tự đóng kín hoàn toàn.
+    \end{enumerate}
+\end{itemize}
+
+\subsection{Điều kiện 5: Bảng Băm Không Xử lý Đụng độ (Un-probed Hash Table) tại Line 363}
+Hãy quan sát kỹ dòng 363 trong hàm \texttt{enum\_record} của \texttt{reference\_solve.cpp}:
+\begin{lstlisting}
+auto it = col_index.find(h);
+if (it != col_index.end()) {
+    Column& c = cols[it->second];
+    if (c.k != k || c.rlen != (int)e_sorted.size() || !equal(e_sorted.begin(), e_sorted.end(), col_req.begin() + c.rbeg))
+        return; // hash clash: drop
+    if (profit > c.profit) { c.profit = profit; copy(e_seq.begin(), e_seq.end(), col_nodes.begin() + c.nbeg); }
+    return;
+}
+\end{lstlisting}
+\begin{itemize}[leftmargin=1.5em]
+    \item \textbf{Phân tích Rủi ro Lý thuyết}: Nếu tồn tại hai cặp khác nhau $(k_1, R_{j_1}) \neq (k_2, R_{j_2})$ vô tình sinh ra cùng một mã băm 64-bit $h$, câu lệnh \texttt{return; // hash clash: drop} sẽ \textbf{vứt bỏ hoàn toàn cột thứ hai}!
+    \item \textbf{Đánh giá Xác suất Thực tế}: Theo bài toán Ngày sinh nhật (Birthday Paradox) trên không gian $M = 2^{64} \approx 1.844 \times 10^{19}$, xác suất xảy ra ít nhất một va chạm khi sinh $NC$ cột là:
+    \[
+        P(\text{clash}) \approx 1 - \exp\left(-\frac{NC^2}{2 \cdot 2^{64}}\right) \approx \frac{NC^2}{3.689 \times 10^{19}}.
+    \]
+    Với $NC = 21,461$ cột (như trên \texttt{test\_500.txt}), $P(\text{clash}) \approx 1.25 \times 10^{-11}$ (gần như bằng $0$). Tuy nhiên, nếu $NC$ tăng lên $2 \times 10^7$ cột, xác suất va chạm tăng lên $\approx 1.08 \times 10^{-5}$.
+    \item \textbf{Cách sửa để Chính xác Tuyệt đối $100\%$ (Zero-Drop Linear Probing)}: Thay câu lệnh \texttt{return; // hash clash: drop} bằng vòng lặp dò tuyến tính khóa băm $h \leftarrow h + 1$:
+\begin{lstlisting}
+for (;; ++h) {
+    auto it = col_index.find(h);
+    if (it == col_index.end()) break;
+    Column& c = cols[it->second];
+    if (c.k == k && c.rlen == (int)e_sorted.size() &&
+        equal(e_sorted.begin(), e_sorted.end(), col_req.begin() + c.rbeg)) {
+        if (profit > c.profit) { c.profit = profit; copy(e_seq.begin(), e_seq.end(), col_nodes.begin() + c.nbeg); }
+        return;
+    }
+}
+\end{lstlisting}
+\end{itemize}
+
+\subsection{Điều kiện 6: Điều kiện Cần và Đủ để Kết luận Nghiệm Cuối Phase 1 là Tối ưu Toàn cục}
+Khi hàm \texttt{column\_solve} kết thúc, để nghiệm trả về được bảo đảm toán học là \textbf{Nghiệm Tối ưu Toàn cục ($OPT_{IP}$)} của đề bài gốc, cần thỏa mãn trọn vẹn chuỗi 3 điều kiện sau:
+
+\begin{table}[htbp]
+\centering
+\renewcommand{\arraystretch}{1.35}
+\resizebox{\linewidth}{!}{%
+\begin{tabular}{c >{\bfseries}l l l}
+\toprule
+TT & Điều kiện Kiểm tra & Biểu thức trong Code & Ý nghĩa Toán học \\
+\midrule
+1 & Không gian cột được vét cạn 100\% & \texttt{enum\_abort == false} & Không chạm \texttt{ENUM\_STATE\_CAP}, \texttt{ENUM\_COL\_CAP} và \texttt{enum\_deadline}. \\
+2 & Không rơi cột do va chạm băm & \texttt{hash\_clash\_count == 0} & Mọi tập $(k, R_j)$ sinh lời đều có đại diện tối ưu trong $\mathcal{C}$. \\
+3 & Đóng kín khoảng cách Đối ngẫu & \texttt{best >= ub} \textit{hoặc} \texttt{norm < 1e-12} & Nghiệm nguyên trùng khớp trần đối ngẫu $\lfloor L(u) \rfloor = \lfloor OPT_{LP} \rfloor$. \\
+\bottomrule
+\end{tabular}%
+}
+\caption{Ba điều kiện cần và đủ để nội tại Phase 1 tự chứng nhận Tối ưu Toàn cục 100\%.}
+\end{table}
+
+\begin{warnbox}{Trường hợp Ngoại lệ khi \texttt{enum\_abort == false} nhưng \texttt{best < ub}}
+Khi Điều kiện 1 và 2 thỏa mãn nhưng kết thúc Phase 1 mà $\texttt{best} < \texttt{ub}$ (như trên \texttt{test\_210.txt}: $4285 < 4332$ và \texttt{test\_500.txt}: $13279 < 13311$), nội tại chương trình C++ chỉ biết rằng nghiệm tìm được nằm trong khoảng $[\text{best}, \text{ub}]$. Sự chênh lệch $\text{ub} - \text{best}$ lúc này là tổng của 2 thành phần không âm:
+\[
+    \underbrace{\text{ub} - \text{best}}_{\text{Total Dual Gap}} = \underbrace{\big(\text{ub} - \lfloor OPT_{LP} \rfloor\big)}_{\text{Subgradient Residual } (\approx 0)} + \underbrace{\big(\lfloor OPT_{LP} \rfloor - OPT_{IP}\big)}_{\text{LP-IP Integrality Gap}} + \underbrace{\big(OPT_{IP} - \text{best}\big)}_{\text{SA Optimality Gap}}.
+\]
+Trong đó, chỉ khi dùng bộ giải quy hoạch nguyên chính xác (như \texttt{SCIP} hoặc Branch-and-Bound trên tập cột) ta mới tách biệt và chứng minh được rằng $OPT_{IP} - \text{best} = 0$ (tức SA đã đạt tối ưu tuyệt đối và toàn bộ khoảng cách còn lại là Integrality Gap của đa diện Set Packing).
+\end{warnbox}
+
+\end{document}
+

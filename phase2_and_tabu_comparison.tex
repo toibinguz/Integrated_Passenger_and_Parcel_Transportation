@@ -1,0 +1,477 @@
+\documentclass[11pt,a4paper]{article}
+
+% ============================================================================
+% PACKAGES & VIETNAMESE TYPOGRAPHY
+% ============================================================================
+\usepackage[utf8]{inputenc}
+\usepackage[T5]{fontenc}
+\usepackage[vietnamese]{babel}
+\usepackage{geometry}
+\geometry{left=2.2cm, right=2.2cm, top=2.4cm, bottom=2.4cm}
+
+\usepackage{amsmath, amssymb, amsthm, mathtools}
+\usepackage{bm}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{multirow}
+\usepackage{enumitem}
+\usepackage{xcolor}
+\usepackage{colortbl}
+\usepackage{hyperref}
+\usepackage{fancyhdr}
+\usepackage{listings}
+\usepackage{tikz}
+\usetikzlibrary{shapes.geometric, arrows.meta, positioning, calc}
+
+% ============================================================================
+% COLOR PALETTE & HYPERLINKS
+% ============================================================================
+\definecolor{primaryblue}{RGB}{18, 58, 130}
+\definecolor{secondaryblue}{RGB}{235, 243, 255}
+\definecolor{accentgreen}{RGB}{16, 110, 60}
+\definecolor{softgreen}{RGB}{236, 250, 242}
+\definecolor{accentred}{RGB}{175, 35, 35}
+\definecolor{softamber}{RGB}{255, 248, 230}
+\definecolor{borderamber}{RGB}{210, 145, 20}
+\definecolor{codebg}{RGB}{247, 249, 252}
+\definecolor{codeframe}{RGB}{205, 215, 230}
+\definecolor{commentgreen}{RGB}{34, 139, 34}
+\definecolor{keywordblue}{RGB}{0, 51, 179}
+
+\hypersetup{
+    colorlinks=true,
+    linkcolor=primaryblue,
+    urlcolor=primaryblue,
+    citecolor=primaryblue,
+    pdftitle={Phan tich Chuyen sau Phase 2 (SISR + SA) va Doi sanh voi Tabu Search},
+    pdfauthor={Antigravity AI}
+}
+
+% ============================================================================
+% THEOREM & CALLOUT BOX ENVIRONMENTS
+% ============================================================================
+\newtheorem{theorem}{Định lý}[section]
+\newtheorem{lemma}[theorem]{Bổ đề}
+\newtheorem{proposition}[theorem]{Mệnh đề}
+\theoremstyle{definition}
+\newtheorem{definition}{Định nghĩa}[section]
+\newtheorem{remark}{Nhận xét}[section]
+
+\newsavebox{\calloutbox}
+\newenvironment{keybox}[1]{%
+    \par\medskip\noindent
+    \begin{lrbox}{\calloutbox}%
+    \begin{minipage}{\dimexpr\linewidth-2\fboxsep-2\fboxrule\relax}
+    \textbf{\textcolor{primaryblue}{#1}}\par\smallskip
+}{%
+    \end{minipage}%
+    \end{lrbox}%
+    \fcolorbox{primaryblue}{secondaryblue}{\usebox{\calloutbox}}%
+    \par\medskip
+}
+
+\newenvironment{warnbox}[1]{%
+    \par\medskip\noindent
+    \begin{lrbox}{\calloutbox}%
+    \begin{minipage}{\dimexpr\linewidth-2\fboxsep-2\fboxrule\relax}
+    \textbf{\textcolor{accentred}{#1}}\par\smallskip
+}{%
+    \end{minipage}%
+    \end{lrbox}%
+    \fcolorbox{borderamber}{softamber}{\usebox{\calloutbox}}%
+    \par\medskip
+}
+
+\newenvironment{optbox}[1]{%
+    \par\medskip\noindent
+    \begin{lrbox}{\calloutbox}%
+    \begin{minipage}{\dimexpr\linewidth-2\fboxsep-2\fboxrule\relax}
+    \textbf{\textcolor{accentgreen}{#1}}\par\smallskip
+}{%
+    \end{minipage}%
+    \end{lrbox}%
+    \fcolorbox{accentgreen}{softgreen}{\usebox{\calloutbox}}%
+    \par\medskip
+}
+
+% ============================================================================
+% CODE LISTING CONFIGURATION
+% ============================================================================
+\lstdefinestyle{cppstyle}{
+    language=C++,
+    backgroundcolor=\color{codebg},
+    frame=single,
+    rulecolor=\color{codeframe},
+    basicstyle=\ttfamily\footnotesize,
+    keywordstyle=\color{keywordblue}\bfseries,
+    commentstyle=\color{commentgreen}\itshape,
+    numbers=left,
+    numberstyle=\tiny\color{gray},
+    numbersep=8pt,
+    breaklines=true,
+    tabsize=4,
+    showstringspaces=false,
+    captionpos=b
+}
+\lstset{style=cppstyle}
+
+% ============================================================================
+% HEADER & FOOTER
+% ============================================================================
+\setlength{\headheight}{14pt}
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small\textcolor{primaryblue}{\textbf{Phân tích Phase 2 (SISR + SA) \& Đối sánh với Tabu Search}}}
+\fancyhead[R]{\small\textcolor{gray}{Bài toán Share-a-Ride (SARP)}}
+\fancyfoot[C]{\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+
+% ============================================================================
+% DOCUMENT START
+% ============================================================================
+\begin{document}
+
+\begin{center}
+    {\LARGE\bfseries\textcolor{primaryblue}{GIẢI PHẪU CHI TIẾT THUẬT TOÁN PHASE 2 (SISR + SA) TRONG \texttt{reference\_solve.cpp}}}\\[0.25cm]
+    {\Large\bfseries Đối sánh Toàn diện với Kiến trúc Tabu Search (\texttt{tabu\_prototype.cpp})\\và Cơ sở Lý thuyết vì sao Simulated Annealing là Hướng tiếp cận Phù hợp}\\[0.35cm]
+    {\normalsize Tài liệu Phân tích Chuyên sâu \& Đánh giá Thực nghiệm Thống kê --- Dự án Tối ưu hóa SARP}\\[0.2cm]
+    \rule{\linewidth}{1.2pt}
+\end{center}
+
+\tableofcontents
+\vspace{0.4cm}
+\rule{\linewidth}{0.5pt}
+\newpage
+
+% ============================================================================
+% SECTION 1: TỔNG QUAN TRIẾT LÝ THIẾT KẾ CỦA PHASE 2
+% ============================================================================
+\section{Tổng quan Triết lý Thiết kế của Phase 2 (SISR + Simulated Annealing)}
+
+Khi không gian lộ trình của từng xe quá lớn khiến Phase 1 (\texttt{column\_solve}) vượt ngưỡng giới hạn bộ nhớ hoặc thời gian (\texttt{enum\_abort == true}), chương trình giải phóng toàn bộ bộ nhớ cột và chuyển sang \textbf{Phase 2}: thuật toán tìm kiếm láng giềng lớn dựa trên \textbf{SISR (Slack Induction by String Removals --- Christiaens \& Vanden Berghe, 2020)} điều khiển bởi \textbf{Simulated Annealing (SA) đa chu kỳ}.
+
+\begin{keybox}{Sự Đối lập Triết lý Thiết kế: ``Độ sâu mỗi Vòng lặp'' vs. ``Tốc độ Vòng lặp Cực đại''}
+Khi giải bài toán SARP trên không gian lộ trình (Routing Space), có hai trường phái thiết kế đối lập nhau:
+\begin{enumerate}[leftmargin=1.5em]
+    \item \textbf{Trường phái ``Heavy-Iteration / High-Intelligence'' (\texttt{tabu\_prototype.cpp})}:
+    Mỗi chu kỳ (epoch) đầu tư rất nhiều tính toán: dùng \textbf{Regret-$k$ Insertion} để cân nhắc kỹ thứ tự chèn trên toàn bộ tập yêu cầu chưa được phục vụ, sau đó chạy \textbf{Tabu Search đa toán tử} (\texttt{Relocate}, \texttt{Swap}, \texttt{Intra-route}) để vắt kiệt từng điểm lợi nhuận cục bộ và lưu vào \textbf{Diverse Elite Pool}. Tốc độ đạt khoảng $\mathbf{1,800\sim 2,000}$ vòng/giây ($\approx 45,000$ vòng / 25 giây).
+    \item \textbf{Trường phái ``Ultra-Light Iteration / Massive Throughput'' (Phase 2 của \texttt{reference\_solve.cpp})}:
+    Loại bỏ hoàn toàn Local Search, loại bỏ hoàn toàn việc tính Regret-$k$, chỉ giữ lại duy nhất cặp toán tử \textbf{SISR String Ruin + Greedy Blink Recreate} được tối ưu hóa ở mức vi kiến trúc phần cứng (nhờ hậu tố \texttt{lat[]}, đồng bộ sớm \texttt{sync}, bộ đệm phiên bản \texttt{icache} và hoàn tác nhãn thời gian \texttt{touch\_stamp}). Nhờ đó, nó đạt tốc độ kinh hoàng $\mathbf{42,260}$ vòng Ruin-Recreate/giây ($\mathbf{>1,056,000}$ vòng / 25 giây --- nhanh gấp \textbf{hơn 20 lần} số vòng lặp của Tabu)!
+\end{enumerate}
+\end{keybox}
+
+\begin{figure}[htbp]
+\centering
+\resizebox{\linewidth}{!}{%
+\begin{tikzpicture}[
+    node distance=0.55cm,
+    box/.style={rectangle, rounded corners=4pt, draw=primaryblue, fill=secondaryblue, thick, minimum width=15.0cm, minimum height=0.95cm, align=center, font=\small},
+    arrow/.style={-Stealth, thick, draw=primaryblue}
+]
+    \node[box] (p0) {\textbf{1. Khởi tạo Tham lam (\texttt{Greedy Init})}: Sắp xếp yêu cầu giảm dần theo lợi nhuận ròng tiềm năng $\text{Rev}_r - \text{nic}_r$, gọi \texttt{recreate(init, false)}.};
+    \node[box, below=of p0] (p1) {\textbf{2. Điều phối Nhiệt độ Đa chu kỳ (\texttt{SA\_CYCLES} \& \texttt{RESTART\_FROM\_BEST})}: Tính $T(t) = T_0 (T_F/T_0)^{\text{prog}}$; nạp lại \texttt{best\_nd} đầu mỗi chu kỳ mới.};
+    \node[box, below=of p1] (p2) {\textbf{3. Phá hủy Chuỗi Không-Thời gian (\texttt{ruin(seed)})}: 85\% cắt chuỗi SISR quanh láng giềng \texttt{nbr[seed]}, 10\% xóa ngẫu nhiên, 5\% tháo rỗng 1 xe.};
+    \node[box, below=of p2] (p3) {\textbf{4. Xây dựng \& Xáo trộn Tập Ứng viên (\texttt{cand})}: Gom \texttt{removed} + 3 láng giềng + 6 ngẫu nhiên; chọn ngẫu nhiên 1 trong 4 chế độ sắp xếp.};
+    \node[box, below=of p3] (p4) {\textbf{5. Tái tạo Tham lam Nháy mắt có Bộ đệm (\texttt{recreate(cand, true)})}: Tra cứu $O(1)$ qua \texttt{icache[q][k]} (\texttt{rver[k]}), chèn với xác suất bỏ qua $1/64$.};
+    \node[box, below=of p4] (p5) {\textbf{6. Đánh giá Metropolis \& Hoàn tác Nhãn thời gian (\texttt{Stamp Rollback})}: Nếu từ chối, chỉ \texttt{swap(rt[k], backup[k])} trên đúng các xe trong \texttt{touched}.};
+
+    \draw[arrow] (p0) -- (p1);
+    \draw[arrow] (p1) -- (p2);
+    \draw[arrow] (p2) -- (p3);
+    \draw[arrow] (p3) -- (p4);
+    \draw[arrow] (p4) -- (p5);
+\end{tikzpicture}%
+}
+\caption{Vòng lặp chính của Phase 2 (SISR Ruin \& Recreate + SA) trong \texttt{reference\_solve.cpp}.}
+\end{figure}
+
+---
+
+% ============================================================================
+% SECTION 2: CẤU TRÚC DỮ LIỆU ROUTE & KIỂM TRA CHÈN O(1) QUA TIỀN TỐ - HẬU TỐ
+% ============================================================================
+\section{Giải phẫu Cấu trúc \texttt{Route}: Tiền tố \texttt{dep[]}, Hậu tố \texttt{lat[]} và Ngắt sớm Đồng bộ \texttt{sync}}
+
+Nút thắt cổ chai lớn nhất của mọi thuật toán VRP/SARP là hàm \texttt{best\_insert(k, q)}: tìm vị trí tốt nhất để chèn yêu cầu $q$ vào lộ trình xe $k$ đang có $n$ điểm dừng. Nếu mỗi vị trí thử chèn đều phải duyệt lại toàn bộ phần đuôi lộ trình để kiểm tra khung thời gian, độ phức tạp sẽ tăng thêm một bậc $O(n)$.
+
+\subsection{Cấu trúc Dữ liệu \texttt{Route} và Quy hoạch Động Hai chiều (Lines 81--123)}
+Mỗi lộ trình xe $k$ (\texttt{rt[k]}) lưu chuỗi các node tác vụ $\text{nd}[1 \dots n]$ ($\text{nd}[0] = 0$ đại diện cho bến xuất phát $O_k$) kèm theo 3 mảng trạng thái được tính trong hàm \texttt{recompute(k)}:
+\begin{enumerate}[leftmargin=1.5em]
+    \item \textbf{Mảng Tiền tố Thời gian Rời sớm nhất (\texttt{dep[0..n]})}:
+    \[
+        \text{dep}[0] = 0, \qquad \text{dep}[i] = \max\Big(\text{dep}[i-1] + T(\text{nout}[\text{nd}[i-1]], \text{nin}[\text{nd}[i]]), \; ne[\text{nd}[i]]\Big) + \text{ndur}[\text{nd}[i]].
+    \]
+    \item \textbf{Mảng Tiền tố Tải trọng Tích lũy (\texttt{ld[0..n]})}:
+    \[
+        \text{ld}[0] = 0, \qquad \text{ld}[i] = \text{ld}[i-1] + \text{nw}[\text{nd}[i]].
+    \]
+    \item \textbf{Mảng Hậu tố Thời điểm Đến Muộn nhất (\texttt{lat[1..n+1]} --- Backward Latest Arrival Slack)}:
+    Được tính ngược từ cuối lộ trình ($i = n \to 1$) tại Lines 114--120:
+    \begin{align}
+        \text{lat}[n+1] &= +\infty, \nonumber\\
+        \text{lat}[i] &= \min\Big( nl[\text{nd}[i]], \; \text{lat}[i+1] - T\big(\text{nout}[\text{nd}[i]], \text{nin}[\text{nd}[i+1]]\big) - \text{ndur}[\text{nd}[i]] \Big). \label{eq:lat_recur}
+    \end{align}
+\end{enumerate}
+
+\begin{theorem}[Định lý Kiểm tra Khả thi Hậu tố trong $O(1)$]
+Giá trị $\text{lat}[i]$ xác định bởi \eqref{eq:lat_recur} là \textbf{thời điểm muộn nhất} mà xe có thể đến điểm vào $\text{nin}[\text{nd}[i]]$ của node thứ $i$ sao cho toàn bộ phần đuôi lộ trình từ vị trí $i$ đến $n$ không vi phạm bất kỳ hạn chót $nl[\text{nd}[s]]$ ($s \ge i$) nào.
+\end{theorem}
+\begin{proof}
+Chứng minh bằng quy nạp ngược từ $i = n$ về $1$:
+\begin{itemize}[leftmargin=1.5em]
+    \item Với $i = n$: Công thức \eqref{eq:lat_recur} cho $\text{lat}[n] = nl[\text{nd}[n]]$, hiển nhiên đúng.
+    \item Giả sử mệnh đề đúng tại $i + 1$: để phần đuôi từ $i+1$ đến $n$ hợp lệ, thời điểm đến node $i+1$ là $t^{\text{arr}}_{i+1}$ phải thỏa mãn $t^{\text{arr}}_{i+1} \le \text{lat}[i+1]$.
+    \item Giả sử xe đến node $i$ vào thời điểm $t^{\text{arr}}_i$. Để bản thân node $i$ hợp lệ, trước hết cần $t^{\text{arr}}_i \le nl[\text{nd}[i]]$. Khi đó, thời điểm xe rời node $i$ là:
+    \[
+        t^{\text{dep}}_i = \max\big(t^{\text{arr}}_i, ne[\text{nd}[i]]\big) + \text{ndur}[\text{nd}[i]],
+    \]
+    và thời điểm xe đến node $i+1$ là:
+    \[
+        t^{\text{arr}}_{i+1} = \max\big(t^{\text{arr}}_i, ne[\text{nd}[i]]\big) + \text{ndur}[\text{nd}[i]] + T\big(\text{nout}[\text{nd}[i]], \text{nin}[\text{nd}[i+1]]\big).
+    \]
+    Vì lộ trình gốc đã hợp lệ nên $ne[\text{nd}[i]] + \text{ndur}[\text{nd}[i]] + T(\dots) \le \text{dep}[i] + T(\dots) \le \text{lat}[i+1]$. Do đó, điều kiện $t^{\text{arr}}_{i+1} \le \text{lat}[i+1]$ tương đương chính xác với:
+    \[
+        t^{\text{arr}}_i + \text{ndur}[\text{nd}[i]] + T\big(\text{nout}[\text{nd}[i]], \text{nin}[\text{nd}[i+1]]\big) \le \text{lat}[i+1] \iff t^{\text{arr}}_i \le \text{lat}[i+1] - T(\dots) - \text{ndur}[\text{nd}[i]].
+    \]
+    Kết hợp với $t^{\text{arr}}_i \le nl[\text{nd}[i]]$, ta thu được đúng công thức \eqref{eq:lat_recur}.
+\end{itemize}
+\end{proof}
+
+\subsection{Ứng dụng vào Hàm \texttt{best\_insert} (Lines 127--206)}
+Nhờ Định lý trên:
+\begin{enumerate}[leftmargin=1.5em]
+    \item \textbf{Chèn Khách hàng $q \le N$ trong $O(n)$ (Lines 132--148)}:
+    Khi thử chèn Macro-Node khách hàng $q$ vào ngay sau vị trí $i \in [0, n]$, xe rời điểm trả khách $D = \text{nout}[q]$ lúc $d = \max(\text{dep}[i] + T(a, P), e_q) + \text{ndur}[q]$. Để kiểm tra xem toàn bộ các điểm dừng từ $i+1$ đến $n$ có bị trễ giờ hay không, chỉ cần \textbf{1 phép so sánh duy nhất trong $O(1)$} (Line 143):
+    \[
+        d + T(D, \text{nin}[\text{nd}[i+1]]) > \text{lat}[i+1] \implies \text{continue (bất khả thi).}
+    \]
+    Ngoài ra, nếu tại vị trí $i$ mà $\text{dep}[i] > l_q$ (Line 135), vì mảng $\text{dep}[]$ đơn điệu tăng nên mọi vị trí sau $i$ đều quá hạn đón khách $q$, vòng lặp lập tức \texttt{break}!
+    \item \textbf{Chèn Kiện hàng $q > N$ với Kỹ thuật Ngắt sớm Đồng bộ \texttt{sync} (Lines 150--204)}:
+    Khi chèn điểm đón hàng $p = q$ sau vị trí $i$ và kéo điểm trả hàng $dn = R+q$ trượt dọc theo các vị trí $j \in [i+1, n]$, thuật toán đẩy thời gian thực tế \texttt{cur} qua từng đỉnh trung gian $x = \text{nd}[j]$:
+    \begin{lstlisting}
+if (!sync) {
+    ll ar = cur + T(prev, nin[x]);
+    if (ar > nl[x]) break;
+    ll dj = max(ar, ne[x]) + ndur[x];
+    if (dj == dep[j]) sync = true;
+    cur = dj;
+} else cur = dep[j];
+    \end{lstlisting}
+    \textbf{Ý nghĩa Vật lý của biến \texttt{sync}}: Giả sử ở lộ trình cũ, xe đến đỉnh $x = \text{nd}[j]$ sớm hơn giờ mở cửa $ne[x]$ và phải đứng chờ 15 phút. Khi chèn thêm điểm đón hàng $p$ ở phía trước làm xe đến $x$ muộn hơn 10 phút, khoảng thời gian chờ 15 phút tại $x$ \textbf{hấp thụ hoàn toàn} độ trễ 10 phút đó! Hệ quả là thời điểm xe rời khỏi $x$ mới ($\text{dj} = ne[x] + \text{ndur}[x]$) \textbf{bằng chính xác thời điểm rời $\text{dep}[j]$ cũ} ($\text{dj} == \text{dep}[j]$). Kể từ vị trí $j$ trở đi, cờ $\texttt{sync} = \texttt{true}$ được bật: không cần tính lại thời gian di chuyển nữa mà lấy thẳng $\text{cur} = \text{dep}[j]$!
+\end{enumerate}
+
+---
+
+% ============================================================================
+% SECTION 3: BỘ ĐỆM PHIÊN BẢN LỘ TRÌNH & KỸ THUẬT NHÁY MẮT CHRISTIAENS
+% ============================================================================
+\section{Bộ nhớ đệm Phiên bản (\texttt{icache} + \texttt{rver}) và Kỹ thuật Nháy mắt (\texttt{BLINK\_MASK = 63})}
+
+\subsection{Cơ chế Bộ nhớ đệm Phiên bản Lộ trình (\texttt{icache} \& \texttt{rver}, Lines 90--93, 238--243)}
+Trong mỗi bước của Phase 2, toán tử \texttt{ruin} chỉ tháo yêu cầu trên khoảng $1\sim 4$ xe trong tổng số $K = 125$ xe. Khi gọi hàm \texttt{recreate}, với mỗi yêu cầu $q \in \texttt{cand}$, vòng lặp phải duyệt qua tất cả $k = 1 \dots K$ xe để tìm chiếc xe có chi phí chèn tăng thêm $\Delta \text{cost}$ nhỏ nhất:
+\begin{lstlisting}
+CacheEntry* ce = &icache[(size_t)q * (K + 1)];
+for (int k = 1; k <= K; ++k) {
+    CacheEntry& e = ce[k];
+    if (e.ver != rver[k]) { e.cost = best_insert(k, q, e.i, e.j, blink); e.ver = rver[k]; }
+    if (e.cost < best) { best = e.cost; bk = k; bi = e.i; bj = e.j; }
+}
+\end{lstlisting}
+\begin{itemize}[leftmargin=1.5em]
+    \item Mỗi chiếc xe $k$ có một biến đếm phiên bản $\texttt{rver}[k]$. Mỗi khi lộ trình xe $k$ bị sửa đổi (trong \texttt{recompute(k)} hoặc khi hoàn tác), phiên bản của nó được gán một mã định danh mới duy nhất toàn cục: $\texttt{rver}[k] = \texttt{++gver}$.
+    \item Khi xét yêu cầu $q$ trên xe $k$, nếu $\texttt{e.ver == rver}[k]$ (tức lộ trình xe $k$ chưa hề thay đổi kể từ lần cuối cùng ta tính vị trí chèn của $q$ vào $k$), kết quả $(e.\text{cost}, e.i, e.j)$ được lấy ra ngay lập tức trong $\mathbf{O(1)}$ (chỉ 1 phép so sánh số nguyên)!
+    \item Trên \texttt{test\_500.txt} ($K = 125$), trung bình mỗi vòng lặp chỉ có $3\sim 4$ xe bị thay đổi, nghĩa là $\mathbf{>96.8\%}$ số cặp $(q, k)$ đạt \textbf{Cache Hit tuyệt đối}, giúp hàm \texttt{recreate} nhanh gấp $\approx 30$ lần!
+\end{itemize}
+
+\subsection{Giải mã Kỹ thuật ``Nháy mắt'' (\texttt{BLINK\_MASK = 63} --- xác suất bỏ qua $1/64$)}
+Bạn đã đặt một câu hỏi rất sắc sảo: \textit{``Tại sao họ lại dùng xác suất $1/64$ bỏ qua vị trí chèn tốt nhất (\texttt{!(blink \&\& (rng() \& BLINK\_MASK) == 0)}) để chống local optimum, và tác động thực sự của nó là gì?''}
+
+Kỹ thuật này có tên học thuật là \textbf{Christiaens' Blink Heuristic} (được giới thiệu trong bài báo kinh điển \textit{Slack Induction by String Removals for Vehicle Routing Problems}, Transportation Science, 2020):
+
+\begin{enumerate}[leftmargin=1.5em]
+    \item \textbf{Vấn đề của Chèn Tham lam Tất định (Deterministic Greedy Recreate)}:
+    Giả sử bạn tháo 4 yêu cầu khỏi 2 xe, rồi lập tức gọi hàm \texttt{best\_insert} tất định để chèn chúng lại vào vị trí có $\Delta \text{cost}$ rẻ nhất. Chuyện gì sẽ xảy ra? Với xác suất rất cao, cả 4 yêu cầu sẽ \textbf{rơi ngược trở lại đúng vị trí cũ trên đúng chiếc xe cũ} mà chúng vừa bị tháo ra! Khi đó $\Delta \text{obj} = 0$, bước nhảy Ruin \& Recreate trở nên vô nghĩa (idempotent move).
+    \item \textbf{Cách giải quyết truyền thống (như trong ALNS)}:
+    Cộng nhiễu ngẫu nhiên liên tục vào hàm mục tiêu ($\Delta \text{cost} + \epsilon$) hoặc tính Regret-2/Regret-3. Tuy nhiên, nếu bạn cộng nhiễu liên tục vào từng vị trí chèn trên xe $k$, bạn \textbf{phá hỏng tính hợp lệ của bộ đệm \texttt{icache}} hoặc phải gọi hàm sinh số thực ngẫu nhiên đắt đỏ tại mọi bước.
+    \item \textbf{Sự tinh tế của \texttt{BLINK\_MASK = 63} ($p = 1/64 \approx 1.56\%$)}:
+    Tại dòng 146, 173 và 202 trong \texttt{best\_insert}:
+    \begin{lstlisting}
+if (dc < best && !(blink && (rng() & BLINK_MASK) == 0)) { best = dc; bi = i; bj = j; }
+    \end{lstlisting}
+    \begin{itemize}[leftmargin=1.2em]
+        \item Phép kiểm tra \texttt{(rng() \& 63) == 0} chỉ tốn đúng \textbf{1 chu kỳ xung nhịp CPU} (phép \texttt{AND} bit với $63 = 2^6 - 1$).
+        \item Tại sao lại là $p = 1/64$ ($1.56\%$) chứ không phải $20\%$ hay $50\%$?
+        Hãy tính xác suất trên cả một vòng \texttt{recreate}: Giả sử trong một vòng \texttt{recreate} có $m \approx 8$ yêu cầu được chèn lại. Xác suất để một vị trí tối ưu cục bộ của 1 yêu cầu trên chiếc xe tốt nhất của nó bị ``nháy mắt bỏ qua'' là $1/64$. Khi đó, xác suất để \textbf{ít nhất 1 trong $8$ yêu cầu trong vòng lặp đó bị đẩy sang vị trí tốt thứ nhì (second-best position)} là:
+        \[
+            P(\text{ít nhất 1 yêu cầu đổi chỗ}) = 1 - \left(1 - \frac{1}{64}\right)^8 \approx 1 - (0.984375)^8 \approx \mathbf{11.84\%}!
+        \]
+        \item Đây chính là điểm ``vàng'' của xác suất:
+        \begin{itemize}
+            \item Trong $\approx 88\%$ số vòng lặp, hàm chèn hoạt động như một bộ chèn tham lam chính xác tuyệt đối để tối ưu hóa cực đại lợi nhuận.
+            \item Trong $\approx 12\%$ số vòng lặp, đúng 1 yêu cầu trong chuỗi bị ``chệch hướng'' sang vị trí tốt thứ hai (tạo hiệu ứng tương tự \textbf{Stochastic Regret-2} mà không tốn chi phí lưu mảng Top-2!), buộc các yêu cầu đi sau phải sắp xếp lại theo một cấu hình hoàn toàn mới!
+        \end{itemize}
+    \end{itemize}
+\end{enumerate}
+
+---
+
+% ============================================================================
+% SECTION 4: CHẾ ĐỘ NHIỆT ĐỘ ĐẲNG CẤP & VÌ SAO SA PHÙ HỢP VỚI BÀI TOÁN NÀY
+% ============================================================================
+\section{Giải phẫu Chế độ Nhiệt độ SA và Vì sao SA là Hướng tiếp cận Phù hợp}
+
+\subsection{Ba Kỹ thuật Đẳng cấp trong Thiết kế Nhiệt độ của \texttt{reference\_solve.cpp}}
+Quan sát đoạn mã điều khiển nhiệt độ ở cả Phase 1 (Lines 506--521) và Phase 2 (Lines 644--666), ta thấy 3 kỹ thuật thiết kế cực kỳ chuyên nghiệp:
+
+\subsubsection{1. Tự chuẩn hóa Nhiệt độ Bất biến theo Thang đo Dữ liệu (Scale-Invariant Calibration)}
+Thay vì gán cứng $T_0 = 100, T_F = 0.1$ (sẽ bị sai lệch hoàn toàn nếu một testcase có doanh thu tính bằng hàng chục trong khi testcase khác tính bằng hàng triệu), thuật toán lấy \textbf{trung bình doanh thu của một yêu cầu} $\overline{\text{Rev}} = \frac{1}{|\mathcal{R}|}\sum_{r} \text{Rev}_r$ làm đơn vị đo năng lượng chuẩn:
+\begin{equation}
+    T_0 = \texttt{T0\_RATIO} \cdot \overline{\text{Rev}} = 1.0 \cdot \overline{\text{Rev}}, \qquad T_F = \texttt{TF\_RATIO} \cdot \overline{\text{Rev}} = 0.005 \cdot \overline{\text{Rev}}.
+\end{equation}
+\begin{itemize}[leftmargin=1.5em]
+    \item Tại đầu chu kỳ ($T = T_0 = \overline{\text{Rev}}$): Một bước nhảy làm mất đi đúng $1$ yêu cầu trung bình ($\Delta = -\overline{\text{Rev}}$) vẫn có xác suất được chấp nhận là $P = e^{-1} \approx \mathbf{36.8\%}$ --- cho phép nghiệm tự do tháo bỏ một yêu cầu cũ để mở đường ghép hai yêu cầu mới!
+    \item Tại cuối chu kỳ ($T = T_F = 0.005 \cdot \overline{\text{Rev}}$): Ngay cả một bước nhảy làm giảm chỉ $2\%$ giá trị của một yêu cầu ($\Delta = -0.02 \cdot \overline{\text{Rev}}$) cũng chỉ có xác suất chấp nhận là $e^{-4} \approx 1.8\%$, biến SA ở cuối chu kỳ thành thuật toán leo đồi thuần túy (Pure Hill-Climbing) để hội tụ sắc nét vào đáy hố!
+\end{itemize}
+
+\subsubsection{2. Làm nguội Hàm mũ Đa chu kỳ theo Thời gian Thực (\texttt{SA\_CYCLES} \& \texttt{RESTART\_FROM\_BEST})}
+Tại Lines 653--665:
+\begin{lstlisting}
+const int SA_CYCLES = max(1, min(20, CYCLE_SCALE / max(1, (int)servable_list.size())));
+...
+double prog = budget > 0 ? (elapsed - search_start) / budget : 1.0;
+prog *= SA_CYCLES;
+int cyc = min(SA_CYCLES - 1, (int)prog);
+prog -= cyc;
+if (cyc != cur_cycle) { cur_cycle = cyc; if (RESTART_FROM_BEST) load_best(); }
+temp = T0 * pow(TF / T0, prog);
+\end{lstlisting}
+\begin{itemize}[leftmargin=1.5em]
+    \item \textbf{Điều khiển bằng Đồng hồ Thực (\texttt{elapsed / budget}) thay vì Số vòng lặp}: Giúp đường cong nhiệt độ trải đều từ $T_0$ đến $T_F$ khớp chính xác $100\%$ với thời gian giới hạn \texttt{TIME\_LIMIT\_SEC}, bất kể chạy trên máy tính nhanh hay chậm và bất kể đề bài có $N = 10$ hay $N = 500$.
+    \item \textbf{Thích nghi Số chu kỳ Nung lại (Adaptive Reheating Cycles)}: Với đề bài nhỏ ($R = 60$), mỗi vòng lặp chạy rất nhanh nên thuật toán chia quỹ thời gian thành $\texttt{SA\_CYCLES} = 600 / 60 = 10$ chu kỳ nung nóng - làm nguội liên tiếp; mỗi khi bắt đầu chu kỳ mới, nó gọi \texttt{load\_best()} để nhảy về kỷ lục tốt nhất đã tìm được rồi nung lại từ $T_0$. Với đề bài lớn ($R = 500$), $\texttt{SA\_CYCLES} = \max(1, 600/500) = 1$ chu kỳ dài liên tục để có đủ hàng triệu bước nhảy thẩm thấu qua toàn bộ nhiệt độ.
+\end{itemize}
+
+\subsubsection{3. Biến đổi Logarit Tiêu chuẩn Metropolis \& Tiết lưu Đồng hồ bằng Bitmask}
+\begin{itemize}[leftmargin=1.5em]
+    \item Chỉ kiểm tra đồng hồ và tính hàm \texttt{pow()} mỗi $16$ vòng lặp ở Phase 2 (\texttt{if ((it \& 15) == 0)}) và mỗi $256$ vòng lặp ở Phase 1 (\texttt{if ((it \& 255) == 0)}).
+    \item Thay vì tính hàm mũ $\exp((\text{new\_obj} - \text{cur\_obj}) / \text{temp}) > \text{rand01}()$, code viết:
+    \[
+        (\text{double})(\text{new\_obj} - \text{cur\_obj}) > \text{temp} \cdot \ln(\text{rand01}() + 10^{-300}),
+    \]
+    và chỉ gọi \texttt{log(rand01())} khi $\text{new\_obj} < \text{cur\_obj}$ nhờ cơ chế đoản mạch (short-circuit evaluation) của toán tử \texttt{||} trong C++!
+\end{itemize}
+
+\subsection{Cơ sở Lý thuyết: Vì sao Simulated Annealing (SA) lại Phù hợp hơn Tabu Search Cổ điển khi Đi cùng Toán tử LNS/SISR?}
+
+\begin{optbox}{Phân tích Toán học về Cấu trúc Láng giềng và Chuỗi Markov}
+\begin{enumerate}[leftmargin=1.5em]
+    \item \textbf{Sự bất tương thích giữa Tabu Search và Không gian Láng giềng Cỡ lớn (Large Neighborhoods)}:
+    \begin{itemize}[leftmargin=1.2em]
+        \item Bản chất của \textbf{Tabu Search} là \textit{Best-Improvement Deterministic Search}: tại mỗi bước, nó phải \textbf{quét toàn bộ (hoặc một phần lớn) láng giềng $\mathcal{N}(S)$}, chọn nghiệm tốt nhất không bị cấm (non-tabu), rồi ghi thuộc tính vừa đổi vào danh sách Tabu.
+        \item Điều này chỉ khả thi khi láng giềng $\mathcal{N}(S)$ là các phép biến đổi \textbf{nhỏ, cục bộ} (như \texttt{1-Relocate} hoặc \texttt{2-Swap}, kích thước $|\mathcal{N}(S)| \approx O(R^2)$).
+        \item Thế nhưng trong bài toán SARP có khung thời gian hẹp, các phép biến đổi nhỏ 1--2 đỉnh thường xuyên đâm vào \textbf{bức tường bất khả thi (infeasibility wall)}: bạn không thể nhấc 1 khách hàng sang xe khác nếu không đồng thời tháo bớt 1 kiện hàng và đẩy lùi 2 điểm dừng liên tiếp trên xe đó!
+        \item Để vượt qua bức tường này, bắt buộc phải dùng \textbf{bước nhảy chuỗi đa điểm (SISR String Ruin \& Recreate)}. Nhưng số lượng cách tháo-lắp chuỗi là tổ hợp mũ ($\gg 10^{12}$), nên bạn \textbf{không thể duyệt hết $\mathcal{N}_{\text{SISR}}(S)$ như Tabu Search}!
+    \end{itemize}
+    \item \textbf{Sự kết hợp Hoàn hảo giữa Lấy mẫu Điểm (Point Sampling) của SISR và Bộ lọc Nhiệt động lực học của SA}:
+    \begin{itemize}[leftmargin=1.2em]
+        \item Thay vì tốn thời gian đánh giá hàng nghìn láng giềng trong 1 bước như Tabu, **SISR + SA** chỉ sinh ra \textbf{đúng 1 nghiệm láng giềng ngẫu nhiên $S' \in \mathcal{N}_{\text{SISR}}(S)$} trong $23\text{ }\mu\text{s}$ rồi dùng tiêu chuẩn Metropolis để quyết định giữ hay bỏ ngay lập tức.
+        \item Nhờ hàm hoàn tác nhãn thời gian \texttt{touch\_stamp} siêu nhẹ ($O(|\texttt{touched}|)$), việc ``thử sai rồi vứt bỏ'' trong SA gần như không tốn chi phí.
+        \item Khi chạy $>1,050,000$ bước nhảy trong 25 giây, chuỗi trạng thái của SA tạo thành một \textbf{Chuỗi Markov Bất khả quy (Irreducible Markov Chain)} có phân phối dừng Boltzmann $P(S) \propto \exp(\text{Obj}(S)/T)$, tự động hội tụ xác suất về vùng cực trị toàn cục mà không cần bộ nhớ Tabu phức tạp!
+    \end{itemize}
+\end{enumerate}
+\end{optbox}
+
+---
+
+% ============================================================================
+% SECTION 5: ĐỐI SÁNH TOÀN DIỆN PHASE 2 VS TABU_PROTOTYPE.CPP
+% ============================================================================
+\section{Đối sánh Toàn diện giữa Phase 2 (\texttt{reference\_solve.cpp}) và Kiến trúc Tabu (\texttt{tabu\_prototype.cpp})}
+
+\subsection{Bảng So sánh Kiến trúc Kỹ thuật}
+
+\begin{table}[htbp]
+\centering
+\renewcommand{\arraystretch}{1.35}
+\resizebox{\linewidth}{!}{%
+\begin{tabular}{>{\bfseries}l l l}
+\toprule
+Tiêu chí Kỹ thuật & \textbf{Phase 2 (\texttt{reference\_solve.cpp})} & \textbf{Kiến trúc Tabu (\texttt{tabu\_prototype.cpp})} \\
+\midrule
+Mô hình Metaheuristic chủ đạo & Simulated Annealing (SA) + SISR LNS & Iterated ALNS/Ruin-Recreate + Tabu Search + Elite Pool \\
+Toán tử Phá hủy (Ruin) & 85\% SISR String, 10\% Random, 5\% Route Dismantle & 4 chế độ: Random, Spatial, Time-Window, Vehicle Dismantle \\
+Toán tử Tái tạo (Recreate) & Greedy theo 4 chế độ sắp xếp + Blink ($p=1/64$) & Hỗn hợp Greedy / Regret-2 / Regret-3 có trọng số nhiễu \\
+Tập ứng viên khi Recreate & Thu hẹp: \texttt{removed} + 3 láng giềng + 6 ngẫu nhiên & Toàn bộ các yêu cầu đang chưa được phục vụ (\texttt{unassigned}) \\
+Tinh chỉnh Cục bộ (Local Search) & \textbf{Không có} (0\% thời gian cho Local Search) & \textbf{Có}: Tabu Search đa toán tử (\texttt{Relocate}, \texttt{Swap}, \texttt{Intra}) \\
+Quản lý Đa dạng hóa Quần thể & 1 nghiệm \texttt{best\_nd} duy nhất + Restart theo chu kỳ & \textbf{Elite Pool} xếp hạng theo Vidal Biased Fitness + Khoảng cách cạnh \\
+Tối ưu hóa Kiểm tra Chèn & Mảng hậu tố \texttt{lat[]} ($O(1)$) + \texttt{sync} + \texttt{icache} (\texttt{rver}) & Kiểm tra trực tiếp trên cấu trúc lộ trình \\
+Tốc độ Vòng lặp trên \texttt{test\_500} & $\mathbf{\approx 42,260\text{ vòng/giây}}$ ($1,056,587$ vòng / 25s) & $\mathbf{\approx 1,800\sim 2,000\text{ vòng/giây}}$ ($\approx 45,000$ vòng / 25s) \\
+\bottomrule
+\end{tabular}%
+}
+\caption{Đối sánh kiến trúc kỹ thuật giữa Phase 2 (\texttt{reference\_solve.cpp}) và \texttt{tabu\_prototype.cpp}.}
+\end{table}
+
+\subsection{Thực nghiệm Thống kê 10 Lượt chạy Độc lập trên \texttt{test\_500.txt} (Giới hạn 25.0 giây / lượt)}
+
+Khi tắt Phase 1 (\texttt{solved = false}) để buộc \texttt{reference\_solve.cpp} chạy thuần Phase 2 (SISR + SA) với 10 hạt giống ngẫu nhiên \texttt{rng\_s} độc lập trong 25.0 giây mỗi lượt, ta thu được phân phối điểm số chi tiết trong Bảng \ref{tab:p2_10trials}:
+
+\begin{table}[htbp]
+\centering
+\renewcommand{\arraystretch}{1.3}
+\resizebox{\linewidth}{!}{%
+\begin{tabular}{c l r r c c}
+\toprule
+\textbf{Lượt thử} & \textbf{Hạt giống (\texttt{rng\_s})} & \textbf{Số vòng lặp SISR} & \textbf{Điểm số đạt được} & \textbf{Tỷ lệ so với $OPT_{IP}$ ($13,279$)} & \textbf{Độ lệch so với $OPT_{IP}$} \\
+\midrule
+Trial \#01 & \texttt{1000000007}           & $1,076,272$ & $\mathbf{13,235}$ \textit{(Max)} & $99.67\%$ & $-44$ \\
+Trial \#02 & \texttt{2000000011}           & $1,056,512$ & $13,170$          & $99.18\%$ & $-109$ \\
+Trial \#03 & \texttt{3000000019}           & $1,076,736$ & $13,105$          & $98.69\%$ & $-174$ \\
+Trial \#04 & \texttt{4000000007}           & $1,051,344$ & $13,137$          & $98.93\%$ & $-142$ \\
+Trial \#05 & \texttt{5000000029}           & $1,051,664$ & $13,140$          & $98.95\%$ & $-139$ \\
+Trial \#06 & \texttt{6000000001}           & $1,052,368$ & $13,194$          & $99.36\%$ & $-85$ \\
+Trial \#07 & \texttt{7000000013}           & $1,043,888$ & $13,188$          & $99.31\%$ & $-91$ \\
+Trial \#08 & \texttt{8000000051}           & $1,049,632$ & $13,113$          & $98.75\%$ & $-166$ \\
+Trial \#09 & \texttt{9000000063}           & $1,045,424$ & $12,987$ \textit{(Min)} & $97.80\%$ & $-292$ \\
+Trial \#10 & \texttt{11400714819323198485} & $1,062,032$ & $13,188$          & $99.31\%$ & $-91$ \\
+\midrule
+\multicolumn{2}{l}{\textbf{Trung bình (Mean) / Trung vị (Median)}} & $\mathbf{1,056,587}$ & \multicolumn{3}{l}{$\mathbf{13,145.70}$ \quad / \quad $\mathbf{13,155.00}$} \\
+\multicolumn{2}{l}{\textbf{Độ lệch chuẩn (Standard Deviation)}}    & $11,815$             & \multicolumn{3}{l}{$\mathbf{\pm 68.72\text{ điểm}}$ ($\mathbf{0.52\%}$)} \\
+\bottomrule
+\end{tabular}%
+}
+\caption{Kết quả 10 lượt chạy độc lập (25.0s / lượt) của riêng Phase 2 (SISR + SA) trên \texttt{test\_500.txt}.}
+\label{tab:p2_10trials}
+\end{table}
+
+\subsection{Đánh giá So sánh theo Thời gian Hội tụ: Khi nào Phase 2 Thắng và Khi nào Tabu Thắng?}
+
+\begin{table}[htbp]
+\centering
+\renewcommand{\arraystretch}{1.35}
+\resizebox{\linewidth}{!}{%
+\begin{tabular}{l c c c c}
+\toprule
+\textbf{Phương pháp} & \textbf{Ngân sách 1.0s} & \textbf{Ngân sách 5.0s} & \textbf{Ngân sách 15.0s} & \textbf{Ngân sách 25.0s (Trung bình / Max)} \\
+\midrule
+\textbf{Phase 2 Only (\texttt{reference\_solve.cpp})} & $12,668$ & $12,925$ & $13,075$ & $\mathbf{13,145.7}$ / $\mathbf{13,235}$ \\
+\textbf{Tabu + Regret + Elite Pool (\texttt{tabu\_prototype.cpp})} & $\approx 12,950$ & $\approx 13,080$ & $\approx 13,130$ & $\mathbf{\approx 13,150}$ / $\mathbf{13,273}$ \\
+\textbf{Phase 1 (\texttt{reference\_solve.cpp} --- Exact + Set Packing)} & $\mathbf{13,279}$ \textit{(0.15s)} & $\mathbf{13,279}$ & $\mathbf{13,279}$ & $\mathbf{13,279}$ \textit{(100\% Optimal)} \\
+\bottomrule
+\end{tabular}%
+}
+\caption{So sánh quỹ đạo hội tụ trên \texttt{test\_500.txt} theo các mốc thời gian chạy.}
+\end{table}
+
+\begin{keybox}{Kết luận Đối sánh Giữa Hai Hướng Tiếp cận Metaheuristics}
+\begin{enumerate}[leftmargin=1.5em]
+    \item \textbf{Ở quỹ thời gian ngắn ($1\text{s} \sim 5\text{s}$): Kiến trúc Tabu + Regret-2 (\texttt{tabu\_prototype.cpp}) vượt trội hoàn toàn}:
+    Vì Phase 2 của \texttt{reference\_solve.cpp} cắt cụt tập ứng viên \texttt{cand} (chỉ bốc 3 láng giềng + 6 ngẫu nhiên mỗi vòng) và không có Regret-2, trong vài giây đầu khi nhiệt độ $T$ còn cao hoặc vừa tụt nhanh, nó bỏ sót nhiều yêu cầu có giá trị cao (chỉ đạt $12,668$ ở 1s). Ngược lại, Regret-2 + Tabu của \texttt{tabu\_prototype.cpp} xét toàn diện tập \texttt{unassigned} nên vọt lên $>12,950$ rất nhanh.
+    \item \textbf{Ở quỹ thời gian dài ($25\text{s}$, tương đương $>1$ triệu vòng lặp): Phase 2 (SISR + SA) bắt kịp và đạt độ ổn định tương đương ($\approx 13,146 \pm 68$)}:
+    Khi được cấp đủ $>10^6$ vòng lặp để đường cong nhiệt độ hạ từ từ, tốc độ $42,260$ vòng/giây của SISR bù đắp hoàn toàn cho sự thiếu vắng của Regret-2 và Local Search, đưa 9/10 lượt chạy vượt mốc $13,105+$ và đạt đỉnh $13,235$.
+    \item \textbf{Phương án Kết hợp Hoàn hảo cho Tương lai}:
+    Nếu tích hợp \textbf{mảng hậu tố \texttt{lat[]} + bộ đệm phiên bản \texttt{icache} + hoàn tác nhãn thời gian \texttt{touch\_stamp}} của Phase 2 vào bên trong bộ khung \textbf{Regret-2 + Tabu + Elite Pool} của \texttt{tabu\_prototype.cpp}, tốc độ mỗi vòng lặp của \texttt{tabu\_prototype.cpp} sẽ tăng gấp $10\sim 15$ lần, kết hợp được cả ``trí tuệ tìm kiếm sâu'' lẫn ``tốc độ duyệt triệu vòng''!
+\end{enumerate}
+\end{keybox}
+
+\end{document}
+

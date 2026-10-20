@@ -2,7 +2,7 @@
 
 Tài liệu này là **Hiến pháp kỹ thuật (Project Constitution)** và **Chỉ dẫn tác vụ (Operational Guidelines)** bắt buộc cho mọi Agent và kỹ sư tham gia nghiên cứu, phát triển và tối ưu hóa hệ thống thuật toán cho bài toán **SOICT 2026: Integrated Passenger and Parcel Transportation**.
 
-Mọi hành động sửa đổi mã nguồn, sinh testcase, đo lường benchmark hay nộp bài đều phải tuân thủ nghiêm ngặt các điều khoản trong tài liệu này.
+Mọi hành động sửa đổi mã nguồn, sinh testcase, đo lường benchmark hay nộp bài đều phải tuân thủ nghiêm ngặt các quy tắc nền tảng trong tài liệu này.
 
 ---
 
@@ -69,51 +69,56 @@ Trong đó $v_0^k = O_k$, và $m_k$ là số điểm phục vụ trên lộ trì
 
 ```
 250926/
-├── AGENT.md                       # Bản quy ước và chỉ dẫn này
-├── ALGORITHM_SPECIFICATION.md     # Tài liệu thiết kế thuật toán
-├── CODE_SPECIFICATION.md          # Tài liệu quy chuẩn code C++
+├── AGENT.md                       # Bản quy ước và chỉ dẫn nền tảng này
+├── OPTIMIZATION_TECHNIQUES.md     # Tài liệu tổng hợp các kỹ thuật tối ưu hóa dùng chung
+├── ALGORITHM_SPECIFICATION.md     # Đặc tả thiết kế thuật toán
+├── CODE_SPECIFICATION.md          # Đặc tả quy chuẩn code C++
 ├── Competition_SOICT_...pdf       # Đề bài chính thức
 ├── OFFICAL_PROBLEM_SOICT_...txt   # Template format I/O chính thức
-├── validator.py                   # Bộ kiểm tra tính hợp lệ tối cao (Ground Truth)
-├── run.py                         # Tool runner tự động hóa benchmark
-├── testcase_generator.py          # Generator cũ (3 đỉnh thời gian hẹp)
-├── testcase_generator_v2.py       # Generator mới (Stress test, đa dạng topology)
-├── submission.cpp                 # Mã nguồn nộp bài chính thức (Clean, No debug stdout)
-├── reference_solve.cpp            # Mã nguồn nghiên cứu (Phase 1 SP + Phase 2 SISR/SA)
-├── tabu_prototype.cpp             # Mã nguồn tham khảo / đối chứng
-├── reports/                       # Thư mục lưu các báo cáo chi tiết (.tex & .pdf)
+├── submissions/                   # THƯ MỤC CHỨA CÁC BẢN CHỐT NỘP BÀI
+│   └── submission.cpp             # Mã nguồn nộp bài chính thức (Clean, No debug stdout)
+├── experiments/                   # THƯ MỤC CHỨA CÁC NGUYÊN MẪU THỬ NGHIỆM
+│   ├── reference_solve.cpp        # Thuật toán tham chiếu (Phase 1 SP + Phase 2 SISR/SA)
+│   ├── tabu_prototype.cpp         # Nguyên mẫu Tabu Search đối chứng
+│   ├── milp_scip_solver.py        # Solver đối chứng chính xác MILP SCIP
+│   └── best_tour_test_500.txt     # Log lộ trình mẫu tốt nhất
+├── utility/                       # THƯ MỤC CHỨA SCRIPTS TIỆN ÍCH & CÔNG CỤ
+│   ├── validator.py               # Bộ kiểm tra tính hợp lệ tối cao (Ground Truth)
+│   ├── run.py                     # Bộ điều phối thực thi & đo lường benchmark tự động
+│   ├── testcase_generator.py      # Bộ sinh testcase ngẫu nhiên
+│   └── plot_tabu.py               # Công cụ trực quan hóa hội tụ và lộ trình
+├── reports/                       # Thư mục lưu các báo cáo chuyên sâu (.tex & .pdf)
 └── testcases/                     # Bộ testcases chuẩn
 ```
 
-### Phân công vai trò file:
-1. **[`submission.cpp`](file:///z:/Desktop/250926/submission.cpp)**:
-   - File duy nhất dùng để nộp bài trên hệ thống chấm tự động của cuộc thi.
-   - Không chứa bất kỳ câu lệnh `cout`/`printf` gỡ lỗi nào ngoài định dạng chuẩn của đề bài.
+### Phân công vai trò:
+1. **[`submissions/`](file:///z:/Desktop/250926/submissions)**:
+   - Chứa file nộp bài chính thức.
+   - Không chứa bất kỳ câu lệnh in debug nào ra stdout (chỉ in đúng định dạng bài toán ra stdout, log phụ trợ xuất ra stderr).
    - Tối ưu hóa tối đa thời gian biên dịch và thực thi (`#pragma GCC optimize("O3,unroll-loops")`).
-2. **[`reference_solve.cpp`](file:///z:/Desktop/250926/reference_solve.cpp)**:
-   - Phòng thí nghiệm thuật toán. Mọi log chi tiết, thống kê số vòng lặp, thời gian chạy từng phase, Lagrangian Upper Bound được xuất ra `cerr`.
-   - Nơi thử nghiệm các toán tử Ruin/Recreate mới, cơ chế Fallback và các cải tiến Phase 2 trước khi chuyển giao vào `submission.cpp`.
-3. **[`validator.py`](file:///z:/Desktop/250926/validator.py)**:
-   - Trọng tài độc lập tối cao. Mọi giải pháp C++ đều vô nghĩa nếu không vượt qua được `validator.py`.
+2. **[`experiments/`](file:///z:/Desktop/250926/experiments)**:
+   - Chứa các solver nghiên cứu, nguyên mẫu thuật toán mới, so sánh đối chứng.
+   - Cho phép xuất log chi tiết ra stderr để phục vụ đo đạc và phân tích.
+3. **[`utility/`](file:///z:/Desktop/250926/utility)**:
+   - Chứa toàn bộ scripts hỗ trợ: validator, generator, runner, plotter.
+   - [`validator.py`](file:///z:/Desktop/250926/utility/validator.py) là trọng tài độc lập tối cao kiểm định tính đúng đắn.
 
 ---
 
-## 3. NGUYÊN TẮC HIỆU NĂNG C++ (C++ PERFORMANCE CONSTITUTION)
+## 3. NGUYÊN TẮC KỸ THUẬT NỀN TẢNG (FOUNDATIONAL PERFORMANCE RULES)
 
-Để đạt tốc độ hàng triệu phép thử/giây, toàn bộ mã C++ phải tuân thủ nghiêm ngặt:
+Để đảm bảo hiệu năng và tính ổn định trên mọi solver:
 
 1. **Bộ nhớ liên tục & Mảng phẳng (Contiguous Flat Buffers)**:
    - Sử dụng mảng 1 chiều phẳng cho ma trận thời gian và chi phí: `Tm[u * SV + v]` và `Cm[u * SV + v]`.
-   - Tránh cấu trúc `vector<vector<T>>` ở các tầng dữ liệu lặp sâu.
-2. **Cấm cấp phát động trong Vòng lặp Tìm kiếm (Zero Allocations in Hot Loops)**:
-   - Nghiêm cấm `new`, `malloc`, `vector.resize()`, `vector.push_back()` tái cấp phát bộ nhớ bên trong các hàm `recreate`, `ruin`, `best_insert`.
-   - Cấp phát sẵn bộ đệm tĩnh (`cand`, `removed`, `touched`, `backup`) từ lúc khởi tạo `main`.
-3. **Kiểm tra Tính khả thi Hậu tố trong $O(1)$**:
-   - Mọi thao tác chèn phải dựa vào mảng `lat[1..n+1]` (Backward Latest Arrival Slack) và cờ đồng bộ `sync` để kiểm tra toàn bộ nhánh đuôi trong $\mathcal{O}(1)$.
-4. **Bộ nhớ đệm Phiên bản Tuyệt đối (`icache` + `rver`)**:
-   - Mọi ứng viên chèn trên xe $k$ phải kiểm tra qua `icache[q * (K + 1) + k]`. Chỉ tính lại khi `rver[k]` thay đổi.
-5. **Đồng hồ thực Wall-clock Deadline**:
-   - Sử dụng `std::chrono::steady_clock` để kiểm soát giới hạn thời gian chính xác, kiểm tra chu kỳ theo bitwise (ví dụ `(it & 15) == 0` hoặc `(it & 255) == 0`).
+   - Tránh cấu trúc con trỏ nhiều cấp hoặc `vector<vector<T>>` ở các tầng dữ liệu lặp sâu.
+2. **Cấm cấp phát động trong Vòng lặp Nóng (Zero Dynamic Allocations in Hot Loops)**:
+   - Nghiêm cấm `new`, `malloc`, `vector.resize()`, `vector.push_back()` tái cấp phát bộ nhớ bên trong các hàm tìm kiếm lặp hàng triệu lần.
+   - Cấp phát sẵn bộ đệm tĩnh cố định theo kích thước tối đa của bài toán ngay từ khi khởi tạo `main`.
+3. **Kiểm soát Giới hạn Thời gian Thực (Wall-clock Time Control)**:
+   - Sử dụng `std::chrono::steady_clock` để kiểm soát giới hạn thời gian thực (wall-clock budget) thay vì đếm số vòng lặp cố định, đảm bảo chạy an toàn và tối đa hóa thời gian trên mọi môi trường chấm thi.
+4. **Áp dụng Kỹ thuật Tối ưu Dùng chung**:
+   - Khi cài đặt các thuật toán tìm kiếm cục bộ hoặc metaheuristics, các kỹ thuật tối ưu hóa chuyên sâu (như mảng backward slack, bộ đệm phiên bản `icache`, bộ sinh số ngẫu nhiên bitwise, blink heuristic, v.v.) phải tham chiếu và tuân thủ theo tài liệu [`OPTIMIZATION_TECHNIQUES.md`](file:///z:/Desktop/250926/OPTIMIZATION_TECHNIQUES.md).
 
 ---
 
@@ -130,7 +135,7 @@ Mọi phiên bản code C++ mới sau khi sửa đổi **phải vượt qua 2 b�
 2. **Chạy qua Validator**:
    ```bash
    ./<source.exe> < testcases/test_X.txt > out.txt
-   python validator.py testcases/test_X.txt out.txt
+   python utility/validator.py testcases/test_X.txt out.txt
    ```
    **Điều kiện Đạt**: Log trả về `🎉 KẾT LUẬN: ĐIỂM SỐ KHỚP HOÀN TOÀN! CHUẨN XÁC!`. Nếu có cảnh báo lệch điểm hoặc vi phạm bất kỳ ràng buộc nào, giải pháp bị từ chối ngay lập tức.
 
@@ -146,33 +151,7 @@ Khi đánh giá hiệu quả của một cải tiến thuật toán:
 
 ---
 
-## 5. CHỈ DẪN NGHIÊN CỨU & PHÁT TRIỂN TIẾP THEO
-
-### 5.1. Bộ sinh Testcase Mới (`testcase_generator_v2.py`)
-Cần thiết kế bộ sinh test có khả năng kích hoạt các chế độ thử thách:
-- **Dạng 1: Wide-Window Stress Test**: Cửa sổ thời gian rộng, giãn cách đều, ép độ sâu lộ trình lên $8 \sim 15$ requests/xe để đẩy Phase 1 vào trạng thái `enum_abort`.
-- **Dạng 2: Heavy Parcel Interleaving**: Tỷ lệ bưu kiện $> 70\%$, kiểm tra khả năng sắp xếp xen kẽ điểm đón/trả và giới hạn tải trọng $Q_k$.
-- **Dạng 3: Metric Euclidean Clusters**: Tọa độ địa lý theo cụm (downtown vs suburbs), thời gian và chi phí thỏa mãn bất đẳng thức tam giác.
-- **Dạng 4: Extreme Scale ($R \ge 500, K \ge 30$)**: Kiểm tra giới hạn bộ nhớ và tốc độ xử lý của Phase 2.
-
-### 5.2. Hướng Tối ưu Hóa Phase 2
-Khi Phase 1 bị hủy do quá tải tổ hợp, Phase 2 phải là "cỗ xe bọc thép" gánh toàn bộ bài toán:
-1. **Toán tử Ruin Đa dạng**:
-   - *SISR (String Removal)*: Tháo chuỗi láng giềng liên kết.
-   - *Time-slice Ruin*: Tháo toàn bộ các request rơi vào một khoảng thời gian $[t_1, t_2]$ đang bị xung đột lịch trình.
-   - *Worst-Cost Removal*: Tính chi phí biên đóng góp của từng request; loại bỏ các request khiến xe phải chạy vòng quá xa.
-   - *Shaw Removal*: Tính độ tương đồng kết hợp: Khoảng cách không gian + Chênh lệch time window + Tải trọng.
-2. **Toán tử Recreate Thông minh**:
-   - *Regret-2 / Regret-3*: Lưu trữ chi phí tốt thứ nhất $c_1$ và tốt thứ hai $c_2$ thông qua `icache`. Ưu tiên chèn các request có $c_2 - c_1$ lớn để tránh cận thị.
-   - *Blink Heuristic*: Giữ xác suất ngẫu nhiên thông minh $p = 1/64$ để phân nhánh thoát cực tiểu địa phương.
-3. **Cơ chế Tận dụng Cột từ Phase 1 (Column Harvesting)**:
-   - Khi Phase 1 chạm trần `enum_abort`, không xóa sạch các cột đã tìm được. Lọc ra các cột có lợi nhuận cao nhất để làm **Nghiệm khởi tạo (Warm-Start)** cho Phase 2 thay vì chạy từ khởi tạo tham lam đơn giản.
-4. **Intra-route Local Search**:
-   - Tối ưu hóa cục bộ sau khi chèn: dùng 2-opt siêu nhanh để gỡ các nút thắt đan chéo trên từng xe riêng biệt.
-
----
-
-## 6. QUY TẮC BẢO TOÀN TÀI LIỆU & LỊCH SỬ DỰ ÁN
+## 5. QUY TẮC BẢO TOÀN TÀI LIỆU & LỊCH SỬ DỰ ÁN
 
 1. Không xóa các file tài liệu nền tảng (`OFFICAL_PROBLEM_SOICT_2026.txt`, `Competition_SOICT_...pdf`).
 2. Mọi báo cáo toán học chuyên sâu phải được viết bằng LaTeX và biên dịch sang PDF trong thư mục [`reports/`](file:///z:/Desktop/250926/reports).

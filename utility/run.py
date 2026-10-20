@@ -11,8 +11,24 @@ if sys.stdout.encoding != 'utf-8':
 if sys.stderr.encoding != 'utf-8':
     sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8', errors='replace')
 
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+PROJECT_ROOT = os.path.abspath(os.path.join(SCRIPT_DIR, ".."))
+
+def resolve_path(p):
+    """Tìm file tại vị trí hiện tại hoặc trong PROJECT_ROOT"""
+    if os.path.exists(p):
+        return p
+    alt = os.path.join(PROJECT_ROOT, p)
+    if os.path.exists(alt):
+        return alt
+    alt_exp = os.path.join(PROJECT_ROOT, "experiments", p)
+    if os.path.exists(alt_exp):
+        return alt_exp
+    return p
+
 def check_and_compile(cpp_file="tabu_prototype.cpp", exe_file="tabu_prototype.exe"):
     """Tự động biên dịch C++ với -O3 nếu file .exe chưa có hoặc file .cpp mới hơn"""
+    cpp_file = resolve_path(cpp_file)
     if not os.path.exists(cpp_file):
         print(f"[-] Không tìm thấy file mã nguồn: {cpp_file}")
         return False
@@ -110,15 +126,21 @@ def run_pipeline(testcase_path="testcases/test_65.txt", max_iter=4000, cpp_exe="
     print("[2/3] Gọi plot_tabu.py xử lý thư mục output...")
     print("=" * 75)
     
-    cmd_plot = [sys.executable, "plot_tabu.py", output_dir, testcase_path]
+    plot_script = os.path.join(SCRIPT_DIR, "plot_tabu.py")
+    if not os.path.exists(plot_script):
+        plot_script = "plot_tabu.py"
+    cmd_plot = [sys.executable, plot_script, output_dir, testcase_path]
     subprocess.run(cmd_plot, check=True)
 
     # 5. Tự động kiểm tra tính hợp lệ bằng validator.py (nếu có)
-    if os.path.exists("validator.py") and solution_file and os.path.exists(solution_file):
+    val_script = os.path.join(SCRIPT_DIR, "validator.py")
+    if not os.path.exists(val_script):
+        val_script = "validator.py"
+    if os.path.exists(val_script) and solution_file and os.path.exists(solution_file):
         print("\n" + "=" * 75)
         print("[3/3] Chạy kiểm định độc lập bằng validator.py...")
         print("=" * 75)
-        cmd_val = [sys.executable, "validator.py", testcase_path, solution_file]
+        cmd_val = [sys.executable, val_script, testcase_path, solution_file]
         subprocess.run(cmd_val)
 
     print("\n" + "=" * 75)

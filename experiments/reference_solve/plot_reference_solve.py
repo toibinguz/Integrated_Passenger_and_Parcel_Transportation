@@ -213,3 +213,4 @@ if __name__ == '__main__':
         sys.exit(1)
     tc = sys.argv[2] if len(sys.argv) > 2 else None
     parse_run_dir(sys.argv[1], tc)
+

@@ -24,10 +24,7 @@ tmp_*.txt
 *.fls
 *.fdb_latexmk
 
-# Directory aliases / junctions
-submissons
-ultility
-
+# VS Code local state
 .vscode/*
 !.vscode/settings.json
 !.vscode/tasks.json

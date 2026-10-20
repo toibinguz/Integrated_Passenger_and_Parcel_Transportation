@@ -454,7 +454,7 @@ if __name__ == '__main__':
         log_file = os.path.join(target_dir, log_candidates[0])
 
         # 2. Tìm file kết quả
-        sol_candidates = [f for f in os.listdir(target_dir) if f.endswith("_ket_qua.txt") or f == "ketqua.txt" or f.endswith("_res.txt")]
+        sol_candidates = [f for f in os.listdir(target_dir) if f.endswith("_ket_qua.txt") or f == "ketqua.txt" or f.endswith("_res.txt") or f == "result.txt"]
         if not sol_candidates:
             print(f"[-] Khong tim thay file _ket_qua.txt trong {target_dir}!")
             sys.exit(1)

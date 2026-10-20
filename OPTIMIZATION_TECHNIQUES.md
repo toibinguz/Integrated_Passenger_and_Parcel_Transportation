@@ -195,3 +195,4 @@ auto add_candidate = [&](int q) {
 };
 ```
 *Ưu điểm*: Không cần tốn bất kỳ chu kỳ nào để reset mảng giữa các vòng lặp!
+

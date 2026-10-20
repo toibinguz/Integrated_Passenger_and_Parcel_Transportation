@@ -15,15 +15,20 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECT_ROOT = os.path.abspath(os.path.join(SCRIPT_DIR, ".."))
 
 def resolve_path(p):
-    """Tìm file tại vị trí hiện tại hoặc trong PROJECT_ROOT"""
+    """Tìm file tại vị trí hiện tại hoặc trong PROJECT_ROOT hoặc trong subdirs của experiments"""
     if os.path.exists(p):
-        return p
+        return os.path.abspath(p)
     alt = os.path.join(PROJECT_ROOT, p)
     if os.path.exists(alt):
-        return alt
-    alt_exp = os.path.join(PROJECT_ROOT, "experiments", p)
-    if os.path.exists(alt_exp):
-        return alt_exp
+        return os.path.abspath(alt)
+    exp_dir = os.path.join(PROJECT_ROOT, "experiments")
+    if os.path.exists(exp_dir):
+        for root, dirs, files in os.walk(exp_dir):
+            if p in files:
+                return os.path.abspath(os.path.join(root, p))
+            base = os.path.basename(p)
+            if base in files:
+                return os.path.abspath(os.path.join(root, base))
     return p
 
 def check_and_compile(cpp_file="tabu_prototype.cpp", exe_file="tabu_prototype.exe"):
@@ -121,16 +126,29 @@ def run_pipeline(testcase_path="testcases/test_65.txt", max_iter=4000, cpp_exe="
         print("[-] Không xác định được thư mục output để vẽ biểu đồ!")
         return
 
-    # 4. Tự động gọi plot_tabu.py để vẽ đồ thị và xuất tour report
-    print("\n" + "=" * 75)
-    print("[2/3] Gọi plot_tabu.py xử lý thư mục output...")
-    print("=" * 75)
+    # 4. Tự động gọi script trực quan hóa chuyên biệt của solver
+    proto_dir = os.path.dirname(os.path.abspath(cpp_source)) if os.path.exists(cpp_source) else SCRIPT_DIR
+    solver_name = os.path.splitext(os.path.basename(cpp_exe))[0]
     
-    plot_script = os.path.join(SCRIPT_DIR, "plot_tabu.py")
-    if not os.path.exists(plot_script):
-        plot_script = "plot_tabu.py"
-    cmd_plot = [sys.executable, plot_script, output_dir, testcase_path]
-    subprocess.run(cmd_plot, check=True)
+    plot_script = None
+    candidate_plots = [
+        os.path.join(proto_dir, f"plot_{solver_name}.py"),
+        os.path.join(proto_dir, f"plot_{solver_name.replace('_prototype', '')}.py"),
+        resolve_path(f"plot_{solver_name}.py"),
+    ]
+    for cp in candidate_plots:
+        if os.path.exists(cp):
+            plot_script = cp
+            break
+            
+    if plot_script:
+        print("\n" + "=" * 75)
+        print(f"[2/3] Gọi {os.path.basename(plot_script)} xử lý thư mục output...")
+        print("=" * 75)
+        cmd_plot = [sys.executable, plot_script, output_dir, testcase_path]
+        subprocess.run(cmd_plot, check=True)
+    else:
+        print(f"[!] Không tìm thấy script trực quan hóa chuyên biệt cho {solver_name}")
 
     # 5. Tự động kiểm tra tính hợp lệ bằng validator.py (nếu có)
     val_script = os.path.join(SCRIPT_DIR, "validator.py")

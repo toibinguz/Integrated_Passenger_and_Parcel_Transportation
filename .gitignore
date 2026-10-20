@@ -1,0 +1,31 @@
+# Binaries and executables
+*.exe
+*.o
+*.obj
+*.dll
+*.so
+
+# Python bytecode
+__pycache__/
+*.pyc
+*.pyo
+
+# Logs and outputs
+output/
+*.log
+tmp_*.txt
+*.tmp
+
+# LaTeX build artifacts
+*.aux
+*.toc
+*.out
+*.synctex.gz
+*.fls
+*.fdb_latexmk
+
+# VS Code local state (keep .vscode/*.json configurations)
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/c_cpp_properties.json

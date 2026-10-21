@@ -241,3 +241,4 @@ bool is_tight_landscape = (avg_slack <= 35.0 && req_per_taxi <= 4.5);
 
 > [!IMPORTANT]
 > **Kết luận Triết lý**: Không có thuật toán nào là vô dụng; mỗi thuật toán là một vũ khí tối thượng trên đúng địa hình sở trường của nó. Sự kết hợp thông minh giữa khả năng tiệm cận tối ưu của Phase 1 trên địa hình hẹp và khả năng tìm kiếm toàn cục của Phase 2 trên địa hình rộng là chìa khóa chiến thắng tuyệt đối cho giải đấu SOICT 2026.
+

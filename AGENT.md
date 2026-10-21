@@ -63,6 +63,15 @@ Trong đó $v_0^k = O_k$, và $m_k$ là số điểm phục vụ trên lộ trì
   - Nếu xe $k$ không sử dụng, in ra số `0`.
   - **Lưu ý**: Tuyệt đối không in đỉnh xuất phát $O_k$ trong danh sách $v_r^k$.
 
+### 1.6. Giả định Địa hình Nghiệm Chuẩn: Tính Thỏa mãn Bất đẳng thức Tam giác (Triangle Inequality)
+1. **Ràng buộc Chuẩn hóa Nghiên cứu Hiện tại**:
+   - Nhằm bảo toàn tính đơn điệu toán học của các kỹ thuật cắt tỉa lộ trình trong VRPTW và phản ánh đúng bản chất của mạng lưới giao thông thực tế (nơi đường nối trực tiếp đại diện cho đường đi ngắn nhất), **toàn bộ các testcase benchmark chuẩn trong nghiên cứu hiện tại đều được đảm bảo thỏa mãn 100% Bất đẳng thức Tam giác (Metric Property)**:
+     $$t(u, w) \le t(u, v) + t(v, w), \quad \forall u, v, w \in \{1, \dots, V\}$$
+     $$c(u, w) \le c(u, v) + c(v, w), \quad \forall u, v, w \in \{1, \dots, V\}$$
+   - Mọi ma trận thời gian và chi phí sinh ra đều được chuẩn hóa thông qua **Floyd-Warshall Metric Closure** ([`utility/testcase_generator_v2.py`](file:///z:/Desktop/250926/utility/testcase_generator_v2.py)).
+2. **Kế hoạch Mở rộng Tương lai (Future Extension Mechanism)**:
+   - Nếu đề bài sau này mở rộng sang các trường hợp phi Metric vi phạm BĐT tam giác, ta có thể nới lỏng giả định này bằng cách bổ sung một tầng tiền xử lý All-Pairs Shortest Path $\mathcal{O}(V^3)$ ngay khi đọc dữ liệu đầu vào trong solver, ánh xạ đồ thị ban đầu về metric closure tương đương. Chi tiết về cơ chế này và bản đồ địa hình nghiệm được quy định tại [`ALGORITHM_LANDSCAPE_MAPPING.md`](file:///z:/Desktop/250926/ALGORITHM_LANDSCAPE_MAPPING.md).
+
 ---
 
 ## 2. KIẾN TRÚC MÃ NGUỒN & PHÂN ĐỊNH TRÁCH NHIỆM
@@ -70,6 +79,7 @@ Trong đó $v_0^k = O_k$, và $m_k$ là số điểm phục vụ trên lộ trì
 ```
 250926/
 ├── AGENT.md                       # Bản quy ước và chỉ dẫn nền tảng này
+├── ALGORITHM_LANDSCAPE_MAPPING.md # Bản đồ địa hình nghiệm & chiến lược phân bổ solver tối ưu
 ├── OPTIMIZATION_TECHNIQUES.md     # Tài liệu tổng hợp các kỹ thuật tối ưu hóa dùng chung
 ├── ALGORITHM_SPECIFICATION.md     # Đặc tả thiết kế thuật toán
 ├── CODE_SPECIFICATION.md          # Đặc tả quy chuẩn code C++

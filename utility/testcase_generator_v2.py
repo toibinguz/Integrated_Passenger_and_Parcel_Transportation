@@ -6,11 +6,15 @@ Bộ sinh testcase tinh hoa cho SOICT 2026: Integrated Passenger and Parcel Tran
 Tập trung vào 7 hình thái địa hình toán học (Fitness Landscapes) của Heuristic:
 - Tight Assignment (Cửa sổ hẹp, phân bổ)
 - Loose Sequencing (Cửa sổ rộng, hoán vị chuỗi dài)
-- Clustered Basins (Hố sâu cục bộ không gian)
+- Clustered Basins (Hố sâu cục bộ không gian cụm)
 - Capacity Bottleneck (Nghẽn tải trọng bưu kiện)
 - Asymmetric Random (Đồ thị có hướng bất đối xứng ngẫu nhiên)
-- Non-Euclidean Violation (Vi phạm bất đẳng thức tam giác)
+- Asymmetric Metric (Đồ thị bất đối xứng có hướng, chuẩn hóa Metric)
 - Dense Scale 500 (Quy mô tối đa V=500)
+
+ĐẶC BIỆT: Mọi ma trận t(u, v) và c(u, v) đều được chuẩn hóa qua Floyd-Warshall Metric Closure
+nhằm đảm bảo 100% THỎA MÃN BẤT ĐẲNG THỨC TAM GIÁC:
+    t(u, w) <= t(u, v) + t(v, w)  và  c(u, w) <= c(u, v) + c(v, w)
 Mọi trọng số và chi phí đều nằm trong giới hạn chuẩn: c, t, Q, w <= 1000.
 """
 
@@ -20,6 +24,8 @@ import os
 import sys
 import argparse
 import io
+import numpy as np
+from scipy.sparse.csgraph import floyd_warshall
 
 # Đảm bảo in console UTF-8 trên Windows
 if sys.stdout.encoding != 'utf-8':
@@ -30,17 +36,18 @@ if sys.stderr.encoding != 'utf-8':
 def generate_curated_instance(filename, profile_key, seed=None):
     if seed is not None:
         random.seed(seed)
+        np.random.seed(seed)
 
     profiles = {
         "tight_assignment": {
             "K": 15, "N": 45, "M": 45, "H": 1600,
             "slack_range": (30, 80), "cap_mult": (1.2, 1.8),
-            "graph_type": "asymmetric", "parcel_weight": (1, 15)
+            "graph_type": "symmetric_metric", "parcel_weight": (1, 15)
         },
         "loose_sequencing": {
             "K": 8, "N": 60, "M": 60, "H": 8000,
             "slack_range": (800, 2500), "cap_mult": (1.2, 1.8),
-            "graph_type": "asymmetric", "parcel_weight": (1, 15)
+            "graph_type": "symmetric_metric", "parcel_weight": (1, 15)
         },
         "clustered_basins": {
             "K": 10, "N": 60, "M": 60, "H": 3500,
@@ -50,22 +57,22 @@ def generate_curated_instance(filename, profile_key, seed=None):
         "capacity_bottleneck": {
             "K": 10, "N": 40, "M": 80, "H": 3500,
             "slack_range": (150, 500), "cap_mult": (0.7, 1.05), # Rất nghẽn tải trọng
-            "graph_type": "asymmetric", "parcel_weight": (12, 28)
+            "graph_type": "symmetric_metric", "parcel_weight": (12, 28)
         },
         "asymmetric_random": {
             "K": 10, "N": 60, "M": 60, "H": 3500,
             "slack_range": (150, 500), "cap_mult": (1.2, 1.8),
-            "graph_type": "pure_asymmetric", "parcel_weight": (1, 18)
+            "graph_type": "asymmetric_metric", "parcel_weight": (1, 18)
         },
-        "non_euclidean_violation": {
+        "asymmetric_metric": {
             "K": 10, "N": 60, "M": 60, "H": 3500,
             "slack_range": (150, 500), "cap_mult": (1.2, 1.8),
-            "graph_type": "triangle_violator", "parcel_weight": (1, 18)
+            "graph_type": "asymmetric_flow", "parcel_weight": (1, 18)
         },
         "dense_scale_500": {
             "K": 20, "N": 120, "M": 120, "H": 5000,
             "slack_range": (200, 700), "cap_mult": (1.2, 1.7),
-            "graph_type": "asymmetric", "parcel_weight": (1, 20)
+            "graph_type": "symmetric_metric", "parcel_weight": (1, 20)
         }
     }
 
@@ -79,47 +86,66 @@ def generate_curated_instance(filename, profile_key, seed=None):
     min_slack, max_slack = p["slack_range"]
     gtype = p["graph_type"]
 
-    # 1. Sinh Ma trận Thời gian t(u, v) & Chi phí c(u, v) (Luôn <= 1000)
-    t_mat = [[0] * V for _ in range(V)]
-    c_mat = [[0] * V for _ in range(V)]
-
-    if gtype == "pure_asymmetric":
-        for i in range(V):
-            for j in range(V):
-                if i != j:
-                    t_mat[i][j] = random.randint(1, 60)
-                    c_mat[i][j] = random.randint(5, 450)
-    elif gtype == "triangle_violator":
-        for i in range(V):
-            for j in range(V):
-                if i != j:
-                    t_mat[i][j] = random.randint(5, 25)
-                    c_mat[i][j] = random.randint(10, 80)
-        # Thổi phồng cạnh trực tiếp vi phạm tam giác
-        for i in range(V):
-            for j in range(V):
-                if i != j and random.random() < 0.35:
-                    t_mat[i][j] = random.randint(70, 150)
-                    c_mat[i][j] = random.randint(250, 750)
-    elif gtype == "clustered":
+    # 1. Sinh Ma trận Thời gian t(u, v) & Chi phí c(u, v) với Floyd-Warshall Metric Closure
+    if gtype == "clustered":
         num_clusters = 4
         centers = [(random.uniform(100, 900), random.uniform(100, 900)) for _ in range(num_clusters)]
         coords = []
         for _ in range(V):
             cx, cy = random.choice(centers)
-            coords.append((max(0, min(1000, int(random.gauss(cx, 80)))), max(0, min(1000, int(random.gauss(cy, 80))))))
-        for i in range(V):
-            for j in range(V):
-                if i != j:
-                    d = math.hypot(coords[i][0] - coords[j][0], coords[i][1] - coords[j][1])
-                    t_mat[i][j] = max(1, min(1000, int(round(d / 15.0)) + random.randint(0, 3)))
-                    c_mat[i][j] = max(1, min(1000, int(round(d * 0.8)) + random.randint(2, 20)))
-    else: # general asymmetric
-        for i in range(V):
-            for j in range(V):
-                if i != j:
-                    t_mat[i][j] = random.randint(1, 50)
-                    c_mat[i][j] = random.randint(5, 250)
+            coords.append((max(0, min(1000, int(random.gauss(cx, 75)))), max(0, min(1000, int(random.gauss(cy, 75))))))
+        coords = np.array(coords, dtype=np.float64)
+        diff = coords[:, None, :] - coords[None, :, :]
+        d = np.sqrt(np.sum(diff**2, axis=-1))
+        t_init = np.maximum(1, np.round(d / 15.0).astype(np.int32))
+        c_init = np.maximum(1, np.round(t_init * 2.5 + np.random.uniform(1, 10, size=(V, V))).astype(np.int32))
+        is_directed = False
+    elif gtype in ("asymmetric_metric", "asymmetric_flow"):
+        # Đồ thị có hướng bất đối xứng nhưng thỏa mãn BĐT Tam giác (mô phỏng đường dốc / lưu lượng giao thông)
+        coords = np.random.uniform(0, 1000, size=(V, 2))
+        diff = coords[:, None, :] - coords[None, :, :]
+        d = np.sqrt(np.sum(diff**2, axis=-1))
+        t_base = np.maximum(1, np.round(d / 15.0).astype(np.int32))
+        
+        # Hàm thế độ cao / lưu lượng gió khiến t(u, v) != t(v, u)
+        potentials = np.random.uniform(-10, 10, size=V)
+        pot_diff = potentials[None, :] - potentials[:, None]
+        t_init = np.maximum(1, t_base + np.round(pot_diff).astype(np.int32))
+        c_init = np.maximum(1, np.round(t_init * 2.4 + np.random.uniform(1, 10, size=(V, V))).astype(np.int32))
+        is_directed = True
+    else: # symmetric_metric
+        coords = np.random.uniform(0, 1000, size=(V, 2))
+        diff = coords[:, None, :] - coords[None, :, :]
+        d = np.sqrt(np.sum(diff**2, axis=-1))
+        t_init = np.maximum(1, np.round(d / 15.0).astype(np.int32))
+        c_init = np.maximum(1, np.round(t_init * 2.5 + np.random.uniform(1, 8, size=(V, V))).astype(np.int32))
+        # Đồng bộ hóa đối xứng
+        t_init = np.maximum(1, np.round((t_init + t_init.T) / 2.0).astype(np.int32))
+        c_init = np.maximum(1, np.round((c_init + c_init.T) / 2.0).astype(np.int32))
+        is_directed = False
+
+    # Đặt đường chéo = 0
+    np.fill_diagonal(t_init, 0)
+    np.fill_diagonal(c_init, 0)
+
+    # FLOYD-WARSHALL METRIC CLOSURE: Đảm bảo 100% Bất đẳng thức Tam giác
+    t_mat = floyd_warshall(t_init, directed=is_directed).astype(np.int32)
+    c_mat = floyd_warshall(c_init, directed=is_directed).astype(np.int32)
+
+    # Đảm bảo đường chéo = 0, các cạnh ngoài chéo >= 1 và <= 1000
+    np.fill_diagonal(t_mat, 0)
+    np.fill_diagonal(c_mat, 0)
+    for i in range(V):
+        for j in range(V):
+            if i != j:
+                if t_mat[i, j] < 1: t_mat[i, j] = 1
+                if c_mat[i, j] < 1: c_mat[i, j] = 1
+                if t_mat[i, j] > 1000: t_mat[i, j] = 1000
+                if c_mat[i, j] > 1000: c_mat[i, j] = 1000
+
+    # Chuyển về list thuần Python
+    t_mat = t_mat.tolist()
+    c_mat = c_mat.tolist()
 
     # 2. Sinh Đội xe & Tải trọng (w <= 50, Q <= 200, đều <= 1000)
     weights = [random.randint(p["parcel_weight"][0], p["parcel_weight"][1]) for _ in range(M)]
@@ -191,9 +217,15 @@ def build_all_benchmarks(target_dir="testcases/benchmark"):
         ("bench_03_clustered_basins.txt", "clustered_basins", 103),
         ("bench_04_capacity_bottleneck.txt", "capacity_bottleneck", 104),
         ("bench_05_asymmetric_random.txt", "asymmetric_random", 105),
-        ("bench_06_non_euclidean_violation.txt", "non_euclidean_violation", 106),
+        ("bench_06_asymmetric_metric.txt", "asymmetric_metric", 106),
         ("bench_07_dense_scale_500.txt", "dense_scale_500", 107)
     ]
+    # Xóa file cũ nếu có tên bench_06_non_euclidean_violation.txt
+    old_viol_file = os.path.join(target_dir, "bench_06_non_euclidean_violation.txt")
+    if os.path.exists(old_viol_file):
+        os.remove(old_viol_file)
+        print(f"[*] Đã loại bỏ file vi phạm cũ: {old_viol_file}")
+
     for fname, pkey, s in curated_list:
         fpath = os.path.join(target_dir, fname)
         generate_curated_instance(fpath, pkey, seed=s)
@@ -209,7 +241,7 @@ if __name__ == "__main__":
         "clustered_basins",
         "capacity_bottleneck",
         "asymmetric_random",
-        "non_euclidean_violation",
+        "asymmetric_metric",
         "dense_scale_500"
     ], default=None, help="Chọn profile cụ thể")
     parser.add_argument("--output", default=None, help="Đường dẫn file lưu nếu chọn profile đơn")

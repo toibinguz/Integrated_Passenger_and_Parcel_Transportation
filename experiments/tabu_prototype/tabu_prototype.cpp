@@ -20,8 +20,8 @@ typedef long long ll;
 // HYPERPARAMETERS & ALGORITHMIC CONTROL KNOBS
 // (Compliant with ALGORITHM_SPECIFICATION.md & OPTIMIZATION_TECHNIQUES.md)
 // ============================================================================
-static double TIME_LIMIT_SEC = 2.0;       // Wall-clock search budget (seconds, default 2.0s)
-static int MAX_ITER = 1000000;            // Maximum search iterations (bounded by time limit)
+static double TIME_LIMIT_SEC = 10.0;      // Wall-clock search budget (seconds, default 10.0s)
+static int MAX_ITER = 10000000;           // Maximum search iterations
 static int TABU_TENURE_BASE = 5;          // Base Tabu tenure (iterations)
 static int TABU_TENURE_RAND = 10;         // Random tenure amplitude [0, TABU_TENURE_RAND)
 static int STAGNANT_LIMIT = 50;           // Iterations without improvement to trigger Ruin
@@ -196,7 +196,7 @@ static ll best_insert(int k, int q, int& bi, int& bj) {
         ll dp = max(arr, ep) + sp;
         ll cA = C(a, Pp);
 
-        // Option 1: Immediate drop after pickup
+        // Immediate drop after pickup
         if (can_edge[Pp][Dq]) {
             ll aq = dp + tPD;
             if (aq <= lq) {
@@ -307,8 +307,7 @@ static vector<int> get_physical_route(const Route& r) {
     return phys;
 }
 
-static vector<pair<int, int>> get_route_edges(int k, const Route& r) {
-    vector<pair<int, int>> edges;
+static void get_route_edges(int k, const Route& r, vector<pair<int, int>>& edges) {
     int prev = O[k];
     for (int i = 1; i <= r.n(); ++i) {
         int x = r.nd[i];
@@ -321,7 +320,6 @@ static vector<pair<int, int>> get_route_edges(int k, const Route& r) {
             prev = nin[x];
         }
     }
-    return edges;
 }
 
 // Fast local re-optimization on modified route
@@ -352,6 +350,47 @@ static void optimize_single_route(int k) {
             }
         }
     }
+}
+
+// ============================================================================
+// O(1) ZERO-ALLOCATION TABU EDGE CHECKING
+// ============================================================================
+static inline bool is_edge_tabu(int u, int v, int iter) {
+    if (u <= 0 || v <= 0) return false;
+    return (!has_edge[u][v] && tabu_add[u][v] >= iter);
+}
+
+static inline bool check_insert_tabu(int k, int q, int bi, int bj, int iter) {
+    const Route& r = rt[k];
+    int n = r.n();
+    if (q <= N) {
+        int a = (bi == 0 ? O[k] : nout[r.nd[bi]]);
+        int b = (bi < n ? nin[r.nd[bi + 1]] : -1);
+        if (is_edge_tabu(a, nin[q], iter)) return true;
+        if (is_edge_tabu(nin[q], nout[q], iter)) return true;
+        if (b != -1 && is_edge_tabu(nout[q], b, iter)) return true;
+        return false;
+    }
+
+    int Pp = nin[q], Dq = nin[R + q];
+    if (bi == bj) {
+        int a = (bi == 0 ? O[k] : nout[r.nd[bi]]);
+        int b = (bi < n ? nin[r.nd[bi + 1]] : -1);
+        if (is_edge_tabu(a, Pp, iter)) return true;
+        if (is_edge_tabu(Pp, Dq, iter)) return true;
+        if (b != -1 && is_edge_tabu(Dq, b, iter)) return true;
+        return false;
+    }
+
+    int a1 = (bi == 0 ? O[k] : nout[r.nd[bi]]);
+    int b1 = nin[r.nd[bi + 1]];
+    int a2 = nout[r.nd[bj]];
+    int b2 = (bj < n ? nin[r.nd[bj + 1]] : -1);
+    if (is_edge_tabu(a1, Pp, iter)) return true;
+    if (is_edge_tabu(Pp, b1, iter)) return true;
+    if (is_edge_tabu(a2, Dq, iter)) return true;
+    if (b2 != -1 && is_edge_tabu(Dq, b2, iter)) return true;
+    return false;
 }
 
 // ============================================================================
@@ -442,7 +481,6 @@ static bool update_elite_pool(const SolutionState& cand, ostream& log_out) {
     }
     if (evict_idx == -1) evict_idx = fit_order.back();
 
-    // If candidate itself is evicted, reject
     if (evict_idx == T_pool - 1) return false;
 
     elite_pool[evict_idx] = cand;
@@ -459,32 +497,7 @@ struct TabuMove {
     int r1 = 0, r2 = 0;
     int bi1 = -1, bj1 = -1;
     int bi2 = -1, bj2 = -1;
-    vector<pair<int, int>> old_edges;
-    vector<pair<int, int>> new_edges;
 };
-
-static void apply_edges_tabu(const vector<pair<int, int>>& old_edges,
-                             const vector<pair<int, int>>& new_edges,
-                             int iter) {
-    for (const auto& e : old_edges) {
-        has_edge[e.first][e.second] = false;
-        int tenure = TABU_TENURE_BASE + rand_int(0, TABU_TENURE_RAND - 1);
-        tabu_add[e.first][e.second] = iter + tenure;
-    }
-    for (const auto& e : new_edges) {
-        has_edge[e.first][e.second] = true;
-    }
-}
-
-// Check if candidate new edges violate tabu
-static inline bool check_is_tabu(const vector<pair<int, int>>& new_edges, int iter) {
-    for (const auto& e : new_edges) {
-        if (!has_edge[e.first][e.second] && tabu_add[e.first][e.second] >= iter) {
-            return true;
-        }
-    }
-    return false;
-}
 
 // Calculate actual arrival time at pickup of request r
 static inline ll get_actual_pickup_arr(int r) {
@@ -551,7 +564,8 @@ static void run_tabu_search(ostream& log_out, double time_budget) {
 
     // Set initial edges
     for (int k = 1; k <= K; ++k) {
-        auto ed = get_route_edges(k, rt[k]);
+        vector<pair<int, int>> ed;
+        get_route_edges(k, rt[k], ed);
         for (const auto& e : ed) has_edge[e.first][e.second] = true;
     }
 
@@ -591,16 +605,7 @@ static void run_tabu_search(ostream& log_out, double time_budget) {
                 valid_neighbors++;
                 ll delta = Rev[u] - dc;
 
-                // Candidate edges:
-                // Old: (O[k], nin[nd[1]]) or (nout[nd[bi]], nin[nd[bi+1]])
-                Route temp_rt = rt[k];
-                auto old_ed = get_route_edges(k, temp_rt);
-                auto& nd = temp_rt.nd;
-                if (u <= N) nd.insert(nd.begin() + bi + 1, u);
-                else { nd.insert(nd.begin() + bi + 1, u); nd.insert(nd.begin() + bj + 2, R + u); }
-                auto new_ed = get_route_edges(k, temp_rt);
-
-                bool is_tabu = check_is_tabu(new_ed, iter);
+                bool is_tabu = check_insert_tabu(k, u, bi, bj, iter);
                 if (is_tabu) {
                     tabu_hits++;
                     if (cur_total_obj + delta > global_best_obj) {
@@ -610,7 +615,7 @@ static void run_tabu_search(ostream& log_out, double time_budget) {
                 }
                 if (!is_tabu) {
                     if (delta > best_move.delta || (delta == best_move.delta && (rng() & 1))) {
-                        best_move = {delta, 1, k, -1, u, 0, bi, bj, -1, -1, old_ed, new_ed};
+                        best_move = {delta, 1, k, -1, u, 0, bi, bj, -1, -1};
                     }
                 }
             }
@@ -623,26 +628,21 @@ static void run_tabu_search(ostream& log_out, double time_budget) {
             int k1 = veh_of[r];
             if (k1 == 0) continue;
             ll cost_k1_orig = rt[k1].cost;
-            Route temp_rt1 = rt[k1];
-            auto old_ed1 = get_route_edges(k1, temp_rt1);
-            
-            // Remove r from k1
-            int dn = (r <= N) ? -1 : (R + r);
-            auto it = temp_rt1.nd.begin() + 1;
-            while (it != temp_rt1.nd.end()) {
-                if (*it == r || *it == dn) it = temp_rt1.nd.erase(it);
-                else ++it;
+
+            // Find r's position in rt[k1]
+            int r_pos = -1;
+            for (int p = 1; p <= rt[k1].n(); ++p) {
+                if (rt[k1].nd[p] == r) { r_pos = p; break; }
             }
-            // Temporary recompute
-            ll cost_k1_new = 0;
-            int prev = O[k1];
-            for (int i = 1; i < (int)temp_rt1.nd.size(); ++i) {
-                int x = temp_rt1.nd[i];
-                cost_k1_new += C(prev, nin[x]) + nic[x];
-                prev = nout[x];
-            }
-            ll drop_saving = cost_k1_orig - cost_k1_new;
-            auto new_ed1 = get_route_edges(k1, temp_rt1);
+            int a_drop = (r_pos == 1 ? O[k1] : nout[rt[k1].nd[r_pos - 1]]);
+            int b_drop = (r_pos < rt[k1].n() ? nin[rt[k1].nd[r_pos + 1]] : -1);
+
+            // Cost without r
+            Route backup_k1 = rt[k1];
+            apply_remove(k1, r);
+            ll drop_saving = cost_k1_orig - rt[k1].cost;
+            rt[k1] = backup_k1;
+            recompute_route(k1);
 
             for (int k2 = 1; k2 <= K; ++k2) {
                 if (k2 == k1) continue;
@@ -653,16 +653,8 @@ static void run_tabu_search(ostream& log_out, double time_budget) {
 
                 ll delta = drop_saving - dc;
 
-                Route temp_rt2 = rt[k2];
-                auto old_ed2 = get_route_edges(k2, temp_rt2);
-                auto& nd2 = temp_rt2.nd;
-                if (r <= N) nd2.insert(nd2.begin() + bi + 1, r);
-                else { nd2.insert(nd2.begin() + bi + 1, r); nd2.insert(nd2.begin() + bj + 2, R + r); }
-                auto new_ed2 = get_route_edges(k2, temp_rt2);
-
-                vector<pair<int, int>> combined_new = new_ed1;
-                combined_new.insert(combined_new.end(), new_ed2.begin(), new_ed2.end());
-                bool is_tabu = check_is_tabu(combined_new, iter);
+                bool is_tabu = (b_drop != -1 && is_edge_tabu(a_drop, b_drop, iter)) ||
+                               check_insert_tabu(k2, r, bi, bj, iter);
                 if (is_tabu) {
                     tabu_hits++;
                     if (cur_total_obj + delta > global_best_obj) {
@@ -672,9 +664,7 @@ static void run_tabu_search(ostream& log_out, double time_budget) {
                 }
                 if (!is_tabu) {
                     if (delta > best_move.delta || (delta == best_move.delta && (rng() & 1))) {
-                        vector<pair<int, int>> combined_old = old_ed1;
-                        combined_old.insert(combined_old.end(), old_ed2.begin(), old_ed2.end());
-                        best_move = {delta, 2, k1, k2, r, 0, bi, bj, -1, -1, combined_old, combined_new};
+                        best_move = {delta, 2, k1, k2, r, 0, bi, bj, -1, -1};
                     }
                 }
             }
@@ -687,16 +677,14 @@ static void run_tabu_search(ostream& log_out, double time_budget) {
             int k = veh_of[r];
             if (k == 0) continue;
             ll cost_k_orig = rt[k].cost;
-            Route temp_rt = rt[k];
-            auto old_ed = get_route_edges(k, temp_rt);
 
-            // Temporarily remove r
             Route backup_k = rt[k];
             apply_remove(k, r);
             ll cost_after_remove = rt[k].cost;
 
             for (int u = 1; u <= R; ++u) {
                 if (veh_of[u] != 0) continue;
+                if (Rev[u] < Rev[r] * 0.75) continue; // Prune unpromising replacement
                 int bi, bj;
                 ll dc = best_insert(k, u, bi, bj);
                 if (dc >= INFLL) continue;
@@ -704,15 +692,7 @@ static void run_tabu_search(ostream& log_out, double time_budget) {
 
                 ll delta = Rev[u] - Rev[r] + (cost_k_orig - cost_after_remove) - dc;
 
-                Route temp_rt_insert = rt[k];
-                if (u <= N) temp_rt_insert.nd.insert(temp_rt_insert.nd.begin() + bi + 1, u);
-                else {
-                    temp_rt_insert.nd.insert(temp_rt_insert.nd.begin() + bi + 1, u);
-                    temp_rt_insert.nd.insert(temp_rt_insert.nd.begin() + bj + 2, R + u);
-                }
-                auto new_ed = get_route_edges(k, temp_rt_insert);
-
-                bool is_tabu = check_is_tabu(new_ed, iter);
+                bool is_tabu = check_insert_tabu(k, u, bi, bj, iter);
                 if (is_tabu) {
                     tabu_hits++;
                     if (cur_total_obj + delta > global_best_obj) {
@@ -722,7 +702,7 @@ static void run_tabu_search(ostream& log_out, double time_budget) {
                 }
                 if (!is_tabu) {
                     if (delta > best_move.delta || (delta == best_move.delta && (rng() & 1))) {
-                        best_move = {delta, 3, k, -1, r, u, bi, bj, -1, -1, old_ed, new_ed};
+                        best_move = {delta, 3, k, -1, r, u, bi, bj, -1, -1};
                     }
                 }
             }
@@ -737,27 +717,22 @@ static void run_tabu_search(ostream& log_out, double time_budget) {
             int k = veh_of[r];
             if (k == 0) continue;
             ll cost_k_orig = rt[k].cost;
-            Route temp_rt = rt[k];
-            auto old_ed = get_route_edges(k, temp_rt);
 
-            int dn = (r <= N) ? -1 : (R + r);
-            auto it = temp_rt.nd.begin() + 1;
-            while (it != temp_rt.nd.end()) {
-                if (*it == r || *it == dn) it = temp_rt.nd.erase(it);
-                else ++it;
+            int r_pos = -1;
+            for (int p = 1; p <= rt[k].n(); ++p) {
+                if (rt[k].nd[p] == r) { r_pos = p; break; }
             }
-            ll cost_k_new = 0;
-            int prev = O[k];
-            for (int i = 1; i < (int)temp_rt.nd.size(); ++i) {
-                int x = temp_rt.nd[i];
-                cost_k_new += C(prev, nin[x]) + nic[x];
-                prev = nout[x];
-            }
-            ll delta = (cost_k_orig - cost_k_new) - Rev[r];
-            auto new_ed = get_route_edges(k, temp_rt);
+            int a_drop = (r_pos == 1 ? O[k] : nout[rt[k].nd[r_pos - 1]]);
+            int b_drop = (r_pos < rt[k].n() ? nin[rt[k].nd[r_pos + 1]] : -1);
+
+            Route backup_k = rt[k];
+            apply_remove(k, r);
+            ll delta = (cost_k_orig - rt[k].cost) - Rev[r];
+            rt[k] = backup_k;
+            recompute_route(k);
 
             valid_neighbors++;
-            bool is_tabu = check_is_tabu(new_ed, iter);
+            bool is_tabu = (b_drop != -1 && is_edge_tabu(a_drop, b_drop, iter));
             if (is_tabu) {
                 tabu_hits++;
                 if (cur_total_obj + delta > global_best_obj) {
@@ -767,7 +742,7 @@ static void run_tabu_search(ostream& log_out, double time_budget) {
             }
             if (!is_tabu) {
                 if (delta > best_move.delta || (delta == best_move.delta && (rng() & 1))) {
-                    best_move = {delta, 4, k, -1, r, 0, -1, -1, -1, -1, old_ed, new_ed};
+                    best_move = {delta, 4, k, -1, r, 0, -1, -1, -1, -1};
                 }
             }
         }
@@ -779,6 +754,10 @@ static void run_tabu_search(ostream& log_out, double time_budget) {
                 << " | Tabu Hits: " << tabu_hits << " (Overrides: " << tabu_overrides << ")\n";
 
         if (best_move.delta != -INFLL) {
+            vector<pair<int, int>> old_edges;
+            get_route_edges(best_move.k1, rt[best_move.k1], old_edges);
+            if (best_move.k2 != -1) get_route_edges(best_move.k2, rt[best_move.k2], old_edges);
+
             if (best_move.type == 1) { // Insert
                 apply_insert(best_move.k1, best_move.r1, best_move.bi1, best_move.bj1);
                 veh_of[best_move.r1] = best_move.k1;
@@ -801,13 +780,25 @@ static void run_tabu_search(ostream& log_out, double time_budget) {
                 optimize_single_route(best_move.k1);
             }
 
+            // Update physical edges in Tabu matrix
+            vector<pair<int, int>> new_edges;
+            get_route_edges(best_move.k1, rt[best_move.k1], new_edges);
+            if (best_move.k2 != -1) get_route_edges(best_move.k2, rt[best_move.k2], new_edges);
+
+            for (const auto& e : old_edges) {
+                has_edge[e.first][e.second] = false;
+                int tenure = TABU_TENURE_BASE + rand_int(0, TABU_TENURE_RAND - 1);
+                tabu_add[e.first][e.second] = iter + tenure;
+            }
+            for (const auto& e : new_edges) {
+                has_edge[e.first][e.second] = true;
+            }
+
             // Recalculate exact total objective
             ll sum_rev = 0, sum_cost = 0;
             for (int r = 1; r <= R; ++r) if (veh_of[r] != 0) sum_rev += Rev[r];
             for (int k = 1; k <= K; ++k) sum_cost += rt[k].cost;
             cur_total_obj = sum_rev - sum_cost;
-
-            apply_edges_tabu(best_move.old_edges, best_move.new_edges, iter);
 
             log_out << "  -> Best Neighbor Obj: " << cur_total_obj << " (Delta: " << best_move.delta << ")\n";
 
@@ -899,7 +890,6 @@ static void run_tabu_search(ostream& log_out, double time_budget) {
                         recompute_route(k_tgt);
                     }
                 } else if (strat == 4) { // Mode 4: Random Ejection
-                    // Shuffle served requests
                     for (int i = (int)served.size() - 1; i > 0; --i) {
                         int j = rand_int(0, i);
                         swap(served[i], served[j]);
@@ -920,7 +910,6 @@ static void run_tabu_search(ostream& log_out, double time_budget) {
                     auto metric = [&](int u) -> ll {
                         if (strat == 0) return (ll)C(nin[r_seed], nin[u]);
                         if (strat == 1) return (ll)T(nin[r_seed], nin[u]);
-                        // Strat 2: actual arrival time deviation
                         ll u_arr = get_actual_pickup_arr(u);
                         return abs(seed_arr - u_arr);
                     };
@@ -1097,17 +1086,32 @@ int main(int argc, char** argv) {
     cin.tie(NULL);
 
     string test_filepath = "";
+    vector<string> pos_args;
     for (int a = 1; a < argc; ++a) {
         string arg = argv[a];
         if (arg == "--time" && a + 1 < argc) {
             TIME_LIMIT_SEC = atof(argv[++a]);
         } else if (arg == "--seed" && a + 1 < argc) {
             rng_s = strtoull(argv[++a], NULL, 10);
-        } else if (fs::exists(arg)) {
-            test_filepath = arg;
         } else {
-            double val = atof(arg.c_str());
-            if (val > 0) TIME_LIMIT_SEC = val;
+            pos_args.push_back(arg);
+        }
+    }
+
+    for (const auto& arg : pos_args) {
+        if (fs::exists(arg)) {
+            test_filepath = arg;
+        }
+    }
+    int num_cnt = 0;
+    for (const auto& arg : pos_args) {
+        if (arg != test_filepath) {
+            num_cnt++;
+            if (num_cnt == 1) {
+                TIME_LIMIT_SEC = atof(arg.c_str());
+            } else if (num_cnt == 2) {
+                rng_s = strtoull(arg.c_str(), NULL, 10);
+            }
         }
     }
 

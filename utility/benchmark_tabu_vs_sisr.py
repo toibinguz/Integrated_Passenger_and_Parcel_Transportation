@@ -5,7 +5,7 @@ benchmark_tabu_vs_sisr.py
 Đo lường so sánh trực tiếp (Head-to-Head Benchmark) giữa 2 Nguyên mẫu Metaheuristic:
 1. Hybrid Tabu Search - LNS (Đã tối ưu hóa O(1) slack checking & version cache)
 2. SISR + Simulated Annealing (Standalone Phase 2)
-CÙNG THỜI GIAN THỰC (Wall-clock Time = 2.0s) trên toàn bộ 7 Benchmark Landscapes chuẩn.
+CÙNG THỜI GIAN THỰC (Wall-clock Time) trên toàn bộ 7 Benchmark Landscapes chuẩn.
 """
 
 import os
@@ -14,6 +14,7 @@ import subprocess
 import glob
 import time
 import io
+import argparse
 
 if sys.stdout.encoding != 'utf-8':
     sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
@@ -24,8 +25,6 @@ BENCHMARK_DIR = "testcases/benchmark"
 TABU_EXE = os.path.abspath("experiments/tabu_prototype/tabu_prototype.exe")
 SISR_EXE = os.path.abspath("experiments/sisr_sa/sisr_sa.exe")
 VALIDATOR = os.path.abspath("utility/validator.py")
-
-TIME_BUDGET = 2.0 # seconds per testcase
 
 def run_solver(exe_path, instance_path, time_sec):
     cmd = [exe_path, str(time_sec), instance_path]
@@ -59,19 +58,19 @@ def run_solver(exe_path, instance_path, time_sec):
             pass
     return obj, elapsed, is_valid, p.stderr
 
-def main():
+def run_benchmark_suite(time_budget):
     testcases = sorted(glob.glob(os.path.join(BENCHMARK_DIR, "*.txt")))
     if not testcases:
         print(f"[-] Không tìm thấy testcase trong {BENCHMARK_DIR}")
-        return
+        return []
 
-    print("=" * 86)
+    print("\n" + "=" * 90)
     print(f"   ĐO LƯỜNG SO SÁNH TABU SEARCH vs SISR+SA TRÊN 7 ĐỊA HÌNH BENCHMARK")
-    print(f"   Ngân sách thời gian thực: {TIME_BUDGET:.1f}s / testcase | Kiểm tra: validator.py")
-    print("=" * 86)
-    header = f"{'Testcase':<34} | {'Tabu Obj':<9} | {'SISR Obj':<9} | {'Chênh lệch':<11} | {'Thắng thế'}"
+    print(f"   Ngân sách thời gian thực: {time_budget:.1f}s / testcase | Kiểm tra: validator.py")
+    print("=" * 90)
+    header = f"{'Testcase':<34} | {'Tabu Obj':<9} | {'SISR Obj':<9} | {'Chênh lệch':<11} | {'Tỷ lệ':<7} | {'Thắng thế'}"
     print(header)
-    print("-" * 86)
+    print("-" * 90)
 
     tabu_wins = 0
     sisr_wins = 0
@@ -83,12 +82,13 @@ def main():
         tname = os.path.basename(tc)
         
         # 1. Run Tabu Search
-        tabu_obj, tabu_t, tabu_valid, tabu_err = run_solver(TABU_EXE, tc, TIME_BUDGET)
+        tabu_obj, tabu_t, tabu_valid, tabu_err = run_solver(TABU_EXE, tc, time_budget)
         
         # 2. Run SISR + SA
-        sisr_obj, sisr_t, sisr_valid, sisr_err = run_solver(SISR_EXE, tc, TIME_BUDGET)
+        sisr_obj, sisr_t, sisr_valid, sisr_err = run_solver(SISR_EXE, tc, time_budget)
 
         diff = tabu_obj - sisr_obj
+        pct = (abs(diff) / max(1, sisr_obj)) * 100.0
         if diff > 0:
             winner = f"Tabu (+{diff})"
             tabu_wins += 1
@@ -100,19 +100,27 @@ def main():
             ties += 1
 
         val_str = "✅" if (tabu_valid and sisr_valid) else "❌"
-        print(f"{tname:<34} | {tabu_obj:<9} | {sisr_obj:<9} | {diff:>+10} | {winner} {val_str}")
+        pct_str = f"{pct:.1f}%"
+        print(f"{tname:<34} | {tabu_obj:<9} | {sisr_obj:<9} | {diff:>+10} | {pct_str:>6}  | {winner} {val_str}")
+        sys.stdout.flush()
+
         results.append({
             "testcase": tname,
             "tabu_obj": tabu_obj,
             "sisr_obj": sisr_obj,
             "diff": diff,
+            "pct": pct,
             "winner": winner,
             "valid": tabu_valid and sisr_valid
         })
 
-    print("-" * 86)
-    print(f"TỔNG KẾT: Tabu thắng {tabu_wins} | SISR thắng {sisr_wins} | Hòa {ties} | 100% nghiệm hợp lệ!")
-    print("=" * 86)
+    print("-" * 90)
+    print(f"TỔNG KẾT ({time_budget:.1f}s): Tabu thắng {tabu_wins} | SISR thắng {sisr_wins} | Hòa {ties} | 100% nghiệm hợp lệ!")
+    print("=" * 90 + "\n")
+    return results
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser(description="Head-to-head benchmark Tabu vs SISR")
+    parser.add_argument("--time", type=float, default=5.0, help="Wall-clock time budget in seconds (default 5.0s)")
+    args = parser.parse_args()
+    run_benchmark_suite(args.time)

@@ -1,1061 +1,140 @@
-#pragma GCC optimize("O3,unroll-loops")
-#include <iostream>
-#include <vector>
+#include <bits/stdc++.h>
 #include <chrono>
 #include <filesystem>
 #include <fstream>
+#include <ctime>
 #include <iomanip>
-#include <algorithm>
-#include <cmath>
-#include <cstring>
-#include <cstdint>
-#include <cstdlib>
-#include <numeric>
-
 using namespace std;
 namespace fs = std::filesystem;
-typedef long long ll;
 
 // ============================================================================
 // HYPERPARAMETERS & ALGORITHMIC CONTROL KNOBS
-// (Compliant with ALGORITHM_SPECIFICATION.md & OPTIMIZATION_TECHNIQUES.md)
 // ============================================================================
-static double TIME_LIMIT_SEC = 10.0;      // Wall-clock search budget (seconds, default 10.0s)
-static int MAX_ITER = 10000000;           // Maximum search iterations
-static int TABU_TENURE_BASE = 5;          // Base Tabu tenure (iterations)
-static int TABU_TENURE_RAND = 10;         // Random tenure amplitude [0, TABU_TENURE_RAND)
-static int STAGNANT_LIMIT = 50;           // Iterations without improvement to trigger Ruin
-static int RUIN_SIZE = 8;                 // Number of requests ejected per Ruin step
-static int RUIN_MODES_COUNT = 5;          // 5 Ruin modes (0: Cost, 1: Time, 2: Actual Arr, 3: Dismantle, 4: Random)
-static int RUIN_TOP_CANDIDATE_POOL = 4;   // Window size for stochastic selection among sorted requests
-static const int ELITE_POOL_SIZE = 6;     // Maximum capacity of the Elite Pool
-static double ELITE_QUALIFICATION_RATIO = 0.80; // Minimum objective ratio vs Global Best to enter pool (80%)
-static int INTENSIFICATION_PROB = 60;     // % probability to seed Ruin from Best Elite (vs Diverse Elite)
-static const int ELITE_PROTECTED_COUNT = 2; // Top-ranking fitness solutions immune from diversity eviction
+// 1. Search Iterations & Tabu Tenure
+int MAX_ITER = 10000;                     // Total iterations for Tabu Search
+int TABU_TENURE_BASE = 5;                 // Base Tabu tenure (iterations)
+int TABU_TENURE_RAND = 10;                // Random tenure amplitude [0, TABU_TENURE_RAND)
 
-static const ll INFLL = (ll)4e18;
+// 2. Epoch & Stagnation Parameters
+int STAGNANT_LIMIT = 50;                  // Iterations without improvement in current epoch to trigger Ruin
 
-// ============================================================================
-// ULTRA-FAST RNG (Xorshift64)
-// ============================================================================
-static uint64_t rng_s = 0x9E3779B97F4A7C15ull;
-static inline uint64_t rng() {
-    rng_s ^= rng_s << 7;
-    rng_s ^= rng_s >> 9;
-    return rng_s;
-}
-static inline int rand_int(int lo, int hi) {
-    return lo + (int)(rng() % (uint64_t)(hi - lo + 1));
-}
+// 3. Ruin Operators Configuration
+int RUIN_SIZE = 8;                        // Number of requests ejected per Ruin step
+int RUIN_MODES_COUNT = 4;                 // Number of Ruin strategies (0: Spatial Cost, 1: Travel Time, 2: Time Window E, 3: Dismantle)
+int RUIN_TOP_CANDIDATE_POOL = 4;          // Window size for stochastic selection among sorted correlated requests
 
-// ============================================================================
-// PROBLEM DATA STRUCTURES & FLAT CONTIGUOUS MEMORY LAYOUT
-// ============================================================================
-static int K, N, M, V, R, SV;
-static vector<int> O, Q;
-static vector<int> req_type, P, D, W, S, Rev;
-static vector<ll> E, L_time, Ed, Ld;
-static vector<int> Tm, Cm; // Flat (V+1)x(V+1) matrices
+// 4. Elite Pool Configuration (Quality & Diversity Management)
+const int ELITE_POOL_SIZE = 6;            // Maximum capacity of the Elite Pool
+double ELITE_QUALIFICATION_RATIO = 0.80;  // Minimum objective ratio vs Global Best to enter pool (80%)
+int INTENSIFICATION_PROB = 60;            // Probability (%) to seed Ruin from Best Elite (vs Diverse Elite)
+const int ELITE_PROTECTED_COUNT = 2;      // Top-ranking fitness solutions immune from diversity eviction
 
-static inline int T(int u, int v) { return Tm[u * SV + v]; }
-static inline int C(int u, int v) { return Cm[u * SV + v]; }
+random_device rd;
+mt19937 rng(123);                          // Mersenne Twister 19937 PRNG engine
 
-// Route node representations:
-// Passenger r -> node r (atomic macro node P_r -> D_r)
-// Parcel r    -> pickup node r, dropoff node R + r
-static vector<int> nin, nout, nw, nic;
-static vector<ll> ne, nl, ndur;
-static vector<vector<bool>> can_edge; // Edge feasibility lookup matrix
+const long long INF = 1e18;
+const int MAXV = 1050;
+const int MAX_REQ = 1050;
+
+int K, N, M, V;
+int O[MAXV], Q[MAXV];
+int req_type[MAX_REQ], P[MAX_REQ], D[MAX_REQ], W[MAX_REQ];
+int E[MAX_REQ], L_time[MAX_REQ], Ed[MAX_REQ], Ld[MAX_REQ];
+int S[MAX_REQ], Rev[MAX_REQ];
+int t_mat[MAXV][MAXV], c_mat[MAXV][MAXV];
+
+// Edge Feasibility Lookup
+bool can_edge[MAXV][MAXV];
 
 // Solution State
-struct Route {
-    vector<int> nd;   // nd[1..n] tasks (nd[0] unused)
-    vector<ll> dep;   // dep[i]: departure time from position i
-    vector<ll> lat;   // lat[i]: backward latest arrival slack
-    vector<int> ld;   // ld[i]: cumulative parcel load
-    ll cost = 0;
-    int n() const { return (int)nd.size() - 1; }
-};
+vector<int> routes[MAXV];           // Task list: r (Passenger/Pickup), -r (Dropoff)
+int veh_of[MAX_REQ];                // Vehicle serving req r (0 if unserved)
+long long route_obj[MAXV];          // Current profit per vehicle
+long long cur_total_obj = 0;
 
-static vector<Route> rt;
-static vector<Route> best_routes;
-static vector<int> veh_of;               // veh_of[r]: vehicle serving request r (0 if unserved)
-static vector<int> best_veh_of;
-static ll cur_total_obj = 0;
-static ll global_best_obj = 0;
+vector<int> best_routes[MAXV];
+long long global_best_obj = -INF;
 
-// Acceleration Structures: Version-tagged Cache
-static vector<int> rver;
-static int gver = 0;
-struct CacheEntry { int ver = -1, i = 0, j = 0; ll cost = INFLL; };
-static vector<CacheEntry> icache;        // [r * (K + 1) + k]
-
-// Global Physical Directed Edge Tabu Matrix
-static vector<vector<int>> tabu_add;     // [MAXV][MAXV]: Iteration when edge is free
-static vector<vector<bool>> has_edge;    // [MAXV][MAXV]: Active physical edge in solution
-
-// Helper: Timestamp & String formatting
-static string get_current_timestamp() {
-    auto now = chrono::system_clock::now();
-    time_t now_c = chrono::system_clock::to_time_t(now);
-    tm now_tm = *localtime(&now_c);
-    char buf[64];
-    strftime(buf, sizeof(buf), "%Y%m%d_%H%M%S", &now_tm);
-    return string(buf);
-}
+bool profitable[MAX_REQ];           // Filter negative-profit requests
+int tabu_add[MAXV][MAXV];           // Tabu expiration matrix for physical edges
+bool has_edge[MAXV][MAXV];          // Active physical edges in current solution
 
 // ============================================================================
-// ROUTE RECOMPUTATION & O(1) BACKWARD SLACK CHECKING
+// HELPER FUNCTIONS
 // ============================================================================
-static bool recompute_route(int k) {
-    Route& r = rt[k];
-    rver[k] = ++gver;
-    int n = r.n();
-    r.dep.resize(n + 1);
-    r.lat.resize(n + 2);
-    r.ld.resize(n + 1);
-    r.dep[0] = 0;
-    r.ld[0] = 0;
+int get_v_in(int task) { return (task > 0) ? P[abs(task)] : D[abs(task)]; }
+int get_v_out(int task) { return (task > 0 && abs(task) <= N) ? D[abs(task)] : get_v_in(task); }
 
-    int prev = O[k];
-    ll cost = 0;
-    for (int i = 1; i <= n; ++i) {
-        int x = r.nd[i];
-        ll arr = r.dep[i - 1] + T(prev, nin[x]);
-        if (arr > nl[x]) return false;
-        r.dep[i] = max(arr, ne[x]) + ndur[x];
-        r.ld[i] = r.ld[i - 1] + nw[x];
-        if (r.ld[i] > Q[k]) return false;
-        cost += C(prev, nin[x]) + nic[x];
-        prev = nout[x];
-    }
-    r.lat[n + 1] = INFLL;
-    for (int i = n; i >= 1; --i) {
-        int x = r.nd[i];
-        ll v = nl[x];
-        if (i < n) {
-            ll u = r.lat[i + 1] - T(nout[x], nin[r.nd[i + 1]]) - ndur[x];
-            if (u < v) v = u;
-        }
-        r.lat[i] = v;
-    }
-    r.cost = cost;
-    return true;
-}
-
-// O(1) Slack-Checking Best Insertion of Request q into Route k
-static ll best_insert(int k, int q, int& bi, int& bj) {
-    const Route& r = rt[k];
-    const int n = r.n();
-    const int* nd = r.nd.data();
-    const ll* dep = r.dep.data();
-    const ll* lat = r.lat.data();
-    const int* ld = r.ld.data();
-    ll best = INFLL;
-    bi = -1; bj = -1;
-
-    if (q <= N) { // Passenger Request
-        const int P_node = nin[q], D_node = nout[q];
-        const ll e = ne[q], l = nl[q], du = ndur[q];
-        const int ic = nic[q];
-        for (int i = 0; i <= n; ++i) {
-            if (dep[i] > l) break;
-            int a = i ? nout[nd[i]] : O[k];
-            if (!can_edge[a][P_node]) continue;
-            ll arr = dep[i] + T(a, P_node);
-            if (arr > l) continue;
-            ll d = max(arr, e) + du;
-            ll dc = C(a, P_node) + ic;
-            if (i < n) {
-                int b = nin[nd[i + 1]];
-                if (!can_edge[D_node][b]) continue;
-                if (d + T(D_node, b) > lat[i + 1]) continue;
-                dc += C(D_node, b) - C(a, b);
-            }
-            if (dc < best) {
-                best = dc;
-                bi = i;
-            }
-        }
-        return best;
-    }
-
-    // Parcel Request
-    const int p = q, dn = R + q;
-    const int Pp = nin[p], Dq = nin[dn], w = nw[p], cap = Q[k];
-    const ll ep = ne[p], lp = nl[p], sp = ndur[p], eq = ne[dn], lq = nl[dn], sq = ndur[dn];
-    const int cPD = C(Pp, Dq), tPD = T(Pp, Dq);
-
-    for (int i = 0; i <= n; ++i) {
-        if (dep[i] > lp) break;
-        if (ld[i] + w > cap) continue;
-        int a = i ? nout[nd[i]] : O[k];
-        if (!can_edge[a][Pp]) continue;
-        ll arr = dep[i] + T(a, Pp);
-        if (arr > lp) continue;
-        ll dp = max(arr, ep) + sp;
-        ll cA = C(a, Pp);
-
-        // Immediate drop after pickup
-        if (can_edge[Pp][Dq]) {
-            ll aq = dp + tPD;
-            if (aq <= lq) {
-                ll dq = max(aq, eq) + sq;
-                ll dc = cA + cPD;
-                bool ok = true;
-                if (i < n) {
-                    int b = nin[nd[i + 1]];
-                    if (!can_edge[Dq][b]) ok = false;
-                    else if (dq + T(Dq, b) > lat[i + 1]) ok = false;
-                    else dc += C(Dq, b) - C(a, b);
-                }
-                if (ok && dc < best) {
-                    best = dc; bi = i; bj = i;
-                }
-            }
-        }
-        if (i == n) continue;
-
-        int b0 = nin[nd[i + 1]];
-        if (!can_edge[Pp][b0]) continue;
-        ll base = cA + C(Pp, b0) - C(a, b0);
-        ll cur = dp;
-        int prev = Pp;
-        bool sync = false;
-
-        for (int j = i + 1; j <= n; ++j) {
-            int x = nd[j];
-            if (!sync) {
-                ll ar = cur + T(prev, nin[x]);
-                if (ar > nl[x]) break;
-                ll dj = max(ar, ne[x]) + ndur[x];
-                if (dj == dep[j]) sync = true;
-                cur = dj;
-            } else {
-                cur = dep[j];
-            }
-
-            if (ld[j] + w > cap) break;
-            if (cur > lq) break;
-            int o = nout[x];
-            prev = o;
-            if (!can_edge[o][Dq]) continue;
-            ll aq = cur + T(o, Dq);
-            if (aq > lq) continue;
-            ll dq = max(aq, eq) + sq;
-            ll dc = base + C(o, Dq);
-            if (j < n) {
-                int b2 = nin[nd[j + 1]];
-                if (!can_edge[Dq][b2]) continue;
-                if (dq + T(Dq, b2) > lat[j + 1]) continue;
-                dc += C(Dq, b2) - C(o, b2);
-            }
-            if (dc < best) {
-                best = dc; bi = i; bj = j;
-            }
-        }
-    }
-    return best;
-}
-
-// Cached version of best_insert
-static inline ll get_cached_best_insert(int k, int q, int& bi, int& bj) {
-    CacheEntry& e = icache[q * (K + 1) + k];
-    if (e.ver != rver[k]) {
-        e.cost = best_insert(k, q, e.i, e.j);
-        e.ver = rver[k];
-    }
-    bi = e.i; bj = e.j;
-    return e.cost;
-}
-
-static void apply_insert(int k, int q, int bi, int bj) {
-    auto& nd = rt[k].nd;
-    if (q <= N) {
-        nd.insert(nd.begin() + bi + 1, q);
-    } else {
-        nd.insert(nd.begin() + bi + 1, q);
-        nd.insert(nd.begin() + bj + 2, R + q);
-    }
-    recompute_route(k);
-}
-
-static void apply_remove(int k, int q) {
-    auto& nd = rt[k].nd;
-    int dn = (q <= N) ? -1 : (R + q);
-    auto it = nd.begin() + 1;
-    while (it != nd.end()) {
-        if (*it == q || *it == dn) it = nd.erase(it);
-        else ++it;
-    }
-    recompute_route(k);
-}
-
-// Physical route extraction
-static vector<int> get_physical_route(const Route& r) {
-    vector<int> phys;
-    phys.reserve(r.n() * 2);
-    for (int i = 1; i <= r.n(); ++i) {
-        int x = r.nd[i];
-        if (x <= N) {
-            phys.push_back(nin[x]);
-            phys.push_back(nout[x]);
-        } else {
-            phys.push_back(nin[x]);
-        }
+const vector<int>& get_physical_route(const vector<int>& rt) {
+    static vector<int> phys;
+    phys.clear();
+    phys.reserve(rt.size() * 2);
+    for (int t : rt) {
+        if (t > 0 && t <= N) { phys.push_back(P[t]); phys.push_back(D[t]); }
+        else if (t > 0) phys.push_back(P[t]);
+        else phys.push_back(D[-t]);
     }
     return phys;
 }
 
-static void get_route_edges(int k, const Route& r, vector<pair<int, int>>& edges) {
-    int prev = O[k];
-    for (int i = 1; i <= r.n(); ++i) {
-        int x = r.nd[i];
-        if (x <= N) {
-            edges.push_back({prev, nin[x]});
-            edges.push_back({nin[x], nout[x]});
-            prev = nout[x];
-        } else {
-            edges.push_back({prev, nin[x]});
-            prev = nin[x];
-        }
-    }
+const vector<int>& remove_req(const vector<int>& rt, int r) {
+    static vector<int> res;
+    res.clear();
+    res.reserve(rt.size());
+    for (int t : rt) if (abs(t) != r) res.push_back(t);
+    return res;
 }
 
-// Fast local re-optimization on modified route
-static void optimize_single_route(int k) {
-    Route& r = rt[k];
-    if (r.n() <= 2) return;
-    bool improved = true;
-    while (improved) {
-        improved = false;
-        vector<int> tasks;
-        for (int i = 1; i <= r.n(); ++i) {
-            int x = r.nd[i];
-            if (x <= R) tasks.push_back(x);
-        }
-        for (int q : tasks) {
-            ll old_c = r.cost;
-            Route backup_r = r;
-            apply_remove(k, q);
-            int bi, bj;
-            ll add_c = best_insert(k, q, bi, bj);
-            if (add_c < INFLL && r.cost + add_c < old_c) {
-                apply_insert(k, q, bi, bj);
-                improved = true;
-                break;
-            } else {
-                r = backup_r;
-                recompute_route(k);
-            }
-        }
-    }
+string get_current_timestamp() {
+    auto now = chrono::system_clock::now();
+    time_t now_c = chrono::system_clock::to_time_t(now);
+    tm now_tm = *localtime(&now_c);
+    char buf[64];
+    strftime(buf, sizeof(buf), "%Y-%m-%d-%H-%M-%S", &now_tm);
+    return string(buf);
 }
 
-// ============================================================================
-// O(1) ZERO-ALLOCATION TABU EDGE CHECKING
-// ============================================================================
-static inline bool is_edge_tabu(int u, int v, int iter) {
-    if (u <= 0 || v <= 0) return false;
-    return (!has_edge[u][v] && tabu_add[u][v] >= iter);
-}
-
-static inline bool check_insert_tabu(int k, int q, int bi, int bj, int iter) {
-    const Route& r = rt[k];
-    int n = r.n();
-    if (q <= N) {
-        int a = (bi == 0 ? O[k] : nout[r.nd[bi]]);
-        int b = (bi < n ? nin[r.nd[bi + 1]] : -1);
-        if (is_edge_tabu(a, nin[q], iter)) return true;
-        if (is_edge_tabu(nin[q], nout[q], iter)) return true;
-        if (b != -1 && is_edge_tabu(nout[q], b, iter)) return true;
-        return false;
+void save_solution(const string& res_path) {
+    ofstream fout(res_path);
+    if (!fout.is_open()) {
+        cerr << "ERROR: Failed to open solution file for writing: " << res_path << "\n";
+        return;
     }
-
-    int Pp = nin[q], Dq = nin[R + q];
-    if (bi == bj) {
-        int a = (bi == 0 ? O[k] : nout[r.nd[bi]]);
-        int b = (bi < n ? nin[r.nd[bi + 1]] : -1);
-        if (is_edge_tabu(a, Pp, iter)) return true;
-        if (is_edge_tabu(Pp, Dq, iter)) return true;
-        if (b != -1 && is_edge_tabu(Dq, b, iter)) return true;
-        return false;
-    }
-
-    int a1 = (bi == 0 ? O[k] : nout[r.nd[bi]]);
-    int b1 = nin[r.nd[bi + 1]];
-    int a2 = nout[r.nd[bj]];
-    int b2 = (bj < n ? nin[r.nd[bj + 1]] : -1);
-    if (is_edge_tabu(a1, Pp, iter)) return true;
-    if (is_edge_tabu(Pp, b1, iter)) return true;
-    if (is_edge_tabu(a2, Dq, iter)) return true;
-    if (b2 != -1 && is_edge_tabu(Dq, b2, iter)) return true;
-    return false;
-}
-
-// ============================================================================
-// ELITE POOL (QUALITY & DIVERSITY MANAGEMENT - SECTION 4)
-// ============================================================================
-struct SolutionState {
-    ll obj = 0;
-    vector<int> veh_assignment; // size R + 1
-    vector<Route> routes;       // size K + 1
-};
-
-static vector<SolutionState> elite_pool;
-
-static int calc_hamming_dist(const SolutionState& a, const SolutionState& b) {
-    int diff = 0;
-    for (int r = 1; r <= R; ++r) {
-        if (a.veh_assignment[r] != b.veh_assignment[r]) diff++;
-    }
-    return diff;
-}
-
-static bool update_elite_pool(const SolutionState& cand, ostream& log_out) {
-    if (cand.obj <= 0) return false;
-    if (global_best_obj > 0 && cand.obj < global_best_obj * ELITE_QUALIFICATION_RATIO) return false;
-
-    if (elite_pool.empty()) {
-        elite_pool.push_back(cand);
-        return true;
-    }
-
-    // Check for clone (Hamming distance == 0)
-    for (size_t i = 0; i < elite_pool.size(); ++i) {
-        if (calc_hamming_dist(cand, elite_pool[i]) == 0) {
-            if (cand.obj > elite_pool[i].obj) {
-                elite_pool[i] = cand;
-                return true;
-            }
-            return false;
-        }
-    }
-
-    if ((int)elite_pool.size() < ELITE_POOL_SIZE) {
-        elite_pool.push_back(cand);
-        return true;
-    }
-
-    // Pool is FULL: Apply Bi-criterion Biased Fitness Ranking with Elitism Protection
-    vector<SolutionState> all_sols = elite_pool;
-    all_sols.push_back(cand);
-    int T_pool = (int)all_sols.size();
-
-    // 1. Fitness Rank
-    vector<int> fit_order(T_pool);
-    iota(fit_order.begin(), fit_order.end(), 0);
-    sort(fit_order.begin(), fit_order.end(), [&](int a, int b) {
-        return all_sols[a].obj > all_sols[b].obj;
-    });
-    vector<int> r_fit(T_pool);
-    for (int rank = 0; rank < T_pool; ++rank) r_fit[fit_order[rank]] = rank + 1;
-
-    // 2. Diversity Rank (min Hamming distance)
-    vector<int> min_d(T_pool, 1e9);
-    for (int i = 0; i < T_pool; ++i) {
-        for (int j = 0; j < T_pool; ++j) {
-            if (i == j) continue;
-            min_d[i] = min(min_d[i], calc_hamming_dist(all_sols[i], all_sols[j]));
-        }
-    }
-    vector<int> div_order(T_pool);
-    iota(div_order.begin(), div_order.end(), 0);
-    sort(div_order.begin(), div_order.end(), [&](int a, int b) {
-        return min_d[a] > min_d[b];
-    });
-    vector<int> r_div(T_pool);
-    for (int rank = 0; rank < T_pool; ++rank) r_div[div_order[rank]] = rank + 1;
-
-    // 3. Score = R_fit + (1.0 - PROTECTED / T_pool) * R_div
-    double lambda = 1.0 - (double)ELITE_PROTECTED_COUNT / (double)T_pool;
-    int evict_idx = -1;
-    double worst_score = -1e9;
-    for (int i = 0; i < T_pool; ++i) {
-        if (r_fit[i] <= ELITE_PROTECTED_COUNT) continue; // Protected
-        double score = (double)r_fit[i] + lambda * (double)r_div[i];
-        if (score > worst_score) {
-            worst_score = score;
-            evict_idx = i;
-        }
-    }
-    if (evict_idx == -1) evict_idx = fit_order.back();
-
-    if (evict_idx == T_pool - 1) return false;
-
-    elite_pool[evict_idx] = cand;
-    return true;
-}
-
-// ============================================================================
-// TABU SEARCH MOVE DEFINITION & APPLICATION
-// ============================================================================
-struct TabuMove {
-    ll delta = -INFLL;
-    int type = 0; // 1: Insert, 2: Relocate, 3: Replace, 4: Drop, 5: Swap
-    int k1 = -1, k2 = -1;
-    int r1 = 0, r2 = 0;
-    int bi1 = -1, bj1 = -1;
-    int bi2 = -1, bj2 = -1;
-};
-
-// Calculate actual arrival time at pickup of request r
-static inline ll get_actual_pickup_arr(int r) {
-    int k = veh_of[r];
-    if (k == 0) return -1;
-    const Route& r_obj = rt[k];
-    for (int i = 1; i <= r_obj.n(); ++i) {
-        if (r_obj.nd[i] == r) {
-            int prev = (i == 1) ? O[k] : nout[r_obj.nd[i - 1]];
-            return r_obj.dep[i - 1] + T(prev, nin[r]);
-        }
-    }
-    return -1;
-}
-
-// ============================================================================
-// MAIN TABU SEARCH ENGINE
-// ============================================================================
-static void run_tabu_search(ostream& log_out, double time_budget) {
-    auto start_time = chrono::steady_clock::now();
-
-    // 1. Initialize State
-    for (int u = 0; u <= V; ++u) {
-        fill(tabu_add[u].begin(), tabu_add[u].end(), 0);
-        fill(has_edge[u].begin(), has_edge[u].end(), false);
-    }
-    fill(veh_of.begin(), veh_of.end(), 0);
-    fill(rver.begin(), rver.end(), 0);
-    gver = 0;
-    cur_total_obj = 0;
-    global_best_obj = 0;
-    elite_pool.clear();
-
+    fout << global_best_obj << "\n";
     for (int k = 1; k <= K; ++k) {
-        rt[k].nd.assign(1, 0);
-        recompute_route(k);
+        vector<int> phys = get_physical_route(best_routes[k]);
+        fout << phys.size();
+        for (int v : phys) fout << " " << v;
+        fout << "\n";
     }
-
-    int epoch_idx = 1;
-    int epoch_iter = 0;
-    ll epoch_best_obj = 0;
-    int epoch_stagnant_iters = 0;
-    SolutionState epoch_best_state;
-
-    // Fast initial greedy insertion to seed Tabu Search
-    for (int q = 1; q <= R; ++q) {
-        ll best_gain = -INFLL; int best_k = -1, best_i = -1, best_j = -1;
-        for (int k = 1; k <= K; ++k) {
-            int bi, bj;
-            ll dc = best_insert(k, q, bi, bj);
-            if (dc < INFLL) {
-                ll gain = Rev[q] - dc;
-                if (gain > best_gain) {
-                    best_gain = gain; best_k = k; best_i = bi; best_j = bj;
-                }
-            }
-        }
-        if (best_gain > 0) {
-            apply_insert(best_k, q, best_i, best_j);
-            veh_of[q] = best_k;
-            cur_total_obj += best_gain;
-        }
-    }
-
-    // Set initial edges
-    for (int k = 1; k <= K; ++k) {
-        vector<pair<int, int>> ed;
-        get_route_edges(k, rt[k], ed);
-        for (const auto& e : ed) has_edge[e.first][e.second] = true;
-    }
-
-    global_best_obj = cur_total_obj;
-    best_routes = rt;
-    best_veh_of = veh_of;
-    epoch_best_obj = cur_total_obj;
-    epoch_best_state.obj = cur_total_obj;
-    epoch_best_state.veh_assignment = veh_of;
-    epoch_best_state.routes = rt;
-
-    log_out << "[Iter 0] Initial Solution Obj = " << cur_total_obj << "\n";
-    cerr << "[TABU_INITIAL] Obj = " << cur_total_obj << "\n";
-
-    // Tabu Loop
-    int iter = 0;
-    while (iter < MAX_ITER) {
-        iter++;
-        epoch_iter++;
-
-        // Check Wall-clock Time Budget
-        double elapsed = chrono::duration<double>(chrono::steady_clock::now() - start_time).count();
-        if (elapsed >= time_budget) break;
-
-        TabuMove best_move;
-        int valid_neighbors = 0, tabu_hits = 0, tabu_overrides = 0;
-
-        // --------------------------------------------------------------------
-        // OPERATOR 1: INSERT (Unserved request into vehicle)
-        // --------------------------------------------------------------------
-        for (int u = 1; u <= R; ++u) {
-            if (veh_of[u] != 0) continue;
-            for (int k = 1; k <= K; ++k) {
-                int bi, bj;
-                ll dc = get_cached_best_insert(k, u, bi, bj);
-                if (dc >= INFLL) continue;
-                valid_neighbors++;
-                ll delta = Rev[u] - dc;
-
-                bool is_tabu = check_insert_tabu(k, u, bi, bj, iter);
-                if (is_tabu) {
-                    tabu_hits++;
-                    if (cur_total_obj + delta > global_best_obj) {
-                        tabu_overrides++;
-                        is_tabu = false;
-                    }
-                }
-                if (!is_tabu) {
-                    if (delta > best_move.delta || (delta == best_move.delta && (rng() & 1))) {
-                        best_move = {delta, 1, k, -1, u, 0, bi, bj, -1, -1};
-                    }
-                }
-            }
-        }
-
-        // --------------------------------------------------------------------
-        // OPERATOR 2: RELOCATE (Move served request from k1 to k2)
-        // --------------------------------------------------------------------
-        for (int r = 1; r <= R; ++r) {
-            int k1 = veh_of[r];
-            if (k1 == 0) continue;
-            ll cost_k1_orig = rt[k1].cost;
-
-            // Find r's position in rt[k1]
-            int r_pos = -1;
-            for (int p = 1; p <= rt[k1].n(); ++p) {
-                if (rt[k1].nd[p] == r) { r_pos = p; break; }
-            }
-            int a_drop = (r_pos == 1 ? O[k1] : nout[rt[k1].nd[r_pos - 1]]);
-            int b_drop = (r_pos < rt[k1].n() ? nin[rt[k1].nd[r_pos + 1]] : -1);
-
-            // Cost without r
-            Route backup_k1 = rt[k1];
-            apply_remove(k1, r);
-            ll drop_saving = cost_k1_orig - rt[k1].cost;
-            rt[k1] = backup_k1;
-            recompute_route(k1);
-
-            for (int k2 = 1; k2 <= K; ++k2) {
-                if (k2 == k1) continue;
-                int bi, bj;
-                ll dc = get_cached_best_insert(k2, r, bi, bj);
-                if (dc >= INFLL) continue;
-                valid_neighbors++;
-
-                ll delta = drop_saving - dc;
-
-                bool is_tabu = (b_drop != -1 && is_edge_tabu(a_drop, b_drop, iter)) ||
-                               check_insert_tabu(k2, r, bi, bj, iter);
-                if (is_tabu) {
-                    tabu_hits++;
-                    if (cur_total_obj + delta > global_best_obj) {
-                        tabu_overrides++;
-                        is_tabu = false;
-                    }
-                }
-                if (!is_tabu) {
-                    if (delta > best_move.delta || (delta == best_move.delta && (rng() & 1))) {
-                        best_move = {delta, 2, k1, k2, r, 0, bi, bj, -1, -1};
-                    }
-                }
-            }
-        }
-
-        // --------------------------------------------------------------------
-        // OPERATOR 3: REPLACE ON SAME VEHICLE (Swap served r with unserved u)
-        // --------------------------------------------------------------------
-        for (int r = 1; r <= R; ++r) {
-            int k = veh_of[r];
-            if (k == 0) continue;
-            ll cost_k_orig = rt[k].cost;
-
-            Route backup_k = rt[k];
-            apply_remove(k, r);
-            ll cost_after_remove = rt[k].cost;
-
-            for (int u = 1; u <= R; ++u) {
-                if (veh_of[u] != 0) continue;
-                if (Rev[u] < Rev[r] * 0.75) continue; // Prune unpromising replacement
-                int bi, bj;
-                ll dc = best_insert(k, u, bi, bj);
-                if (dc >= INFLL) continue;
-                valid_neighbors++;
-
-                ll delta = Rev[u] - Rev[r] + (cost_k_orig - cost_after_remove) - dc;
-
-                bool is_tabu = check_insert_tabu(k, u, bi, bj, iter);
-                if (is_tabu) {
-                    tabu_hits++;
-                    if (cur_total_obj + delta > global_best_obj) {
-                        tabu_overrides++;
-                        is_tabu = false;
-                    }
-                }
-                if (!is_tabu) {
-                    if (delta > best_move.delta || (delta == best_move.delta && (rng() & 1))) {
-                        best_move = {delta, 3, k, -1, r, u, bi, bj, -1, -1};
-                    }
-                }
-            }
-            rt[k] = backup_k;
-            recompute_route(k);
-        }
-
-        // --------------------------------------------------------------------
-        // OPERATOR 4: DROP (Eject served request to unserved pool)
-        // --------------------------------------------------------------------
-        for (int r = 1; r <= R; ++r) {
-            int k = veh_of[r];
-            if (k == 0) continue;
-            ll cost_k_orig = rt[k].cost;
-
-            int r_pos = -1;
-            for (int p = 1; p <= rt[k].n(); ++p) {
-                if (rt[k].nd[p] == r) { r_pos = p; break; }
-            }
-            int a_drop = (r_pos == 1 ? O[k] : nout[rt[k].nd[r_pos - 1]]);
-            int b_drop = (r_pos < rt[k].n() ? nin[rt[k].nd[r_pos + 1]] : -1);
-
-            Route backup_k = rt[k];
-            apply_remove(k, r);
-            ll delta = (cost_k_orig - rt[k].cost) - Rev[r];
-            rt[k] = backup_k;
-            recompute_route(k);
-
-            valid_neighbors++;
-            bool is_tabu = (b_drop != -1 && is_edge_tabu(a_drop, b_drop, iter));
-            if (is_tabu) {
-                tabu_hits++;
-                if (cur_total_obj + delta > global_best_obj) {
-                    tabu_overrides++;
-                    is_tabu = false;
-                }
-            }
-            if (!is_tabu) {
-                if (delta > best_move.delta || (delta == best_move.delta && (rng() & 1))) {
-                    best_move = {delta, 4, k, -1, r, 0, -1, -1, -1, -1};
-                }
-            }
-        }
-
-        // --------------------------------------------------------------------
-        // APPLY BEST TABU MOVE
-        // --------------------------------------------------------------------
-        log_out << "[Iter " << iter << "] Valid Neighbors: " << valid_neighbors
-                << " | Tabu Hits: " << tabu_hits << " (Overrides: " << tabu_overrides << ")\n";
-
-        if (best_move.delta != -INFLL) {
-            vector<pair<int, int>> old_edges;
-            get_route_edges(best_move.k1, rt[best_move.k1], old_edges);
-            if (best_move.k2 != -1) get_route_edges(best_move.k2, rt[best_move.k2], old_edges);
-
-            if (best_move.type == 1) { // Insert
-                apply_insert(best_move.k1, best_move.r1, best_move.bi1, best_move.bj1);
-                veh_of[best_move.r1] = best_move.k1;
-                optimize_single_route(best_move.k1);
-            } else if (best_move.type == 2) { // Relocate
-                apply_remove(best_move.k1, best_move.r1);
-                apply_insert(best_move.k2, best_move.r1, best_move.bi1, best_move.bj1);
-                veh_of[best_move.r1] = best_move.k2;
-                optimize_single_route(best_move.k1);
-                optimize_single_route(best_move.k2);
-            } else if (best_move.type == 3) { // Replace
-                apply_remove(best_move.k1, best_move.r1);
-                apply_insert(best_move.k1, best_move.r2, best_move.bi1, best_move.bj1);
-                veh_of[best_move.r1] = 0;
-                veh_of[best_move.r2] = best_move.k1;
-                optimize_single_route(best_move.k1);
-            } else if (best_move.type == 4) { // Drop
-                apply_remove(best_move.k1, best_move.r1);
-                veh_of[best_move.r1] = 0;
-                optimize_single_route(best_move.k1);
-            }
-
-            // Update physical edges in Tabu matrix
-            vector<pair<int, int>> new_edges;
-            get_route_edges(best_move.k1, rt[best_move.k1], new_edges);
-            if (best_move.k2 != -1) get_route_edges(best_move.k2, rt[best_move.k2], new_edges);
-
-            for (const auto& e : old_edges) {
-                has_edge[e.first][e.second] = false;
-                int tenure = TABU_TENURE_BASE + rand_int(0, TABU_TENURE_RAND - 1);
-                tabu_add[e.first][e.second] = iter + tenure;
-            }
-            for (const auto& e : new_edges) {
-                has_edge[e.first][e.second] = true;
-            }
-
-            // Recalculate exact total objective
-            ll sum_rev = 0, sum_cost = 0;
-            for (int r = 1; r <= R; ++r) if (veh_of[r] != 0) sum_rev += Rev[r];
-            for (int k = 1; k <= K; ++k) sum_cost += rt[k].cost;
-            cur_total_obj = sum_rev - sum_cost;
-
-            log_out << "  -> Best Neighbor Obj: " << cur_total_obj << " (Delta: " << best_move.delta << ")\n";
-
-            if (cur_total_obj > epoch_best_obj) {
-                epoch_best_obj = cur_total_obj;
-                epoch_stagnant_iters = 0;
-                epoch_best_state.obj = cur_total_obj;
-                epoch_best_state.veh_assignment = veh_of;
-                epoch_best_state.routes = rt;
-            } else {
-                epoch_stagnant_iters++;
-            }
-
-            if (cur_total_obj > global_best_obj) {
-                global_best_obj = cur_total_obj;
-                best_routes = rt;
-                best_veh_of = veh_of;
-                log_out << "  -> *** NEW GLOBAL BEST FOUND! ***\n";
-                log_out << "  -> Global Best Obj: " << global_best_obj << "\n";
-                cerr << "  -> [Iter " << setw(5) << iter << " | Epoch " << epoch_idx 
-                     << "] NEW GLOBAL BEST: " << global_best_obj << "\n" << flush;
-            }
-        } else {
-            epoch_stagnant_iters++;
-            log_out << "  -> No valid neighbor found.\n";
-        }
-
-        // --------------------------------------------------------------------
-        // RUIN MECHANISM (TRIGGERED ON EPOCH STAGNATION - SECTION 5)
-        // --------------------------------------------------------------------
-        if (epoch_stagnant_iters >= STAGNANT_LIMIT) {
-            ll prev_epoch_peak = epoch_best_obj;
-            int strat = (epoch_idx - 1) % RUIN_MODES_COUNT;
-            const char* mode_names[] = {
-                "SPATIAL_COST", "TRAVEL_TIME", "ACTUAL_ARRIVAL_TIME", "VEHICLE_DISMANTLE", "RANDOM"
-            };
-
-            log_out << "  -> [RUIN ACTIVATED] Epoch #" << epoch_idx << " exhausted after "
-                    << epoch_iter << " iters (Peak: " << prev_epoch_peak << " | Mode " << strat << ": " << mode_names[strat] << ")\n";
-
-            // Submit epoch best state to Elite Pool
-            if (epoch_best_state.obj > 0) {
-                update_elite_pool(epoch_best_state, log_out);
-            }
-
-            // Backtrack from Elite Pool
-            int elite_sel = -1;
-            if (!elite_pool.empty()) {
-                int best_elite_idx = 0;
-                for (size_t i = 1; i < elite_pool.size(); ++i) {
-                    if (elite_pool[i].obj > elite_pool[best_elite_idx].obj) best_elite_idx = i;
-                }
-                if (elite_pool.size() > 1 && (rand_int(0, 99) >= INTENSIFICATION_PROB)) {
-                    vector<int> other_indices;
-                    for (size_t i = 0; i < elite_pool.size(); ++i) {
-                        if ((int)i != best_elite_idx) other_indices.push_back(i);
-                    }
-                    elite_sel = other_indices[rand_int(0, other_indices.size() - 1)];
-                    log_out << "  -> [ELITE BACKTRACK] [DIVERSIFY " << (100 - INTENSIFICATION_PROB)
-                            << "%] Picked Diverse Elite #" << elite_sel << " (Obj: " << elite_pool[elite_sel].obj << ") as seed\n";
-                } else {
-                    elite_sel = best_elite_idx;
-                    log_out << "  -> [ELITE BACKTRACK] [INTENSIFY " << INTENSIFICATION_PROB
-                            << "%] Picked Best Elite #" << elite_sel << " (Obj: " << elite_pool[elite_sel].obj << ") as seed\n";
-                }
-
-                // Restore seed
-                veh_of = elite_pool[elite_sel].veh_assignment;
-                rt = elite_pool[elite_sel].routes;
-                cur_total_obj = elite_pool[elite_sel].obj;
-                for (int k = 1; k <= K; ++k) recompute_route(k);
-            }
-
-            // Execute Ruin
-            vector<int> served;
-            for (int r = 1; r <= R; ++r) if (veh_of[r] != 0) served.push_back(r);
-
-            if (!served.empty()) {
-                if (strat == 3) { // Mode 3: Vehicle Dismantle
-                    vector<int> busy;
-                    for (int k = 1; k <= K; ++k) if (rt[k].n() > 0) busy.push_back(k);
-                    if (!busy.empty()) {
-                        int k_tgt = busy[rand_int(0, busy.size() - 1)];
-                        for (int t = 1; t <= rt[k_tgt].n(); ++t) {
-                            int task = rt[k_tgt].nd[t];
-                            if (task <= R) veh_of[task] = 0;
-                        }
-                        rt[k_tgt].nd.assign(1, 0);
-                        recompute_route(k_tgt);
-                    }
-                } else if (strat == 4) { // Mode 4: Random Ejection
-                    for (int i = (int)served.size() - 1; i > 0; --i) {
-                        int j = rand_int(0, i);
-                        swap(served[i], served[j]);
-                    }
-                    int q_ruin = min((int)served.size(), RUIN_SIZE);
-                    for (int s = 0; s < q_ruin; ++s) {
-                        int req = served[s];
-                        int k = veh_of[req];
-                        if (k != 0) {
-                            apply_remove(k, req);
-                            veh_of[req] = 0;
-                        }
-                    }
-                } else { // Modes 0, 1, 2: Seed-correlated Ejection
-                    int r_seed = served[rand_int(0, served.size() - 1)];
-                    ll seed_arr = (strat == 2) ? get_actual_pickup_arr(r_seed) : 0;
-
-                    auto metric = [&](int u) -> ll {
-                        if (strat == 0) return (ll)C(nin[r_seed], nin[u]);
-                        if (strat == 1) return (ll)T(nin[r_seed], nin[u]);
-                        ll u_arr = get_actual_pickup_arr(u);
-                        return abs(seed_arr - u_arr);
-                    };
-
-                    sort(served.begin(), served.end(), [&](int a, int b) {
-                        return metric(a) < metric(b);
-                    });
-
-                    int q_ruin = min((int)served.size(), RUIN_SIZE);
-                    for (int s = 0; s < q_ruin; ++s) {
-                        int pick_idx = rand_int(0, min((int)served.size() - 1, RUIN_TOP_CANDIDATE_POOL - 1));
-                        int req = served[pick_idx];
-                        served.erase(served.begin() + pick_idx);
-                        int k = veh_of[req];
-                        if (k != 0) {
-                            apply_remove(k, req);
-                            veh_of[req] = 0;
-                        }
-                    }
-                }
-
-                // Re-evaluate total objective after Ruin
-                ll sum_rev = 0, sum_cost = 0;
-                for (int r = 1; r <= R; ++r) if (veh_of[r] != 0) sum_rev += Rev[r];
-                for (int k = 1; k <= K; ++k) sum_cost += rt[k].cost;
-                cur_total_obj = sum_rev - sum_cost;
-            }
-
-            // Start new epoch
-            epoch_idx++;
-            epoch_iter = 0;
-            epoch_best_obj = cur_total_obj;
-            epoch_best_state.obj = cur_total_obj;
-            epoch_best_state.veh_assignment = veh_of;
-            epoch_best_state.routes = rt;
-            epoch_stagnant_iters = 0;
-        }
-    }
-
-    double total_time = chrono::duration<double>(chrono::steady_clock::now() - start_time).count();
-    cerr << "[TABU_COMPLETED] Iters = " << iter << " | Best Obj = " << global_best_obj 
-         << " | Total Time = " << fixed << setprecision(2) << total_time << "s\n";
-    log_out << "[TABU_COMPLETED] Total Iters = " << iter << " | Global Best Obj = " << global_best_obj 
-            << " | Time = " << total_time << "s\n";
+    fout.close();
 }
 
 // ============================================================================
-// INPUT READING & EDGE FEASIBILITY
+// INITIALIZATION & INPUT
 // ============================================================================
-static void read_input() {
-    if (!(cin >> K >> N >> M)) {
-        cerr << "ERROR: Failed to read input!\n";
-        exit(1);
-    }
-    V = 2 * N + 2 * M + K;
-    R = N + M;
-    SV = V + 1;
-
-    O.assign(K + 1, 0);
-    Q.assign(K + 1, 0);
-    for (int k = 1; k <= K; ++k) cin >> O[k] >> Q[k];
-
-    req_type.assign(R + 1, 0);
-    P.assign(R + 1, 0);
-    D.assign(R + 1, 0);
-    W.assign(R + 1, 0);
-    S.assign(R + 1, 0);
-    Rev.assign(R + 1, 0);
-    E.assign(R + 1, 0);
-    L_time.assign(R + 1, 0);
-    Ed.assign(R + 1, 0);
-    Ld.assign(R + 1, 0);
-
-    for (int i = 1; i <= N; ++i) {
-        req_type[i] = 1;
-        cin >> P[i] >> D[i] >> E[i] >> L_time[i] >> S[i] >> Rev[i];
-    }
-    for (int j = 1; j <= M; ++j) {
-        int r = N + j;
-        req_type[r] = 2;
-        cin >> P[r] >> D[r] >> W[r] >> E[r] >> L_time[r] >> Ed[r] >> Ld[r] >> S[r] >> Rev[r];
-    }
-
-    Tm.assign(SV * SV, 0);
-    Cm.assign(SV * SV, 0);
-    for (int i = 1; i <= V; ++i) {
-        for (int j = 1; j <= V; ++j) {
-            cin >> Tm[i * SV + j];
-        }
-    }
-    for (int i = 1; i <= V; ++i) {
-        for (int j = 1; j <= V; ++j) {
-            cin >> Cm[i * SV + j];
-        }
-    }
-
-    // Node attribute initialization
-    int max_node = 2 * R + 1;
-    nin.assign(max_node, 0);
-    nout.assign(max_node, 0);
-    nw.assign(max_node, 0);
-    nic.assign(max_node, 0);
-    ne.assign(max_node, 0);
-    nl.assign(max_node, 0);
-    ndur.assign(max_node, 0);
-
-    for (int r = 1; r <= N; ++r) {
-        nin[r] = P[r]; nout[r] = D[r];
-        ne[r] = E[r]; nl[r] = L_time[r];
-        ndur[r] = 2LL * S[r] + T(P[r], D[r]);
-        nic[r] = C(P[r], D[r]);
-        nw[r] = 0;
-    }
-    for (int j = 1; j <= M; ++j) {
-        int p = N + j, d = R + p;
-        nin[p] = P[p]; nout[p] = P[p];
-        ne[p] = E[p]; nl[p] = L_time[p];
-        ndur[p] = S[p]; nw[p] = W[p]; nic[p] = 0;
-
-        nin[d] = D[p]; nout[d] = D[p];
-        ne[d] = Ed[p]; nl[d] = Ld[p];
-        ndur[d] = S[p]; nw[d] = -W[p]; nic[d] = 0;
-    }
-
-    // Edge Feasibility Lookup initialization
-    can_edge.assign(V + 1, vector<bool>(V + 1, false));
-    vector<ll> earliest_dep(V + 1, 0);
-    vector<ll> latest_arr(V + 1, INFLL);
-
+void init_edge_feasibility() {
+    static long long earliest_dep[MAXV];
+    static long long latest_arr[MAXV];
+    for (int i = 0; i <= V; ++i) { earliest_dep[i] = 0; latest_arr[i] = INF; }
     for (int k = 1; k <= K; ++k) earliest_dep[O[k]] = 0;
+
     for (int r = 1; r <= N; ++r) {
         latest_arr[P[r]] = L_time[r];
         earliest_dep[P[r]] = E[r] + S[r];
-        earliest_dep[D[r]] = E[r] + 2LL * S[r] + T(P[r], D[r]);
+        earliest_dep[D[r]] = E[r] + 2LL * S[r] + t_mat[P[r]][D[r]];
     }
     for (int j = 1; j <= M; ++j) {
         int r = N + j;
         latest_arr[P[r]] = L_time[r];
         earliest_dep[P[r]] = E[r] + S[r];
         latest_arr[D[r]] = Ld[r];
-        ll earliest_arr_d = max(Ed[r], E[r] + S[r] + T(P[r], D[r]));
+        long long earliest_arr_d = max((long long)Ed[r], (long long)E[r] + S[r] + t_mat[P[r]][D[r]]);
         earliest_dep[D[r]] = earliest_arr_d + S[r];
     }
     for (int u = 1; u <= V; ++u) {
         for (int v = 1; v <= V; ++v) {
-            can_edge[u][v] = (earliest_dep[u] + T(u, v) <= latest_arr[v]);
+            can_edge[u][v] = (earliest_dep[u] + t_mat[u][v] <= latest_arr[v]);
         }
     }
     for (int u = 1; u <= V; ++u) {
@@ -1065,122 +144,822 @@ static void read_input() {
         for (int v = 1; v <= V; ++v) if (v != D[r]) can_edge[P[r]][v] = false;
         for (int u = 1; u <= V; ++u) if (u != P[r]) can_edge[u][D[r]] = false;
     }
+}
 
-    // Allocate solution structures
-    rt.resize(K + 1);
-    best_routes.resize(K + 1);
-    veh_of.assign(R + 1, 0);
-    best_veh_of.assign(R + 1, 0);
-    rver.assign(K + 1, 0);
-    icache.assign((R + 1) * (K + 1), CacheEntry());
+void read_input() {
+    if (!(cin >> K >> N >> M)) { cerr << "ERROR: Failed to read input file!\n"; exit(1); }
+    V = 2 * N + 2 * M + K;
+    for (int k = 1; k <= K; ++k) cin >> O[k] >> Q[k];
+    
+    for (int i = 1; i <= N; ++i) {
+        int r = i; req_type[r] = 1;
+        cin >> P[r] >> D[r] >> E[r] >> L_time[r] >> S[r] >> Rev[r];
+    }
+    for (int j = 1; j <= M; ++j) {
+        int r = N + j; req_type[r] = 2;
+        cin >> P[r] >> D[r] >> W[r] >> E[r] >> L_time[r] >> Ed[r] >> Ld[r] >> S[r] >> Rev[r];
+    }
+    for (int i = 1; i <= V; ++i)
+        for (int j = 1; j <= V; ++j) cin >> t_mat[i][j];
+    for (int i = 1; i <= V; ++i)
+        for (int j = 1; j <= V; ++j) cin >> c_mat[i][j];
 
-    tabu_add.assign(V + 1, vector<int>(V + 1, 0));
-    has_edge.assign(V + 1, vector<bool>(V + 1, false));
+    for (int i = 1; i <= N + M; ++i) profitable[i] = true;
+    for (int i = 1; i <= N; ++i) {
+        if (Rev[i] - c_mat[P[i]][D[i]] < 0) profitable[i] = false;
+    }
+
+    init_edge_feasibility();
+}
+
+// ============================================================================
+// ROUTE EVALUATION & LOCAL SEARCH
+// ============================================================================
+static int picked_tag[MAX_REQ];
+static int dropped_tag[MAX_REQ];
+static int eval_token = 0;
+
+long long eval_single_route(int k, const vector<int>& rt) {
+    if (rt.empty()) return 0;
+    eval_token++;
+    if (eval_token >= 2000000000) {
+        eval_token = 1;
+        memset(picked_tag, 0, sizeof(picked_tag));
+        memset(dropped_tag, 0, sizeof(dropped_tag));
+    }
+
+    long long time_now = 0; int load = 0; int curr = O[k];
+    long long benefit = 0;
+
+    for (int task : rt) {
+        int r = abs(task);
+        int v_in = get_v_in(task);
+        int v_out = get_v_out(task);
+
+        time_now += t_mat[curr][v_in]; benefit -= c_mat[curr][v_in];
+        
+        if (task > 0) { // Passenger or Pickup
+            if (picked_tag[r] == eval_token) return -INF;
+            time_now = max(time_now, (long long)E[r]);
+            if (time_now > L_time[r]) return -INF;
+            picked_tag[r] = eval_token;
+            
+            if (r <= N) { // Passenger macro-node
+                time_now += S[r] + t_mat[P[r]][D[r]]; benefit -= c_mat[P[r]][D[r]];
+                time_now += S[r]; dropped_tag[r] = eval_token; benefit += Rev[r];
+            } else { // Parcel pickup
+                load += W[r];
+                if (load > Q[k]) return -INF;
+                time_now += S[r];
+            }
+        } else { // Parcel dropoff (-r)
+            if (picked_tag[r] != eval_token || dropped_tag[r] == eval_token) return -INF;
+            time_now = max(time_now, (long long)Ed[r]);
+            if (time_now > Ld[r]) return -INF;
+            load -= W[r];
+            dropped_tag[r] = eval_token; benefit += Rev[r];
+            time_now += S[r];
+        }
+        curr = v_out;
+    }
+    return benefit;
+}
+
+void optimize_route(int k, vector<int>& rt) {
+    if (rt.empty()) return;
+    bool improved = true;
+    long long best_b = eval_single_route(k, rt);
+
+    static vector<int> opt_best_rt;
+    static vector<int> opt_reqs;
+    static vector<int> opt_temp;
+    static vector<int> opt_cand;
+
+    while (improved) {
+        improved = false;
+        opt_best_rt = rt;
+        opt_reqs.clear();
+        for (int t : rt) {
+            int r = abs(t);
+            if (find(opt_reqs.begin(), opt_reqs.end(), r) == opt_reqs.end()) opt_reqs.push_back(r);
+        }
+        
+        for (int r : opt_reqs) {
+            opt_temp.clear();
+            for (int t : rt) if (abs(t) != r) opt_temp.push_back(t);
+            int m = opt_temp.size();
+            
+            if (r <= N) { // Passenger
+                for (int pos = 0; pos <= m; ++pos) {
+                    int u = (pos == 0) ? O[k] : get_v_out(opt_temp[pos - 1]);
+                    if (!can_edge[u][P[r]]) continue;
+                    if (pos < m && !can_edge[D[r]][get_v_in(opt_temp[pos])]) continue;
+
+                    opt_cand.clear();
+                    opt_cand.reserve(m + 1);
+                    for (int i = 0; i < pos; ++i) opt_cand.push_back(opt_temp[i]);
+                    opt_cand.push_back(r);
+                    for (int i = pos; i < m; ++i) opt_cand.push_back(opt_temp[i]);
+
+                    long long b = eval_single_route(k, opt_cand);
+                    if (b > best_b) { best_b = b; opt_best_rt = opt_cand; improved = true; }
+                }
+            } else { // Parcel
+                for (int p1 = 0; p1 <= m; ++p1) {
+                    int u1 = (p1 == 0) ? O[k] : get_v_out(opt_temp[p1 - 1]);
+                    if (!can_edge[u1][P[r]]) continue;
+
+                    for (int p2 = p1 + 1; p2 <= m + 1; ++p2) {
+                        opt_cand.clear();
+                        opt_cand.reserve(m + 2);
+                        for (int i = 0; i < p1; ++i) opt_cand.push_back(opt_temp[i]);
+                        opt_cand.push_back(r);
+                        for (int i = p1; i < p2 - 1; ++i) opt_cand.push_back(opt_temp[i]);
+                        opt_cand.push_back(-r);
+                        for (int i = p2 - 1; i < m; ++i) opt_cand.push_back(opt_temp[i]);
+
+                        long long b = eval_single_route(k, opt_cand);
+                        if (b > best_b) { best_b = b; opt_best_rt = opt_cand; improved = true; }
+                    }
+                }
+            }
+        }
+        rt = opt_best_rt;
+    }
+}
+
+long long best_insert(int k, const vector<int>& rt, int r, vector<int>& out_rt) {
+    long long best_b = -INF;
+    static vector<int> bi_best_rt;
+    static vector<int> bi_cand;
+    bi_best_rt.clear();
+    int n = rt.size();
+
+    if (r <= N) { // Passenger
+        for (int pos = 0; pos <= n; ++pos) {
+            int u = (pos == 0) ? O[k] : get_v_out(rt[pos - 1]);
+            if (!can_edge[u][P[r]]) continue;
+            if (pos < n && !can_edge[D[r]][get_v_in(rt[pos])]) continue;
+
+            bi_cand.clear();
+            bi_cand.reserve(n + 1);
+            for (int i = 0; i < pos; ++i) bi_cand.push_back(rt[i]);
+            bi_cand.push_back(r);
+            for (int i = pos; i < n; ++i) bi_cand.push_back(rt[i]);
+
+            long long b = eval_single_route(k, bi_cand);
+            if (b > best_b) { best_b = b; bi_best_rt = bi_cand; }
+        }
+    } else { // Parcel
+        for (int p1 = 0; p1 <= n; ++p1) {
+            int u1 = (p1 == 0) ? O[k] : get_v_out(rt[p1 - 1]);
+            if (!can_edge[u1][P[r]]) continue;
+
+            for (int p2 = p1 + 1; p2 <= n + 1; ++p2) {
+                bi_cand.clear();
+                bi_cand.reserve(n + 2);
+                for (int i = 0; i < p1; ++i) bi_cand.push_back(rt[i]);
+                bi_cand.push_back(r);
+                for (int i = p1; i < p2 - 1; ++i) bi_cand.push_back(rt[i]);
+                bi_cand.push_back(-r);
+                for (int i = p2 - 1; i < n; ++i) bi_cand.push_back(rt[i]);
+
+                long long b = eval_single_route(k, bi_cand);
+                if (b > best_b) { best_b = b; bi_best_rt = bi_cand; }
+            }
+        }
+    }
+    if (best_b != -INF) {
+        optimize_route(k, bi_best_rt);
+        best_b = eval_single_route(k, bi_best_rt);
+        out_rt = bi_best_rt;
+    }
+    return best_b;
+}
+
+// ============================================================================
+// TABU SEARCH ENGINE
+// ============================================================================
+struct SolutionState {
+    long long obj = 0;
+    vector<int> veh_assignment; // size N + M + 1
+    vector<vector<int>> routes;  // size K + 1
+    vector<int> edges;           // sorted unique encoded physical edges (u * MAXV + v)
+};
+
+vector<SolutionState> elite_pool;
+
+void extract_solution_edges(SolutionState& sol) {
+    sol.edges.clear();
+    for (int k = 1; k <= K; ++k) {
+        if (sol.routes[k].empty()) continue;
+        int curr = O[k];
+        for (int t : sol.routes[k]) {
+            if (t > 0 && t <= N) {
+                sol.edges.push_back(curr * MAXV + P[t]);
+                sol.edges.push_back(P[t] * MAXV + D[t]);
+                curr = D[t];
+            } else if (t > 0) {
+                sol.edges.push_back(curr * MAXV + P[t]);
+                curr = P[t];
+            } else {
+                sol.edges.push_back(curr * MAXV + D[-t]);
+                curr = D[-t];
+            }
+        }
+    }
+    sort(sol.edges.begin(), sol.edges.end());
+    sol.edges.erase(unique(sol.edges.begin(), sol.edges.end()), sol.edges.end());
+}
+
+int calc_edge_dist(const SolutionState& a, const SolutionState& b) {
+    int i = 0, j = 0, diff = 0;
+    int sa = a.edges.size(), sb = b.edges.size();
+    while (i < sa && j < sb) {
+        if (a.edges[i] == b.edges[j]) {
+            i++; j++;
+        } else if (a.edges[i] < b.edges[j]) {
+            diff++; i++;
+        } else {
+            diff++; j++;
+        }
+    }
+    diff += (sa - i) + (sb - j);
+    return diff;
+}
+
+void log_elite_pool_telemetry(const string& event_desc) {
+    cerr << "  -> [ELITE POOL TELEMETRY] " << event_desc << "\n";
+    cerr << "     +-----+-------------------+---------+---------+------+------+-------+\n";
+    cerr << "     | Idx |   Fitness (Obj)   | MinDist | AvgDist | Rfit | Rdiv | Score |\n";
+    cerr << "     +-----+-------------------+---------+---------+------+------+-------+\n";
+    int P = elite_pool.size();
+    if (P == 0) {
+        cerr << "     | (Pool is empty)                                                 |\n";
+        cerr << "     +-----+-------------------+---------+---------+------+------+-------+\n";
+        return;
+    }
+
+    vector<int> min_d(P, 1e9);
+    vector<double> avg_d(P, 0.0);
+    for (int i = 0; i < P; ++i) {
+        int sum_d = 0;
+        for (int j = 0; j < P; ++j) {
+            if (i == j) continue;
+            int d = calc_edge_dist(elite_pool[i], elite_pool[j]);
+            min_d[i] = min(min_d[i], d);
+            sum_d += d;
+        }
+        if (P > 1) avg_d[i] = (double)sum_d / (P - 1);
+        else min_d[i] = 0;
+    }
+
+    vector<int> fit_order(P);
+    iota(fit_order.begin(), fit_order.end(), 0);
+    sort(fit_order.begin(), fit_order.end(), [&](int a, int b) {
+        return elite_pool[a].obj > elite_pool[b].obj;
+    });
+    vector<int> r_fit(P);
+    for (int r = 0; r < P; ++r) r_fit[fit_order[r]] = r + 1;
+
+    vector<int> div_order(P);
+    iota(div_order.begin(), div_order.end(), 0);
+    sort(div_order.begin(), div_order.end(), [&](int a, int b) {
+        return min_d[a] > min_d[b];
+    });
+    vector<int> r_div(P);
+    for (int r = 0; r < P; ++r) r_div[div_order[r]] = r + 1;
+
+    double lambda = 1.0 - (double)ELITE_PROTECTED_COUNT / (double)P;
+    long long sum_obj = 0;
+    double sum_min_d = 0;
+    for (int i = 0; i < P; ++i) {
+        sum_obj += elite_pool[i].obj;
+        sum_min_d += min_d[i];
+        double score = (double)r_fit[i] + lambda * (double)r_div[i];
+        cerr << "     | #" << setw(2) << i << " | " 
+             << setw(17) << elite_pool[i].obj << " | "
+             << setw(7) << min_d[i] << " | "
+             << setw(7) << fixed << setprecision(1) << avg_d[i] << " | "
+             << setw(4) << r_fit[i] << " | "
+             << setw(4) << r_div[i] << " | "
+             << setw(5) << fixed << setprecision(2) << score << " |\n";
+    }
+    cerr << "     +-----+-------------------+---------+---------+------+------+-------+\n";
+    cerr << "     * Summary: " << P << "/" << ELITE_POOL_SIZE 
+         << " Solutions | Avg Fitness: " << (sum_obj / P) 
+         << " | Avg Diversity (MinDist): " << fixed << setprecision(1) << (sum_min_d / P) << "\n";
+}
+
+bool update_elite_pool(SolutionState cand, int iter, int epoch_idx, int epoch_iter) {
+    if (cand.obj <= 0) return false;
+    // Reject any candidate below ratio of global best to prevent premature solutions
+    if (global_best_obj > 0 && cand.obj < global_best_obj * ELITE_QUALIFICATION_RATIO) return false;
+    if (cand.edges.empty()) extract_solution_edges(cand);
+
+    if (elite_pool.empty()) {
+        elite_pool.push_back(cand);
+        //log_elite_pool_telemetry("Initialized Elite #0 (Obj=" + to_string(cand.obj) + ")");
+        return true;
+    }
+
+    // Check if candidate is an identical clone (dist == 0) of an existing member
+    for (int i = 0; i < (int)elite_pool.size(); ++i) {
+        int d = calc_edge_dist(cand, elite_pool[i]);
+        if (d == 0) {
+            if (cand.obj > elite_pool[i].obj) {
+                elite_pool[i] = cand;
+                //log_elite_pool_telemetry("Refined Clone Elite #" + to_string(i) + " to Obj=" + to_string(cand.obj));
+                return true;
+            }
+            return false; // Identical structure, equal or worse obj
+        }
+    }
+
+    if ((int)elite_pool.size() < ELITE_POOL_SIZE) {
+        elite_pool.push_back(cand);
+        //log_elite_pool_telemetry("Added Diverse Elite #" + to_string(elite_pool.size() - 1) + " (Obj=" + to_string(cand.obj) + ")");
+        return true;
+    }
+
+    // Pool is FULL: Apply Bi-criterion Biased Fitness Ranking with Elitism Protection
+    // Pool has ELITE_POOL_SIZE solutions, plus cand = T solutions
+    static vector<SolutionState> all_sols;
+    all_sols = elite_pool;
+    all_sols.push_back(cand);
+    int T = all_sols.size();
+
+    // 1. Fitness Rank R_fit: Rank by Obj descending (1 is best, T is worst)
+    static vector<int> fit_order;
+    fit_order.resize(T);
+    iota(fit_order.begin(), fit_order.end(), 0);
+    sort(fit_order.begin(), fit_order.end(), [&](int a, int b) {
+        return all_sols[a].obj > all_sols[b].obj;
+    });
+    static vector<int> r_fit;
+    r_fit.resize(T);
+    for (int rank = 0; rank < T; ++rank) {
+        r_fit[fit_order[rank]] = rank + 1;
+    }
+
+    // 2. Diversity Score: min edge distance to any other solution in all_sols
+    static vector<int> min_d;
+    min_d.assign(T, 1e9);
+    for (int i = 0; i < T; ++i) {
+        for (int j = 0; j < T; ++j) {
+            if (i == j) continue;
+            int d = calc_edge_dist(all_sols[i], all_sols[j]);
+            min_d[i] = min(min_d[i], d);
+        }
+    }
+
+    // Diversity Rank R_div: Rank by min_d descending (1 is most isolated/diverse, T is most crowded)
+    static vector<int> div_order;
+    div_order.resize(T);
+    iota(div_order.begin(), div_order.end(), 0);
+    sort(div_order.begin(), div_order.end(), [&](int a, int b) {
+        return min_d[a] > min_d[b];
+    });
+    static vector<int> r_div;
+    r_div.resize(T);
+    for (int rank = 0; rank < T; ++rank) {
+        r_div[div_order[rank]] = rank + 1;
+    }
+
+    // 3. Biased Rank with Elitism Protection (Vidal et al.):
+    // Score = R_fit + (1.0 - ELITE_PROTECTED_COUNT / T) * R_div
+    // Solutions with R_fit <= ELITE_PROTECTED_COUNT are immune from eviction.
+    double lambda = 1.0 - (double)ELITE_PROTECTED_COUNT / (double)T;
+    int evict_idx = -1;
+    double worst_score = -1e9;
+    int worst_r_fit = -1;
+    for (int i = 0; i < T; ++i) {
+        if (r_fit[i] <= ELITE_PROTECTED_COUNT) {
+            // Protected elite: immune from diversity eviction
+            continue;
+        }
+        double score = (double)r_fit[i] + lambda * (double)r_div[i];
+        if (score > worst_score || (score == worst_score && r_fit[i] > worst_r_fit)) {
+            worst_score = score;
+            worst_r_fit = r_fit[i];
+            evict_idx = i;
+        }
+    }
+
+    if (evict_idx == -1) {
+        evict_idx = fit_order.back(); // Safety fallback to worst fitness
+    }
+
+    // If the candidate itself is the worst, reject it
+    if (evict_idx == T - 1) {
+        cerr << "  -> [ELITE POOL] Candidate rejected by Biased Fitness (Score=" << fixed << setprecision(2) << worst_score 
+             << " [Rfit=" << r_fit[T - 1] << ", Rdiv=" << r_div[T - 1] << ", MinDist=" << min_d[T - 1] << "])\n";
+        return false;
+    }
+
+    // Replace the evicted member in elite_pool
+    elite_pool[evict_idx] = cand;
+    //log_elite_pool_telemetry("Evicted Elite #" + to_string(evict_idx) + " and Admitted New Elite (Obj=" + to_string(cand.obj) + ")");
+    return true;
+}
+
+struct Move {
+    long long delta = -INF;
+    int k1 = -1, k2 = -1;
+    vector<int> rt1, rt2;
+    int r_in = 0, r_out = 0;
+    int type = 0;
+};
+
+void run_tabu_search() {
+    memset(has_edge, false, sizeof(has_edge));
+    memset(tabu_add, 0, sizeof(tabu_add));
+    memset(veh_of, 0, sizeof(veh_of));
+    for (int k = 1; k <= K; ++k) route_obj[k] = 0;
+    cur_total_obj = 0; global_best_obj = 0;
+    
+    elite_pool.clear();
+    int epoch_idx = 1;
+    int epoch_iter = 0;
+    long long epoch_best_obj = 0;
+    int epoch_stagnant_iters = 0;
+    SolutionState epoch_best_state;
+
+    auto apply_edges = [&](int k, const vector<int>& rt, bool add, int iter) {
+        int curr = O[k];
+        for (int v : get_physical_route(rt)) {
+            has_edge[curr][v] = add;
+            tabu_add[curr][v] = iter + TABU_TENURE_BASE + rng() % TABU_TENURE_RAND;
+            curr = v;
+        }
+    };
+
+    static vector<int> op_rt1, op_rt2, op_cand1, op_cand2;
+    static vector<int> op_dummy;
+
+    for (int iter = 1; iter <= MAX_ITER; ++iter) {
+        epoch_iter++;
+        Move best_move;
+        int valid_neighbors = 0, tabu_hits = 0, tabu_overrides = 0;
+
+        auto test_candidate = [&](int type, int k1, const vector<int>& rt1, long long b1, 
+                                  int k2, const vector<int>& rt2, long long b2, 
+                                  int r_in, int r_out) {
+            if (b1 == -INF || (k2 != -1 && b2 == -INF)) return;
+            valid_neighbors++;
+
+            long long delta = (b1 - route_obj[k1]);
+            if (k2 != -1) delta += (b2 - route_obj[k2]);
+
+            bool is_tabu = false; int new_edges = 0;
+            auto check_route_edges = [&](int k, const vector<int>& rt) {
+                int curr = O[k];
+                for (int v : get_physical_route(rt)) {
+                    if (!has_edge[curr][v]) {
+                        new_edges++;
+                        if (tabu_add[curr][v] >= iter) is_tabu = true;
+                    }
+                    curr = v;
+                }
+            };
+            check_route_edges(k1, rt1);
+            if (k2 != -1) check_route_edges(k2, rt2);
+
+            if (type != 4 && new_edges == 0) return;
+
+            if (is_tabu) {
+                tabu_hits++;
+                if (cur_total_obj + delta > global_best_obj) tabu_overrides++;
+                else return; // Rejected by Tabu tenure
+            }
+
+            if (delta > best_move.delta || (delta == best_move.delta && (rng() & 1))) {
+                best_move = {delta, k1, k2, rt1, rt2, r_in, r_out, type};
+            }
+        };
+
+        // OPERATOR 1: INSERT (Unserved request into any vehicle)
+        for (int u = 1; u <= N + M; ++u) {
+            if (veh_of[u] != 0 || !profitable[u]) continue;
+            for (int k = 1; k <= K; ++k) {
+                long long b = best_insert(k, routes[k], u, op_cand1);
+                test_candidate(1, k, op_cand1, b, -1, op_dummy, 0, u, 0);
+            }
+        }
+
+        // OPERATOR 2: RELOCATE (Move request from k1 to k2)
+        for (int r = 1; r <= N + M; ++r) {
+            if (veh_of[r] == 0) continue;
+            int k1 = veh_of[r];
+            op_rt1.clear();
+            for (int t : routes[k1]) if (abs(t) != r) op_rt1.push_back(t);
+            long long b1 = eval_single_route(k1, op_rt1);
+
+            for (int k2 = 1; k2 <= K; ++k2) {
+                if (k2 == k1) continue;
+                long long b2 = best_insert(k2, routes[k2], r, op_cand2);
+                test_candidate(2, k1, op_rt1, b1, k2, op_cand2, b2, r, r);
+            }
+        }
+
+        // OPERATOR 3: SWAP ON SAME VEHICLE (Replace served r with unserved u)
+        for (int r = 1; r <= N + M; ++r) {
+            if (veh_of[r] == 0) continue;
+            int k = veh_of[r];
+            op_rt1.clear();
+            for (int t : routes[k]) if (abs(t) != r) op_rt1.push_back(t);
+
+            for (int u = 1; u <= N + M; ++u) {
+                if (veh_of[u] != 0 || !profitable[u]) continue;
+                long long b = best_insert(k, op_rt1, u, op_cand1);
+                test_candidate(3, k, op_cand1, b, -1, op_dummy, 0, u, r);
+            }
+        }
+
+        // OPERATOR 4: DROP (Remove served request to unserved pool)
+        for (int r = 1; r <= N + M; ++r) {
+            if (veh_of[r] == 0) continue;
+            int k = veh_of[r];
+            op_rt1.clear();
+            for (int t : routes[k]) if (abs(t) != r) op_rt1.push_back(t);
+            long long b = eval_single_route(k, op_rt1);
+            test_candidate(4, k, op_rt1, b, -1, op_dummy, 0, 0, r);
+        }
+
+        // OPERATOR 5: INTER-ROUTE SWAP (Cross swap r1 on k1 with r2 on k2)
+        for (int r1 = 1; r1 <= N + M; ++r1) {
+            if (veh_of[r1] == 0) continue;
+            int k1 = veh_of[r1];
+            for (int r2 = r1 + 1; r2 <= N + M; ++r2) {
+                if (veh_of[r2] == 0) continue;
+                int k2 = veh_of[r2];
+                if (k1 == k2) continue;
+
+                op_rt1.clear();
+                for (int t : routes[k1]) if (abs(t) != r1) op_rt1.push_back(t);
+                long long b1 = best_insert(k1, op_rt1, r2, op_cand1);
+                if (b1 == -INF) continue;
+
+                op_rt2.clear();
+                for (int t : routes[k2]) if (abs(t) != r2) op_rt2.push_back(t);
+                long long b2 = best_insert(k2, op_rt2, r1, op_cand2);
+                if (b2 == -INF) continue;
+
+                test_candidate(5, k1, op_cand1, b1, k2, op_cand2, b2, r2, r1);
+            }
+        }
+
+        // APPLY BEST MOVE
+        cerr << "[Iter " << iter << "] Valid Neighbors: " << valid_neighbors 
+             << " | Tabu Hits: " << tabu_hits << " (Overrides: " << tabu_overrides << ")\n";
+
+        if (best_move.delta != -INF) {
+            apply_edges(best_move.k1, routes[best_move.k1], false, iter);
+            apply_edges(best_move.k1, best_move.rt1, true, iter);
+            routes[best_move.k1] = best_move.rt1;
+            route_obj[best_move.k1] = eval_single_route(best_move.k1, routes[best_move.k1]);
+
+            if (best_move.k2 != -1) {
+                apply_edges(best_move.k2, routes[best_move.k2], false, iter);
+                apply_edges(best_move.k2, best_move.rt2, true, iter);
+                routes[best_move.k2] = best_move.rt2;
+                route_obj[best_move.k2] = eval_single_route(best_move.k2, routes[best_move.k2]);
+            }
+
+            if (best_move.type == 1) {
+                veh_of[best_move.r_in] = best_move.k1;
+            } else if (best_move.type == 2) {
+                veh_of[best_move.r_in] = best_move.k2;
+            } else if (best_move.type == 3) {
+                veh_of[best_move.r_out] = 0;
+                veh_of[best_move.r_in] = best_move.k1;
+            } else if (best_move.type == 4) {
+                veh_of[best_move.r_out] = 0;
+            } else if (best_move.type == 5) {
+                veh_of[best_move.r_in] = best_move.k1;
+                veh_of[best_move.r_out] = best_move.k2;
+            }
+
+            cur_total_obj += best_move.delta;
+            cerr << "  -> Best Neighbor Obj: " << cur_total_obj << " (Delta: " << best_move.delta << ")\n";
+
+            if (cur_total_obj > epoch_best_obj) {
+                epoch_best_obj = cur_total_obj;
+                epoch_stagnant_iters = 0;
+                epoch_best_state.obj = cur_total_obj;
+                epoch_best_state.veh_assignment.assign(veh_of, veh_of + N + M + 1);
+                epoch_best_state.routes.resize(K + 1);
+                for (int k = 1; k <= K; ++k) epoch_best_state.routes[k] = routes[k];
+                epoch_best_state.edges.clear();
+            } else {
+                epoch_stagnant_iters++;
+            }
+
+            if (cur_total_obj > global_best_obj) {
+                global_best_obj = cur_total_obj;
+                for (int k = 1; k <= K; ++k) best_routes[k] = routes[k];
+                cerr << "  -> *** NEW GLOBAL BEST FOUND! ***\n";
+                cout << "  -> [Iter " << setw(5) << iter 
+                     << " | Epoch " << setw(2) << epoch_idx 
+                     << " @" << setw(3) << epoch_iter 
+                     << "] NEW GLOBAL BEST: " << global_best_obj << "\n" << flush;
+            }
+        } else {
+            epoch_stagnant_iters++;
+            cerr << "  -> No valid neighbor found.\n";
+        }
+        cerr << "  -> Epoch Status: Epoch #" << epoch_idx << " (Iter " << epoch_iter 
+             << ") | Peak In Epoch: " << epoch_best_obj 
+             << " | Stagnant: " << epoch_stagnant_iters << "/" << STAGNANT_LIMIT 
+             << " | Elite Pool: " << elite_pool.size() << "/" << ELITE_POOL_SIZE << "\n";
+        cerr << "  -> Global Best Obj: " << global_best_obj << "\n";
+
+        // RUIN MECHANISM (Triggered on epoch stagnation)
+        if (epoch_stagnant_iters >= STAGNANT_LIMIT) {
+            long long prev_epoch_peak = epoch_best_obj;
+            int strat = (epoch_idx - 1) % RUIN_MODES_COUNT;
+            const char* mode_names[] = {"SPATIAL_COST", "TRAVEL_TIME", "TIME_WINDOW", "VEHICLE_DISMANTLE"};
+            cerr << "  -> [RUIN ACTIVATED] Epoch #" << epoch_idx << " exhausted after " 
+                 << epoch_iter << " iters (Peak: " << prev_epoch_peak << " | Mode " << strat << ": " << mode_names[strat] << ")\n";
+
+            // Submit this epoch's best state to Elite Pool before ruin
+            if (epoch_best_state.obj > 0) {
+                if (epoch_best_state.edges.empty()) extract_solution_edges(epoch_best_state);
+                update_elite_pool(epoch_best_state, iter, epoch_idx, epoch_iter);
+            }
+
+            // 1. Backtrack to an Elite solution from pool
+            int elite_sel = -1;
+            if (!elite_pool.empty()) {
+                int best_elite_idx = 0;
+                for (int i = 1; i < (int)elite_pool.size(); ++i) {
+                    if (elite_pool[i].obj > elite_pool[best_elite_idx].obj) best_elite_idx = i;
+                }
+
+                if (elite_pool.size() > 1 && (rng() % 100 >= INTENSIFICATION_PROB)) {
+                    static vector<int> other_indices;
+                    other_indices.clear();
+                    for (int i = 0; i < (int)elite_pool.size(); ++i) {
+                        if (i != best_elite_idx) other_indices.push_back(i);
+                    }
+                    elite_sel = other_indices[rng() % other_indices.size()];
+                    cerr << "  -> [ELITE BACKTRACK] [DIVERSIFY " << (100 - INTENSIFICATION_PROB) << "%] Picked Diverse Elite #" << elite_sel 
+                         << " (Obj: " << elite_pool[elite_sel].obj << ") as seed for Ruin\n";
+                } else {
+                    elite_sel = best_elite_idx;
+                    cerr << "  -> [ELITE BACKTRACK] [INTENSIFY " << INTENSIFICATION_PROB << "%] Picked Best Elite #" << elite_sel 
+                         << " (Obj: " << elite_pool[elite_sel].obj << ") as seed for Ruin\n";
+                }
+
+                for (int k = 1; k <= K; ++k) apply_edges(k, routes[k], false, iter);
+                for (int r = 1; r <= N + M; ++r) veh_of[r] = elite_pool[elite_sel].veh_assignment[r];
+                for (int k = 1; k <= K; ++k) {
+                    routes[k] = elite_pool[elite_sel].routes[k];
+                    apply_edges(k, routes[k], true, iter);
+                    route_obj[k] = eval_single_route(k, routes[k]);
+                }
+                cur_total_obj = elite_pool[elite_sel].obj;
+            }
+
+            static vector<int> served;
+            served.clear();
+            for (int r = 1; r <= N + M; ++r) if (veh_of[r] != 0) served.push_back(r);
+
+            if (!served.empty()) {
+                if (strat == 3) { // Mode 3: Vehicle Dismantle
+                    static vector<int> busy;
+                    busy.clear();
+                    for (int k = 1; k <= K; ++k) if (!routes[k].empty()) busy.push_back(k);
+                    if (!busy.empty()) {
+                        int k_tgt = busy[rng() % busy.size()];
+                        cerr << "  -> [RUIN MODE 3: VEHICLE DISMANTLE] Clearing vehicle #" << k_tgt << ": ";
+                        apply_edges(k_tgt, routes[k_tgt], false, iter);
+                        for (int t : routes[k_tgt]) { veh_of[abs(t)] = 0; cerr << abs(t) << " "; }
+                        routes[k_tgt].clear();
+                        route_obj[k_tgt] = 0;
+                        cerr << "\n";
+                    }
+                } else { // Modes 0, 1, 2: Correlated by seed
+                    int r_seed = served[rng() % served.size()];
+                    auto metric = [&](int u) -> long long {
+                        if (strat == 0) return c_mat[P[r_seed]][P[u]];
+                        if (strat == 1) return t_mat[P[r_seed]][P[u]];
+                        return abs(E[r_seed] - E[u]);
+                    };
+                    sort(served.begin(), served.end(), [&](int a, int b) { return metric(a) < metric(b); });
+
+                    int num_to_ruin = min((int)served.size(), RUIN_SIZE);
+                    cerr << "  -> [RUIN MODE " << strat << ": " << mode_names[strat] 
+                         << "] Ejecting near req " << r_seed << ": ";
+                    for (int step = 0; step < num_to_ruin; ++step) {
+                        int pick_idx = rng() % min((int)served.size(), RUIN_TOP_CANDIDATE_POOL);
+                        int r = served[pick_idx];
+                        served.erase(served.begin() + pick_idx);
+
+                        int k = veh_of[r];
+                        if (k != 0) {
+                            apply_edges(k, routes[k], false, iter);
+                            routes[k] = remove_req(routes[k], r);
+                            apply_edges(k, routes[k], true, iter);
+                            route_obj[k] = eval_single_route(k, routes[k]);
+                            veh_of[r] = 0;
+                            cerr << r << " ";
+                        }
+                    }
+                    cerr << "\n";
+                }
+
+                cur_total_obj = 0;
+                for (int k = 1; k <= K; ++k) cur_total_obj += route_obj[k];
+                cerr << "  -> Total Obj after Ruin: " << cur_total_obj << "\n";
+            }
+
+            // Start New Epoch
+            epoch_idx++;
+            epoch_iter = 0;
+            epoch_best_obj = cur_total_obj;
+            epoch_best_state.obj = cur_total_obj;
+            epoch_best_state.veh_assignment.assign(veh_of, veh_of + N + M + 1);
+            epoch_best_state.routes.resize(K + 1);
+            for (int k = 1; k <= K; ++k) epoch_best_state.routes[k] = routes[k];
+            epoch_best_state.edges.clear();
+            epoch_stagnant_iters = 0;
+            cerr << "  -> [EPOCH " << epoch_idx << " STARTED] Initial Obj: " << cur_total_obj << "\n";
+            cout << "  -> [Iter " << setw(5) << iter << "] Epoch " << epoch_idx - 1 
+                 << " Peak: " << prev_epoch_peak 
+                 << " -> Epoch " << epoch_idx << " Started (Ruin Mode " << strat << ": " << mode_names[strat] 
+                 << ", Seed Elite #" << elite_sel << ")\n" << flush;
+        }
+    }
 }
 
 // ============================================================================
 // MAIN ENTRY POINT
 // ============================================================================
 int main(int argc, char** argv) {
-    ios_base::sync_with_stdio(false);
-    cin.tie(NULL);
+    ios_base::sync_with_stdio(false); cin.tie(NULL);
 
-    string test_filepath = "";
-    vector<string> pos_args;
-    for (int a = 1; a < argc; ++a) {
-        string arg = argv[a];
-        if (arg == "--time" && a + 1 < argc) {
-            TIME_LIMIT_SEC = atof(argv[++a]);
-        } else if (arg == "--seed" && a + 1 < argc) {
-            rng_s = strtoull(argv[++a], NULL, 10);
-        } else {
-            pos_args.push_back(arg);
-        }
+    string test_filepath = "input.txt";
+    if (argc > 1) {
+        test_filepath = argv[1];
+        if (!freopen(argv[1], "r", stdin)) { cerr << "ERROR: Failed to open input file!\n"; return 1; }
+    } else {
+        if (!freopen("input.txt", "r", stdin)) { cerr << "ERROR: Failed to open input file!\n"; return 1; }
     }
-
-    for (const auto& arg : pos_args) {
-        if (fs::exists(arg)) {
-            test_filepath = arg;
-        }
+    if (argc > 2) {
+        MAX_ITER = atoi(argv[2]);
     }
-    int num_cnt = 0;
-    for (const auto& arg : pos_args) {
-        if (arg != test_filepath) {
-            num_cnt++;
-            if (num_cnt == 1) {
-                TIME_LIMIT_SEC = atof(arg.c_str());
-            } else if (num_cnt == 2) {
-                rng_s = strtoull(arg.c_str(), NULL, 10);
-            }
-        }
+    if (argc > 3) {
+        rng.seed(atoi(argv[3]));
     }
 
-    if (!test_filepath.empty()) {
-        if (!freopen(test_filepath.c_str(), "r", stdin)) {
-            cerr << "ERROR: Failed to open input file: " << test_filepath << "\n";
-            return 1;
-        }
-    }
+
+    // 1. Resolve testcase name, program name, and timestamp
+    string test_name = fs::path(test_filepath).stem().string();
+    string cpp_name = fs::path(__FILE__).stem().string();
+    string timestamp = get_current_timestamp();
+
+    // 2. Create subfolder inside output/
+    string folder_name = test_name + "_" + cpp_name + "_" + timestamp;
+    fs::path out_dir = fs::path("output") / folder_name;
+    fs::create_directories(out_dir);
+
+    // 3. Define output paths inheriting folder name format
+    string res_file_path = (out_dir / (folder_name + "_ket_qua.txt")).string();
+    string log_file_path = (out_dir / (folder_name + "_log.txt")).string();
+
+    cout << "======================================================================\n";
+    cout << "  STARTING TABU SEARCH SOLVER\n";
+    cout << "  * Testcase       : " << test_name << " (" << test_filepath << ")\n";
+    cout << "  * Source (.cpp)  : " << cpp_name << ".cpp\n";
+    cout << "  * Max Iterations : " << MAX_ITER << "\n";
+    cout << "  * Output Dir     : " << out_dir.string() << "\n";
+    cout << "  * Result File    : " << res_file_path << "\n";
+    cout << "  * Log File       : " << log_file_path << "\n";
+    cout << "======================================================================\n" << flush;
+
+    // 4. Redirect cerr to log file
+    ofstream log_file(log_file_path);
+    streambuf* old_cerr_buf = cerr.rdbuf(log_file.rdbuf());
+    cerr << unitbuf;
 
     read_input();
+    run_tabu_search();
 
-    // Setup output directories
-    string timestamp = get_current_timestamp();
-    string test_name = fs::path(test_filepath).stem().string();
-    fs::path run_dir = fs::path("experiments") / "tabu_prototype" / "output" / ("run_" + timestamp);
-    fs::create_directories(run_dir);
+    // 5. Save best solution
+    save_solution(res_file_path);
 
-    string res_path = (run_dir / "result.txt").string();
-    string log_path = (run_dir / "log.txt").string();
-    string rpt_path = (run_dir / "report.txt").string();
-
-    ofstream log_file(log_path);
-
-    // Run Tabu Search
-    run_tabu_search(log_file, TIME_LIMIT_SEC);
-
+    // 6. Restore cerr and finish
+    cerr.rdbuf(old_cerr_buf);
     log_file.close();
 
-    // 1. Output Standard Format to result.txt
-    ofstream res_file(res_path);
-    res_file << global_best_obj << "\n";
-    for (int k = 1; k <= K; ++k) {
-        vector<int> phys = get_physical_route(best_routes[k]);
-        res_file << phys.size();
-        for (int v : phys) res_file << " " << v;
-        res_file << "\n";
-    }
-    res_file.close();
-
-    // 2. Output Standard Format to stdout (for direct validator piping)
-    cout << global_best_obj << "\n";
-    for (int k = 1; k <= K; ++k) {
-        vector<int> phys = get_physical_route(best_routes[k]);
-        cout << phys.size();
-        for (int v : phys) cout << " " << v;
-        cout << "\n";
-    }
-    cout << flush;
-
-    // 3. Write summary report.txt
-    ofstream rpt_file(rpt_path);
-    rpt_file << "======================================================================\n";
-    rpt_file << "  TABU SEARCH WITH LNS & BACKWARD SLACK: RUN REPORT\n";
-    rpt_file << "======================================================================\n";
-    rpt_file << "Testcase              : " << test_name << "\n";
-    rpt_file << "Time Budget (seconds) : " << TIME_LIMIT_SEC << "\n";
-    rpt_file << "Global Best Objective : " << global_best_obj << "\n";
-    rpt_file << "Vehicles (K)          : " << K << "\n";
-    rpt_file << "Passengers (N)        : " << N << "\n";
-    rpt_file << "Parcels (M)           : " << M << "\n";
-    int served_cnt = 0;
-    for (int r = 1; r <= R; ++r) if (best_veh_of[r] != 0) served_cnt++;
-    rpt_file << "Served Requests       : " << served_cnt << "/" << R << " (" 
-             << fixed << setprecision(1) << (100.0 * served_cnt / R) << "%)\n";
-    rpt_file << "Result File           : " << res_path << "\n";
-    rpt_file << "Log File              : " << log_path << "\n";
-    rpt_file << "======================================================================\n";
-    rpt_file.close();
+    cout << "======================================================================\n";
+    cout << "  SEARCH COMPLETED SUCCESSFULLY!\n";
+    cout << "  * Global Best Objective : " << global_best_obj << "\n";
+    cout << "  * Solution saved to     : " << res_file_path << "\n";
+    cout << "  * Execution log saved to: " << log_file_path << "\n";
+    cout << "======================================================================\n" << flush;
 
     return 0;
 }
+

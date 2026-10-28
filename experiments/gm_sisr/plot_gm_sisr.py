@@ -81,6 +81,10 @@ def parse_and_visualize(run_dir, testcase_file=None):
     
     sub_step = max(1, len(df) // 3000)
     df_sample = df.iloc[::sub_step]
+    if 'status' in df.columns:
+        specials = df[df['status'].isin(['IMPROVE_GLOBAL', 'RESTORE_BEST'])]
+        if not specials.empty:
+            df_sample = pd.concat([df_sample, specials]).drop_duplicates(subset=['iter']).sort_values('iter')
     
     ax1.plot(df_sample['elapsed_s'], df_sample['cur_obj'], color='#bdc3c7', alpha=0.60, linewidth=0.8, label='Trạng thái tức thời (Current Obj)')
     if has_thermo_cols:

@@ -11,9 +11,9 @@ static double TIME_LIMIT_SEC = 2.0;      // Wall-clock search budget (seconds)
 
 // --- CHẾ ĐỘ NHIỆT RĂNG CƯA BẢO VỆ ĐỘ CHÍN (MATURITY-GUARDED SAWTOOTH) ---
 static int          N_WAVES       = 5;      // Số chu kỳ sóng nhiệt răng cưa trong toàn bộ thời gian chạy
-static const double T_PEAK        = 38.0;   // Đỉnh nhiệt nung chảy cấu trúc đầu mỗi sóng
+static double       T_PEAK        = 38.0;   // Đỉnh nhiệt nung chảy cấu trúc đầu mỗi sóng
 static const double T_MIN         = 0.80;   // Sàn nhiệt kết tinh sâu vắt kiệt kỷ lục
-static const double RHO_COOL      = 0.70;   // Tỷ lệ dốc làm lạnh (70% thời gian sóng làm lạnh, 30% ngâm đáy kết tinh)
+static double       RHO_COOL      = 0.70;   // Tỷ lệ dốc làm lạnh (mặc định 70% thời gian sóng làm lạnh, 30% ngâm đáy kết tinh)
 static int          M_QUENCH      = 6000;   // Số bước bế tắc tại đáy lạnh để công nhận "đủ chín"
 
 // --- CÁC THAM SỐ TOÁN TỬ SISR ---
@@ -473,6 +473,8 @@ int main(int argc, char** argv) {
     if (argc > 6) CAND_NB = atoi(argv[6]);
     if (argc > 7) N_WAVES = atoi(argv[7]);
     if (argc > 8) M_QUENCH = atoi(argv[8]);
+    if (argc > 9) RHO_COOL = atof(argv[9]);
+    if (argc > 10) T_PEAK = atof(argv[10]);
 
     read_all();
     K = rd(); N = rd(); M = rd();
@@ -629,7 +631,18 @@ int main(int argc, char** argv) {
         }
 
         if (need_load_best) {
-            if (cur_obj < best_obj) restore_best();
+            if (cur_obj < best_obj) {
+                restore_best();
+                if (flog.is_open()) {
+                    flog << it << "," << fixed << setprecision(4) << elapsed << ","
+                         << cur_cycle << "," << setprecision(2) << temp << ","
+                         << 1 << "," << 0 << "," << 0 << ","
+                         << cur_obj << "," << best_obj << ",RESTORE_BEST,"
+                         << setprecision(1) << thermo.b_sat << ","
+                         << setprecision(4) << thermo.last_r_worse << ","
+                         << thermo.last_r_imp << "," << thermo.last_r_neutral << "\n";
+                }
+            }
             need_load_best = false;
         }
 

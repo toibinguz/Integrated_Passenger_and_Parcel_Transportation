@@ -9,19 +9,20 @@ namespace fs = std::filesystem;
 // ============================================================================
 static double TIME_LIMIT_SEC = 2.0;      // Wall-clock search budget (seconds)
 
-// --- CHẾ ĐỘ NHIỆT RĂNG CƯA TỐI GIẢN (MINIMAL STATIC SAWTOOTH SCHEDULE) ---
-static const int    N_WAVES       = 7;      // Số chu kỳ sóng nhiệt răng cưa trong toàn bộ thời gian chạy
+// --- CHẾ ĐỘ NHIỆT RĂNG CƯA BẢO VỆ ĐỘ CHÍN (MATURITY-GUARDED SAWTOOTH) ---
+static int          N_WAVES       = 5;      // Số chu kỳ sóng nhiệt răng cưa trong toàn bộ thời gian chạy
 static const double T_PEAK        = 38.0;   // Đỉnh nhiệt nung chảy cấu trúc đầu mỗi sóng
 static const double T_MIN         = 0.80;   // Sàn nhiệt kết tinh sâu vắt kiệt kỷ lục
-static const double RHO_COOL      = 0.7;   // Tỷ lệ dốc làm lạnh (85% thời gian sóng làm lạnh, 15% ngâm đáy kết tinh)
+static const double RHO_COOL      = 0.70;   // Tỷ lệ dốc làm lạnh (70% thời gian sóng làm lạnh, 30% ngâm đáy kết tinh)
+static int          M_QUENCH      = 6000;   // Số bước bế tắc tại đáy lạnh để công nhận "đủ chín"
 
 // --- CÁC THAM SỐ TOÁN TỬ SISR ---
 static const int NB_SIZE = 60;           // Normalized spatio-temporal neighbor list size
 static const double C_AVG = 10.0;        // SISR: average removed requests
 static const int L_MAX = 10;             // SISR: maximum string length
-static const int CAND_NB = 3;            // Unserved neighbors offered to recreate
-static const int CAND_RAND = 6;          // Random unserved requests offered to recreate
-static const unsigned BLINK_MASK = 63;   // Christiaens blink probability (1/64)
+static int CAND_NB = 3;                  // Unserved neighbors offered to recreate
+static int CAND_RAND = 10;               // Random unserved requests offered to recreate (Sweet Spot)
+static unsigned BLINK_MASK = 31;         // Christiaens blink probability (1/32)
 static const ll INFLL = (ll)4e18;
 
 // ============================================================================
@@ -339,56 +340,99 @@ static void restore_best() {
 }
 
 // ============================================================================
-// MINIMAL TIME-DRIVEN STATIC SAWTOOTH THERMOSTAT (TDSS)
+// MATURITY-GUARDED STATIC SAWTOOTH THERMOSTAT (MG-SST)
 // ============================================================================
-struct MinimalSawtoothThermostat {
+struct MaturitySawtoothThermostat {
     int cur_wave = 0;
-    int last_wave = 0;
     int total_reheats = 0;
     int total_restores = 0;
     double b_sat = 0.0;
     double cur_temp = T_PEAK;
+
+    // Tiến độ sóng thích ứng
+    double wave_start_tau = 0.0;
+    double nominal_end_tau = 0.0;
+    bool in_freezing = false;
+    long long stag_cold_steps = 0;
 
     // Biến thống kê thụ động phục vụ vẽ đồ thị 3 tầng (KHÔNG can thiệp điều khiển)
     double last_r_worse = 0.0, last_r_imp = 0.0, last_r_neutral = 0.0;
     long long win_iters = 0, win_worse_tries = 0, win_worse_acc = 0, win_imp = 0, win_neu = 0;
 
     void init(ll init_obj) {
-        cur_wave = last_wave = total_reheats = total_restores = 0;
+        cur_wave = total_reheats = total_restores = 0;
         b_sat = (double)init_obj;
         cur_temp = T_PEAK;
+        wave_start_tau = 0.0;
+        nominal_end_tau = 1.0 / (double)N_WAVES;
+        in_freezing = false;
+        stag_cold_steps = 0;
         win_iters = win_worse_tries = win_worse_acc = win_imp = win_neu = 0;
         last_r_worse = last_r_imp = last_r_neutral = 0.0;
     }
 
     // Cập nhật nhiệt độ định kỳ theo tiến độ thời gian (mỗi 32 bước lặp theo nhịp đo đồng hồ)
     pair<double, bool> update(double tau) {
-        double g = tau * (double)N_WAVES;
-        int wave = (int)g;
-        double p = g - (double)wave;
+        if (tau >= 1.0) tau = 1.0;
+
+        double wave_dur = max(0.001, nominal_end_tau - wave_start_tau);
+        double p = (tau - wave_start_tau) / wave_dur;
 
         bool need_restore = false;
-        if (wave > last_wave) {
-            last_wave = wave;
-            ++total_reheats;
-            need_restore = true;
-            ++total_restores;
-        }
-        cur_wave = wave;
 
+        // Nếu đã chạm hoặc vượt thời điểm kết thúc danh định của sóng
+        if (tau >= nominal_end_tau && cur_wave < N_WAVES - 1) {
+            // Kiểm tra tiêu chuẩn ĐỦ CHÍN:
+            // 1. Phải đang ở vùng đóng băng (in_freezing)
+            // 2. stag_cold_steps >= M_QUENCH (đã bế tắc tại đáy lạnh, không còn bước cải thiện)
+            // 3. Hoặc chạm trần an toàn thời gian gia hạn (tối đa 40% thời lượng sóng)
+            double grace = (tau - nominal_end_tau);
+            double max_grace = 0.40 * wave_dur;
+            bool is_mature = in_freezing && (stag_cold_steps >= M_QUENCH);
+            bool is_timeout = (grace >= max_grace);
+
+            if (is_mature || is_timeout) {
+                // Đủ chín hoặc hết hạn ân hạn -> Kích hoạt Reheat sang sóng tiếp theo
+                ++cur_wave;
+                ++total_reheats;
+                need_restore = true;
+                ++total_restores;
+                wave_start_tau = tau;
+                nominal_end_tau = wave_start_tau + (1.0 - wave_start_tau) / (double)(N_WAVES - cur_wave);
+                cur_temp = T_PEAK;
+                in_freezing = false;
+                stag_cold_steps = 0;
+                return { cur_temp, need_restore };
+            }
+        }
+
+        // Tính nhiệt độ sóng hiện tại
         if (p < RHO_COOL) {
             cur_temp = T_PEAK * pow(T_MIN / T_PEAK, p / RHO_COOL);
+            in_freezing = false;
         } else {
             cur_temp = T_MIN;
+            in_freezing = true; // ĐÃ VÀO VÙNG ĐÓNG BĂNG!
         }
 
         return { cur_temp, need_restore };
     }
 
-    // Ghi nhận thống kê thụ động mỗi bước đi (O(1) cực nhẹ, không tính toán nhiệt độ)
+    // Ghi nhận thống kê mỗi bước đi (O(1))
     void observe(ll delta, bool accepted, ll cur_o) {
         if ((double)cur_o > b_sat) b_sat = (double)cur_o;
         ++win_iters;
+
+        // CHỈ THEO DÕI BẾ TẮC KHI ĐÃ VÀO VÙNG ĐÓNG BĂNG (in_freezing == true)!
+        if (in_freezing) {
+            if (delta > 0) {
+                // Có bước cải thiện (cục bộ hoặc kỷ lục) -> Reset bế tắc! Nghiệm đang tiếp tục leo đồi!
+                stag_cold_steps = 0;
+            } else {
+                ++stag_cold_steps;
+            }
+        }
+
         if (delta > 0) ++win_imp;
         else if (delta == 0) ++win_neu;
         else {
@@ -424,6 +468,11 @@ int main(int argc, char** argv) {
         if (rng_s == 0) rng_s = 0x9E3779B97F4A7C15ull;
         for (int w = 0; w < 16; ++w) rng();
     }
+    if (argc > 4) CAND_RAND = atoi(argv[4]);
+    if (argc > 5) BLINK_MASK = (unsigned)atoi(argv[5]);
+    if (argc > 6) CAND_NB = atoi(argv[6]);
+    if (argc > 7) N_WAVES = atoi(argv[7]);
+    if (argc > 8) M_QUENCH = atoi(argv[8]);
 
     read_all();
     K = rd(); N = rd(); M = rd();
@@ -552,12 +601,12 @@ int main(int argc, char** argv) {
     save_best();
     ll initial_greedy_obj = cur_obj;
 
-    // 4. Minimal Static Sawtooth Thermostat Initialization
+    // 4. Maturity-Guarded Sawtooth Thermostat Initialization
     double elapsed = chrono::duration<double>(chrono::steady_clock::now() - t_start).count();
     const double search_start = elapsed;
     const double budget = max(0.001, TIME_LIMIT_SEC - search_start);
 
-    MinimalSawtoothThermostat thermo;
+    MaturitySawtoothThermostat thermo;
     thermo.init(cur_obj);
 
     double temp = thermo.cur_temp;

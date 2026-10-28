@@ -157,6 +157,32 @@ Mỗi lần thực thi một nguyên mẫu thuật toán:
    - Mỗi thư mục nguyên mẫu `experiments/<prototype_name>/` **bắt buộc phải có file script trực quan hóa riêng**: `plot_<prototype_name>.py`.
    - Script này nhận đường dẫn thư mục phiên chạy `run_.../`, đọc `log.txt` / `metrics.csv` và tự động kết xuất toàn bộ biểu đồ vào thư mục con `plots/`.
 
+### 3.4. Nghiêm cấm Tuyệt đối Lưu Trữ trong Thư mục Hệ thống / Brain (Workspace Direct Visibility Mandate)
+1. **Quyền truy cập trực tiếp của người dùng là tối thượng**:
+   - Mọi kết quả thử nghiệm, log, báo cáo, và đồ thị hình ảnh **BẮT BUỘC phải được lưu trữ trực tiếp trong Workspace dự án** tại thư mục nguyên mẫu tương ứng:
+     `experiments/<prototype_name>/output/run_YYYYMMDD_HHMMSS/`
+   - **TUYỆT ĐỐI NGHIÊM CẤM** việc lưu trữ hoặc chỉ trỏ người dùng vào thư mục ẩn của hệ thống/AI (`.gemini/antigravity/brain/...`). Người dùng hoàn toàn không thể xem hoặc đọc dữ liệu trong thư mục này, và hành vi này bị coi là vi phạm nghiêm trọng quy chuẩn vận hành dự án.
+
+### 3.5. Quy Chuẩn Đầy Đủ 100% Cả 7 Testcase Benchmark (No Missing Benchmark Runs Policy)
+1. **Không bỏ sót bất kỳ benchmark nào**:
+   - Khi tiến hành đánh giá benchmark cho một nguyên mẫu (dù là 2.5s hay 5-10s), **BẮT BUỘC phải chạy đầy đủ 100% cả 7 testcase chuẩn**:
+     1. `bench_01_tight_assignment.txt`
+     2. `bench_02_loose_sequencing.txt`
+     3. `bench_03_clustered_basins.txt`
+     4. `bench_04_capacity_bottleneck.txt`
+     5. `bench_05_asymmetric_random.txt`
+     6. `bench_06_asymmetric_metric.txt`
+     7. `bench_07_dense_scale_500.txt`
+2. **Tự động sinh đủ Bộ Tứ (The Essential 4) cho từng testcase**:
+   - Mỗi testcase chạy xong **phải lập tức có thư mục phiên chạy riêng** chứa đầy đủ:
+     - `result.txt` (nghiệm chuẩn)
+     - `log.txt` (tiến trình chi tiết)
+     - `report.txt` (chỉ số KPIs)
+     - `plots/convergence.png` (đồ thị hội tụ)
+   - Mọi script benchmark (`run_...benchmark.py`) bắt buộc phải tự động gọi `plot_<prototype>.py` ngay sau khi solver C++ kết thúc để đảm bảo thư mục không bao giờ thiếu plot. Không cho phép có bất kỳ thư mục run nào tồn tại mà thiếu `plots/convergence.png`.
+3. **Đồng nhất đường dẫn, cấm phân mảnh thư mục**:
+   - Mỗi nguyên mẫu chỉ có DUY NHẤT một thư mục hoạt động chuẩn xác trong `experiments/`. Mã nguồn C++, script chạy và script plot phải đồng bộ 100% đường dẫn ghi ra thư mục `output/` của chính nó, không được tạo song song hai thư mục trùng lặp gây thất lạc dữ liệu kiểm thử.
+
 ---
 
 ## 4. NGUYÊN TẮC KỸ THUẬT NỀN TẢNG (FOUNDATIONAL PERFORMANCE RULES)

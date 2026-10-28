@@ -5,9 +5,17 @@ typedef long long ll;
 namespace fs = std::filesystem;
 
 // ============================================================================
-// PARAMETERS & HYPERPARAMETERS (CLEAN BASELINE SISR-SA + CLOSED-LOOP THERMOSTAT)
+// PARAMETERS & HYPERPARAMETERS
 // ============================================================================
 static double TIME_LIMIT_SEC = 2.0;      // Wall-clock search budget (seconds)
+
+// --- CHẾ ĐỘ NHIỆT RĂNG CƯA TỐI GIẢN (MINIMAL STATIC SAWTOOTH SCHEDULE) ---
+static const int    N_WAVES       = 7;      // Số chu kỳ sóng nhiệt răng cưa trong toàn bộ thời gian chạy
+static const double T_PEAK        = 38.0;   // Đỉnh nhiệt nung chảy cấu trúc đầu mỗi sóng
+static const double T_MIN         = 0.80;   // Sàn nhiệt kết tinh sâu vắt kiệt kỷ lục
+static const double RHO_COOL      = 0.7;   // Tỷ lệ dốc làm lạnh (85% thời gian sóng làm lạnh, 15% ngâm đáy kết tinh)
+
+// --- CÁC THAM SỐ TOÁN TỬ SISR ---
 static const int NB_SIZE = 60;           // Normalized spatio-temporal neighbor list size
 static const double C_AVG = 10.0;        // SISR: average removed requests
 static const int L_MAX = 10;             // SISR: maximum string length
@@ -331,53 +339,55 @@ static void restore_best() {
 }
 
 // ============================================================================
-// SAIRL ADAPTIVE REHEATING THERMOSTAT (Goh et al., 2019 + Azizi et al., 2004)
+// MINIMAL TIME-DRIVEN STATIC SAWTOOTH THERMOSTAT (TDSS)
 // ============================================================================
-struct SAIRLThermostat {
-    // 4 tham số kiểm soát trực tiếp, rõ nghĩa vật lý (hiệu chỉnh cho tốc độ ~40,000 iter/s)
-    double T_MAX      = 100.0;    // Trần nhiệt tối đa
-    double T_MIN      = 0.80;    // Sàn nhiệt hội tụ sâu
-    int    K_MAX      = 28000;   // Ngưỡng kiên nhẫn (~0.7s kẹt trước khi Reheat -> ~8-9 sóng / 10s)
-    double COOL_RATE  = 0.99985; // Hệ số làm lạnh hình học mỗi bước (rơi từ 30 -> 0.8 trong ~24,000 bước,
-                                 // sau đó ngâm phẳng ở 0.80 suốt ~8,000 bước còn lại trước khi chạm K_MAX!)
-
-    // Biến trạng thái nội bộ
-    double T            = 16.0; // Nhiệt độ hiện tại
-    double mean_delta   = 15.0; // Độ lệch chi phí trung bình của các bước xấu (tự học)
-    int    stag_iters   = 0;    // Bộ đếm bước lặp chưa cải thiện (stagnation_counter)
-    int    reheat_count = 0;    // Số lần gia nhiệt liên tiếp chưa phá được best_obj
-    long long n_worsen  = 0;
+struct MinimalSawtoothThermostat {
+    int cur_wave = 0;
+    int last_wave = 0;
+    int total_reheats = 0;
+    int total_restores = 0;
+    double b_sat = 0.0;
+    double cur_temp = T_PEAK;
 
     // Biến thống kê thụ động phục vụ vẽ đồ thị 3 tầng (KHÔNG can thiệp điều khiển)
-    int    wave_idx     = 0;
-    int    total_reheats = 0;
-    int    total_restores = 0;
-    double b_sat        = 0.0;
-    double last_r_worse = 0.0;
-    double last_r_imp   = 0.0;
-    double last_r_neutral = 0.0;
+    double last_r_worse = 0.0, last_r_imp = 0.0, last_r_neutral = 0.0;
     long long win_iters = 0, win_worse_tries = 0, win_worse_acc = 0, win_imp = 0, win_neu = 0;
 
-    void init(double scale_S, ll init_obj = 0) {
-        mean_delta   = clamp(0.06 * scale_S, 12.0, 25.0);
-        T            = max(14.0, 1.05 * mean_delta);
-        stag_iters   = 0;
-        reheat_count = 0;
-        n_worsen     = 0;
-        wave_idx     = 0;
-        total_reheats = 0;
-        total_restores = 0;
-        b_sat        = (double)init_obj;
-        last_r_worse = last_r_imp = last_r_neutral = 0.0;
+    void init(ll init_obj) {
+        cur_wave = last_wave = total_reheats = total_restores = 0;
+        b_sat = (double)init_obj;
+        cur_temp = T_PEAK;
         win_iters = win_worse_tries = win_worse_acc = win_imp = win_neu = 0;
+        last_r_worse = last_r_imp = last_r_neutral = 0.0;
     }
 
-    // Gọi ở mỗi vòng lặp SA. Trả về {Nhiệt_độ_T, Cờ_yêu_cầu_load_best}
-    pair<double, bool> step(ll cur_obj, ll best_obj, ll delta, ll r_delta, double tau, bool accepted = false) {
-        bool need_load_best = false;
+    // Cập nhật nhiệt độ định kỳ theo tiến độ thời gian (mỗi 32 bước lặp theo nhịp đo đồng hồ)
+    pair<double, bool> update(double tau) {
+        double g = tau * (double)N_WAVES;
+        int wave = (int)g;
+        double p = g - (double)wave;
 
-        // Thống kê thụ động cho đồ thị
-        if ((double)cur_obj > b_sat) b_sat = (double)cur_obj;
+        bool need_restore = false;
+        if (wave > last_wave) {
+            last_wave = wave;
+            ++total_reheats;
+            need_restore = true;
+            ++total_restores;
+        }
+        cur_wave = wave;
+
+        if (p < RHO_COOL) {
+            cur_temp = T_PEAK * pow(T_MIN / T_PEAK, p / RHO_COOL);
+        } else {
+            cur_temp = T_MIN;
+        }
+
+        return { cur_temp, need_restore };
+    }
+
+    // Ghi nhận thống kê thụ động mỗi bước đi (O(1) cực nhẹ, không tính toán nhiệt độ)
+    void observe(ll delta, bool accepted, ll cur_o) {
+        if ((double)cur_o > b_sat) b_sat = (double)cur_o;
         ++win_iters;
         if (delta > 0) ++win_imp;
         else if (delta == 0) ++win_neu;
@@ -391,48 +401,6 @@ struct SAIRLThermostat {
             last_r_neutral = (double)win_neu / (double)win_iters;
             win_iters = win_worse_tries = win_worse_acc = win_imp = win_neu = 0;
         }
-
-        // 1. Cập nhật độ lệch trung bình của các bước xấu cấu trúc (lọc bỏ bước rớt khách r_delta < 0)
-        if (delta < 0 && r_delta >= 0 && -delta <= 3.0 * mean_delta) {
-            ++n_worsen;
-            mean_delta += ((double)(-delta) - mean_delta) / min(n_worsen, 500LL);
-        }
-
-        // 2. Theo dõi trạng thái phá kỷ lục và độ kẹt (Stagnation)
-        if (cur_obj >= best_obj && delta > 0) {
-            // Vừa phá kỷ lục toàn cục -> Lùi nhẹ bộ đếm kẹt (* 0.9) và reset cường độ gia nhiệt!
-            stag_iters   = (int)(stag_iters * 0.9);
-            reheat_count = 0;
-        } else {
-            ++stag_iters;
-        }
-
-        // 3. Làm lạnh hình học chuẩn (99% thời gian chạy)
-        T = max(T_MIN, T * COOL_RATE);
-
-        // 4. Kích hoạt Gia nhiệt Thích ứng (SAIRL Reheating) khi vượt ngưỡng kiên nhẫn K_MAX
-        //    (Ngắt gia nhiệt ở 12% thời gian cuối cùng để hội tụ tuyệt đối)
-        if (stag_iters >= K_MAX && tau < 0.88) {
-            ++reheat_count;
-            ++wave_idx;
-            ++total_reheats;
-            stag_iters = 0;
-
-            // Công thức kết hợp Goh et al. (tỷ lệ với mean_delta) & Azizi et al. (hàm ln(1 + r))
-            double reheat_peak = mean_delta * (3.20 + 0.80 * log(1.0 + reheat_count));
-            T = clamp(reheat_peak, T_MIN * 4.0, T_MAX * (1.0 - 0.25 * tau));
-
-            // Nếu trước khi gia nhiệt mà nghiệm đã trôi quá xa kỷ lục -> Neo lại về Best!
-            if (best_obj - cur_obj > (ll)(12.0 * mean_delta)) {
-                need_load_best = true;
-                ++total_restores;
-                b_sat = (double)best_obj;
-            } else {
-                b_sat = (double)cur_obj;
-            }
-        }
-
-        return { T, need_load_best };
     }
 };
 
@@ -584,30 +552,35 @@ int main(int argc, char** argv) {
     save_best();
     ll initial_greedy_obj = cur_obj;
 
-    // 4. SAIRL Adaptive Reheating Thermostat Initialization
+    // 4. Minimal Static Sawtooth Thermostat Initialization
     double elapsed = chrono::duration<double>(chrono::steady_clock::now() - t_start).count();
     const double search_start = elapsed;
     const double budget = max(0.001, TIME_LIMIT_SEC - search_start);
 
-    SAIRLThermostat thermo;
-    thermo.init(S_scale, cur_obj);
+    MinimalSawtoothThermostat thermo;
+    thermo.init(cur_obj);
 
-    double temp = thermo.T;
+    double temp = thermo.cur_temp;
     bool need_load_best = false;
     int cur_cycle = 0;
     long long total_iters = 0, accepted_count = 0, improved_count = 0, local_improve_count = 0;
     long long worsening_tries = 0, worsening_accepts = 0, neutral_count = 0;
 
-    // 5. Main Search Loop (Pure Christiaens & Berghe SISR + SAIRL Reheating SA)
+    // 5. Main Search Loop (Pure Christiaens & Berghe SISR + Minimal Sawtooth SA)
     for (long long it = 0;; ++it) {
         total_iters = it;
         if ((it & 31) == 0) {
             elapsed = chrono::duration<double>(chrono::steady_clock::now() - t_start).count();
             if (elapsed >= TIME_LIMIT_SEC) break;
+            double tau = (elapsed - search_start) / budget;
+            auto [next_T, load_best] = thermo.update(tau);
+            temp = next_T;
+            if (load_best) need_load_best = true;
+            cur_cycle = thermo.cur_wave;
         }
 
         if (need_load_best) {
-            restore_best();
+            if (cur_obj < best_obj) restore_best();
             need_load_best = false;
         }
 
@@ -667,12 +640,8 @@ int main(int argc, char** argv) {
             for (int i = (int)veh_log.size() - 1; i >= 0; --i) veh[veh_log[i].first] = veh_log[i].second;
         }
 
-        // Feed real-time observation into SAIRL Thermostat
-        double tau = clamp((elapsed - search_start) / budget, 0.0, 1.0);
-        auto [next_T, load_best] = thermo.step(cur_obj, best_obj, delta, rev_delta, tau, (status != "REJECT"));
-        temp = next_T;
-        need_load_best = load_best;
-        cur_cycle = thermo.wave_idx;
+        // Real-time passive observation for logging / plotting
+        thermo.observe(delta, (status != "REJECT"), cur_obj);
 
         if (flog.is_open() && ((it & 127) == 0 || status == "IMPROVE_GLOBAL")) {
             flog << it << "," << fixed << setprecision(4) << elapsed << ","
@@ -737,8 +706,9 @@ int main(int argc, char** argv) {
                     << "  * True Worsening Accept: " << worsening_accepts << " / " << worsening_tries << " (" << fixed << setprecision(2) << (100.0 * worsening_accepts / max(1LL, worsening_tries)) << "%)\n"
                     << "  * Local Improvements   : " << local_improve_count << "\n"
                     << "  * Global Records       : " << improved_count << "\n"
-                    << "  * Learned Scale mu_d   : " << fixed << setprecision(2) << thermo.mean_delta << " (Samples=" << thermo.n_worsen << ", Reheats=" << thermo.total_reheats << ", Restores=" << thermo.total_restores << ")\n"
-                    << "  * Final B_sat & Temp   : B_sat=" << setprecision(1) << thermo.b_sat << " | Final T=" << setprecision(2) << thermo.T << "\n\n"
+                    << "  * Thermal Schedule     : N_WAVES=" << N_WAVES << ", T_PEAK=" << T_PEAK << ", T_MIN=" << T_MIN << ", RHO_COOL=" << RHO_COOL << "\n"
+                    << "  * Reheats / Restores   : " << thermo.total_reheats << " / " << thermo.total_restores << "\n"
+                    << "  * Final B_sat & Temp   : B_sat=" << setprecision(1) << thermo.b_sat << " | Final T=" << setprecision(2) << temp << "\n\n"
                     << "--- OPERATOR TELEMETRY ---\n"
                     << "  * Mode 1 (String Ruin) : Calls=" << total_iters << " | Improves=" << local_improve_count << " | Records=" << improved_count << "\n"
                     << "  * Sort Records (0/1/2) : " << sort_records[0] << " / " << sort_records[1] << " / 0\n"

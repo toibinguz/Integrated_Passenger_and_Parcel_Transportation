@@ -1,0 +1,5 @@
+Giữ khung răng cưa vòng hở (không phản hồi). Chỉ sửa đúng chỗ yếu duy nhất của nó: thang nhiệt đang tính bằng giá trị tuyệt đối.
+
+Chuẩn hóa thang nhiệt bằng một lần hiệu chuẩn lúc khởi động. Chạy một mẫu ngắn các bước ruin/recreate từ nghiệm ban đầu và ghi lại phân phối các Δ xấu. Từ đó suy ra T_PEAK và T_MIN theo xác suất chấp nhận mục tiêu. Ví dụ: ở đỉnh sóng, một bước xấu điển hình được nhận khoảng 50%; ở đáy, khoảng 1%. Sau đó cố định luôn, không học lại trong lúc chạy. → Tham số điều khiển trở thành xác suất không thứ nguyên, dùng chung được cho mọi instance. Hành vi vẫn tiền định, vẫn kiểm chứng được.
+Lập giao thức đánh giá trước, tinh chỉnh sau. Bộ chuẩn cố định: 16 testcase × ≥5 seed, đo bằng % cải thiện so với nghiệm tham lam ban đầu, báo cáo trung vị và độ phân tán. Mọi thay đổi chỉ được nhận khi vượt độ dao động giữa các seed.
+Chỉ sau đó mới quét N_WAVES và RHO_COOL trên bộ chuẩn này (quét lưới thô là đủ), chứ không tinh chỉnh tay trên test_850.

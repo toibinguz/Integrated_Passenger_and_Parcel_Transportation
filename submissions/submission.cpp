@@ -1,664 +1,999 @@
+#pragma GCC optimize("O3,unroll-loops")
 #include <bits/stdc++.h>
-#include <chrono>
 using namespace std;
+typedef long long ll;
 
 // ============================================================================
-// HYPERPARAMETERS & ALGORITHMIC CONTROL KNOBS
+// 1. GLOBAL PARAMETERS & HYPERPARAMETERS (ONLINE JUDGE SPECIFICATION)
 // ============================================================================
-// 1. Search Iterations & Time Budget
-int MAX_ITER = 30000;                     // Total maximum iterations for Tabu Search
-double TIME_LIMIT_SEC = 250.0;              // Time limit guard for Online Judge (seconds)
+static double TIME_LIMIT_SEC = 69.8;              // Total search budget (seconds, safe for 70s limit)
+static double TIME_LIMIT_PHASE1 = 10.0;           // Phase 1 exact budget (seconds)
+static long long MAX_ITERS = 0;                  // Phase 2 deterministic iteration budget (0 = wall-clock)
 
-// 2. Tabu Tenure Configuration
-int TABU_TENURE_BASE = 8;                 // Base Tabu tenure for (vehicle, request)
-int TABU_TENURE_RAND = 8;                 // Random tenure amplitude [0, TABU_TENURE_RAND)
+// --- PHASE 1 HYPERPARAMETERS (DFS Column Enumeration + Set Packing) ---
+static const long long ENUM_STATE_CAP = 500000000;// State cap for DFS
+static const size_t ENUM_COL_CAP = 20000000;      // Unique column memory cap
+static const int LAGR_MAX_IT = 2000;              // Lagrangian subgradient max iterations
+static const ll LAGR_WORK = 200000000;            // Max subgradient work
+static const double ENUM_TIME_FRAC = 0.65;        // Max fraction of Phase 1 time for DFS (up to 6.5s in 10s budget)
+static double SP_STALL_SEC = 3.5;                 // Stagnation threshold for Set Packing SA
 
-// 3. Epoch & Stagnation Parameters
-int STAGNANT_LIMIT = 50;                  // Iterations without improvement in current epoch to trigger Ruin
-
-// 4. Ruin Operators Configuration
-int RUIN_SIZE = 6;                        // Number of requests ejected per Ruin step
-int RUIN_MODES_COUNT = 4;                 // Number of Ruin strategies (0: Spatial, 1: Time, 2: Window, 3: Dismantle)
-int RUIN_TOP_CANDIDATE_POOL = 4;          // Window size for stochastic selection among sorted correlated requests
-
-// 5. Elite Pool Configuration (Quality & Diversity Management)
-const int ELITE_POOL_SIZE = 4;            // Maximum capacity of the Elite Pool
-double ELITE_QUALIFICATION_RATIO = 0.80;  // Minimum objective ratio vs Global Best to enter pool (80%)
-int INTENSIFICATION_PROB = 60;            // Probability (%) to seed Ruin from Best Elite (vs Diverse Elite)
-
-// ============================================================================
-// DATA STRUCTURES & PROBLEM CONSTANTS
-// ============================================================================
-const long long INF = 1e18;
-const int MAXV = 1050;
-const int MAX_REQ = 1050;
-
-int K, N, M, V;
-int O[MAXV], Q[MAXV];
-int req_type[MAX_REQ], P[MAX_REQ], D[MAX_REQ], W[MAX_REQ];
-int E[MAX_REQ], L_time[MAX_REQ], Ed[MAX_REQ], Ld[MAX_REQ];
-int S[MAX_REQ], Rev[MAX_REQ];
-int t_mat[MAXV][MAXV], c_mat[MAXV][MAXV];
-
-// Edge Feasibility Lookup
-bool can_edge[MAXV][MAXV];
-
-// Solution State
-vector<int> routes[MAXV];           // Task list: r (Passenger/Pickup), -r (Dropoff)
-int veh_of[MAX_REQ];                // Vehicle serving req r (0 if unserved)
-long long route_obj[MAXV];          // Current profit per vehicle
-long long cur_total_obj = 0;
-
-vector<int> best_routes[MAXV];
-long long global_best_obj = -INF;
-
-bool profitable[MAX_REQ];           // Filter negative-profit requests
-int tabu_veh_req[MAXV][MAX_REQ];    // Tabu expiration matrix for (vehicle k, request r)
+// --- PHASE 2 HYPERPARAMETERS (Champion Guided Multi-Basin SISR-SA) ---
+static const int NB_SIZE = 60;                    // Normalized spatio-temporal neighbor list size
+static const double C_AVG = 10.0;                 // SISR: average removed requests
+static const int L_MAX = 10;                      // SISR: maximum string length
+static int CAND_NB = 3;                           // Unserved neighbors offered to recreate
+static int CAND_RAND = 10;                        // Random unserved requests offered to recreate
+static unsigned BLINK_MASK = 31;                  // Christiaens blink probability (1/32)
+static const ll INFLL = (ll)4e18;
 
 // ============================================================================
-// HELPER FUNCTIONS
+// 2. FAST INPUT READER & ULTRA-FAST RNG (Xorshift64)
 // ============================================================================
-inline int get_v_in(int task) { return (task > 0) ? P[abs(task)] : D[abs(task)]; }
-inline int get_v_out(int task) { return (task > 0 && abs(task) <= N) ? D[abs(task)] : get_v_in(task); }
-
-vector<int> get_physical_route(const vector<int>& rt) {
-    vector<int> phys;
-    for (int t : rt) {
-        if (t > 0 && t <= N) { phys.push_back(P[t]); phys.push_back(D[t]); }
-        else if (t > 0) phys.push_back(P[t]);
-        else phys.push_back(D[-t]);
-    }
-    return phys;
-}
-
-vector<int> remove_req(const vector<int>& rt, int r) {
-    vector<int> res;
-    for (int t : rt) if (abs(t) != r) res.push_back(t);
-    return res;
-}
-
-// ============================================================================
-// INITIALIZATION & INPUT
-// ============================================================================
-void init_edge_feasibility() {
-    vector<long long> earliest_dep(V + 1, 0);
-    vector<long long> latest_arr(V + 1, INF);
-    for (int k = 1; k <= K; ++k) earliest_dep[O[k]] = 0;
-
-    for (int r = 1; r <= N; ++r) {
-        latest_arr[P[r]] = L_time[r];
-        earliest_dep[P[r]] = E[r] + S[r];
-        earliest_dep[D[r]] = E[r] + 2LL * S[r] + t_mat[P[r]][D[r]];
-    }
-    for (int j = 1; j <= M; ++j) {
-        int r = N + j;
-        latest_arr[P[r]] = L_time[r];
-        earliest_dep[P[r]] = E[r] + S[r];
-        latest_arr[D[r]] = Ld[r];
-        long long earliest_arr_d = max((long long)Ed[r], (long long)E[r] + S[r] + t_mat[P[r]][D[r]]);
-        earliest_dep[D[r]] = earliest_arr_d + S[r];
-    }
-    for (int u = 1; u <= V; ++u) {
-        for (int v = 1; v <= V; ++v) {
-            can_edge[u][v] = (earliest_dep[u] + t_mat[u][v] <= latest_arr[v]);
-        }
-    }
-    for (int u = 1; u <= V; ++u) {
-        for (int k = 1; k <= K; ++k) can_edge[u][O[k]] = false;
-    }
-    for (int r = 1; r <= N; ++r) {
-        for (int v = 1; v <= V; ++v) if (v != D[r]) can_edge[P[r]][v] = false;
-        for (int u = 1; u <= V; ++u) if (u != P[r]) can_edge[u][D[r]] = false;
+static char* ibuf; 
+static size_t ilen, ipos;
+static void read_all() {
+    size_t cap = 1 << 22; ibuf = (char*)malloc(cap); ilen = 0;
+    for (;;) {
+        if (ilen == cap) { cap <<= 1; ibuf = (char*)realloc(ibuf, cap); }
+        size_t r = fread(ibuf + ilen, 1, cap - ilen, stdin);
+        if (r == 0) break;
+        ilen += r;
     }
 }
-
-void read_input() {
-    if (!(cin >> K >> N >> M)) return;
-    V = 2 * N + 2 * M + K;
-    for (int k = 1; k <= K; ++k) cin >> O[k] >> Q[k];
-    
-    for (int i = 1; i <= N; ++i) {
-        int r = i; req_type[r] = 1;
-        cin >> P[r] >> D[r] >> E[r] >> L_time[r] >> S[r] >> Rev[r];
+static inline bool read_int(ll& out) {
+    while (ipos < ilen) {
+        char ch = ibuf[ipos];
+        if (ch == '#') { while (ipos < ilen && ibuf[ipos] != '\n') ++ipos; }
+        else if (ch == '-' || (ch >= '0' && ch <= '9')) break;
+        else ++ipos;
     }
-    for (int j = 1; j <= M; ++j) {
-        int r = N + j; req_type[r] = 2;
-        cin >> P[r] >> D[r] >> W[r] >> E[r] >> L_time[r] >> Ed[r] >> Ld[r] >> S[r] >> Rev[r];
-    }
-    for (int i = 1; i <= V; ++i)
-        for (int j = 1; j <= V; ++j) cin >> t_mat[i][j];
-    for (int i = 1; i <= V; ++i)
-        for (int j = 1; j <= V; ++j) cin >> c_mat[i][j];
-
-    for (int i = 1; i <= N + M; ++i) profitable[i] = true;
-    for (int i = 1; i <= N; ++i) {
-        if (Rev[i] - c_mat[P[i]][D[i]] < 0) profitable[i] = false;
-    }
-
-    init_edge_feasibility();
+    if (ipos >= ilen) return false;
+    bool neg = (ibuf[ipos] == '-');
+    if (neg) ++ipos;
+    ll v = 0;
+    while (ipos < ilen && ibuf[ipos] >= '0' && ibuf[ipos] <= '9') v = v * 10 + (ibuf[ipos++] - '0');
+    out = neg ? -v : v;
+    return true;
 }
+static inline int rd() { ll v = 0; read_int(v); return (int)v; }
+
+static uint64_t rng_s = 0x9E3779B97F4A7C15ull;
+static inline uint64_t rng() { rng_s ^= rng_s << 7; rng_s ^= rng_s >> 9; return rng_s; }
+static inline int rand_int(int lo, int hi) { return lo + (int)(rng() % (uint64_t)(hi - lo + 1)); }
+static inline double rand01() { return (rng() >> 11) * (1.0 / 9007199254740992.0); }
 
 // ============================================================================
-// ROUTE EVALUATION & LOCAL SEARCH
+// 3. PROBLEM DATA & TOPOLOGY
 // ============================================================================
-long long eval_single_route(int k, const vector<int>& rt) {
-    if (rt.empty()) return 0;
-    long long time_now = 0; int load = 0; int curr = O[k];
-    vector<bool> picked(N + M + 1, false), dropped(N + M + 1, false);
-    long long benefit = 0;
+static int K, N, M, V, R, SV;
+static vector<int> O, Q, Rev, Tm, Cm;
+static inline int T(int u, int v) { return Tm[u * SV + v]; }
+static inline int C(int u, int v) { return Cm[u * SV + v]; }
 
-    for (int task : rt) {
-        int r = abs(task);
-        int v_in = get_v_in(task);
-        int v_out = get_v_out(task);
-
-        time_now += t_mat[curr][v_in]; benefit -= c_mat[curr][v_in];
-        
-        if (task > 0) { // Passenger or Pickup
-            if (picked[r]) return -INF;
-            time_now = max(time_now, (long long)E[r]);
-            if (time_now > L_time[r]) return -INF;
-            picked[r] = true;
-            
-            if (r <= N) { // Passenger macro-node
-                time_now += S[r] + t_mat[P[r]][D[r]]; benefit -= c_mat[P[r]][D[r]];
-                time_now += S[r]; dropped[r] = true; benefit += Rev[r];
-            } else { // Parcel pickup
-                load += W[r];
-                if (load > Q[k]) return -INF;
-                time_now += S[r];
-            }
-        } else { // Parcel dropoff (-r)
-            if (!picked[r] || dropped[r]) return -INF;
-            time_now = max(time_now, (long long)Ed[r]);
-            if (time_now > Ld[r]) return -INF;
-            load -= W[r];
-            dropped[r] = true; benefit += Rev[r];
-            time_now += S[r];
-        }
-        curr = v_out;
-    }
-    return benefit;
-}
-
-void optimize_route(int k, vector<int>& rt) {
-    if (rt.empty()) return;
-    bool improved = true;
-    long long best_b = eval_single_route(k, rt);
-
-    while (improved) {
-        improved = false;
-        vector<int> best_rt = rt;
-        vector<int> reqs;
-        for (int t : rt) {
-            int r = abs(t);
-            if (find(reqs.begin(), reqs.end(), r) == reqs.end()) reqs.push_back(r);
-        }
-        
-        for (int r : reqs) {
-            vector<int> temp;
-            for (int t : rt) if (abs(t) != r) temp.push_back(t);
-            int m = temp.size();
-            
-            if (r <= N) { // Passenger
-                for (int pos = 0; pos <= m; ++pos) {
-                    int u = (pos == 0) ? O[k] : get_v_out(temp[pos - 1]);
-                    if (!can_edge[u][P[r]]) continue;
-                    if (pos < m && !can_edge[D[r]][get_v_in(temp[pos])]) continue;
-
-                    vector<int> cand = temp; cand.insert(cand.begin() + pos, r);
-                    long long b = eval_single_route(k, cand);
-                    if (b > best_b) { best_b = b; best_rt = cand; improved = true; }
-                }
-            } else { // Parcel
-                for (int p1 = 0; p1 <= m; ++p1) {
-                    int u1 = (p1 == 0) ? O[k] : get_v_out(temp[p1 - 1]);
-                    if (!can_edge[u1][P[r]]) continue;
-
-                    for (int p2 = p1 + 1; p2 <= m + 1; ++p2) {
-                        vector<int> cand = temp;
-                        cand.insert(cand.begin() + p1, r); cand.insert(cand.begin() + p2, -r);
-                        long long b = eval_single_route(k, cand);
-                        if (b > best_b) { best_b = b; best_rt = cand; improved = true; }
-                    }
-                }
-            }
-        }
-        rt = best_rt;
-    }
-}
-
-pair<long long, vector<int>> best_insert(int k, const vector<int>& rt, int r) {
-    long long best_b = -INF;
-    vector<int> best_rt;
-    int n = rt.size();
-
-    if (r <= N) { // Passenger
-        for (int pos = 0; pos <= n; ++pos) {
-            int u = (pos == 0) ? O[k] : get_v_out(rt[pos - 1]);
-            if (!can_edge[u][P[r]]) continue;
-            if (pos < n && !can_edge[D[r]][get_v_in(rt[pos])]) continue;
-
-            vector<int> cand = rt; cand.insert(cand.begin() + pos, r);
-            long long b = eval_single_route(k, cand);
-            if (b > best_b) { best_b = b; best_rt = cand; }
-        }
-    } else { // Parcel
-        for (int p1 = 0; p1 <= n; ++p1) {
-            int u1 = (p1 == 0) ? O[k] : get_v_out(rt[p1 - 1]);
-            if (!can_edge[u1][P[r]]) continue;
-
-            for (int p2 = p1 + 1; p2 <= n + 1; ++p2) {
-                if (p1 < n && !can_edge[P[r]][get_v_in(rt[p1])]) continue;
-                int u2 = (p2 == p1 + 1) ? P[r] : get_v_out(rt[p2 - 2]);
-                if (!can_edge[u2][D[r]]) continue;
-                if (p2 <= n && !can_edge[D[r]][get_v_in(rt[p2 - 1])]) continue;
-
-                vector<int> cand = rt;
-                cand.insert(cand.begin() + p1, r); cand.insert(cand.begin() + p2, -r);
-                long long b = eval_single_route(k, cand);
-                if (b > best_b) { best_b = b; best_rt = cand; }
-            }
-        }
-    }
-    if (best_b != -INF) {
-        optimize_route(k, best_rt);
-        best_b = eval_single_route(k, best_rt);
-    }
-    return {best_b, best_rt};
-}
+static vector<int> nin, nout, nw, nic, servable_list;
+static vector<ll> ne, nl, ndur;
+static vector<char> servable;
+static vector<vector<int>> nbr;
+static double S_scale = 100.0;
 
 // ============================================================================
-// ELITE POOL (BIASED FITNESS: QUALITY & DIVERSITY MANAGEMENT)
+// 4. SOLUTION STATE & VERIFICATION STRUCTURES
 // ============================================================================
-struct SolutionState {
-    long long obj = 0;
-    vector<int> veh_assignment; // size N + M + 1
-    vector<vector<int>> routes;  // size K + 1
+struct Route {
+    vector<int> nd;   // nd[1..n] (nd[0] unused)
+    vector<ll> dep;   // dep[i]: departure time from position i
+    vector<ll> lat;   // lat[i]: backward latest arrival slack
+    vector<int> ld;   // ld[i]: cumulative parcel load
+    ll cost = 0;
+    int n() const { return (int)nd.size() - 1; }
 };
 
-vector<SolutionState> elite_pool;
+static vector<Route> rt, backup;
+static vector<int> rver, veh;
+static int gver = 0;
+struct CacheEntry { int ver = -1, i = 0, j = 0; ll cost = 0; };
+static vector<CacheEntry> icache;
+static ll cur_obj = 0, best_obj = 0;
+static vector<vector<int>> best_nd;
 
-int calc_assignment_dist(const vector<int>& a, const vector<int>& b) {
-    int d = 0;
-    for (int r = 1; r <= N + M; ++r) {
-        if (a[r] != b[r]) d++;
+// Piggybacked Regret Memory
+static vector<double> ema_regret;
+static int priority_head = -1;
+
+// Route evaluation & recompute
+static bool recompute(int k) {
+    Route& r = rt[k];
+    rver[k] = ++gver;
+    int n = r.n();
+    r.dep.resize(n + 1); r.lat.resize(n + 2); r.ld.resize(n + 1);
+    r.dep[0] = 0; r.ld[0] = 0;
+    int prev = O[k]; ll cost = 0;
+    for (int i = 1; i <= n; ++i) {
+        int x = r.nd[i];
+        ll arr = r.dep[i - 1] + T(prev, nin[x]);
+        if (arr > nl[x]) return false;
+        r.dep[i] = max(arr, ne[x]) + ndur[x];
+        r.ld[i] = r.ld[i - 1] + nw[x];
+        if (r.ld[i] > Q[k]) return false;
+        cost += C(prev, nin[x]) + nic[x];
+        prev = nout[x];
     }
-    return d;
-}
-
-bool update_elite_pool(const SolutionState& cand) {
-    if (cand.obj <= 0) return false;
-    if (global_best_obj > 0 && cand.obj < global_best_obj * ELITE_QUALIFICATION_RATIO) return false;
-
-    if (elite_pool.empty()) {
-        elite_pool.push_back(cand);
-        return true;
+    r.lat[n + 1] = INFLL;
+    for (int i = n; i >= 1; --i) {
+        int x = r.nd[i];
+        ll v = nl[x];
+        if (i < n) v = min(v, r.lat[i + 1] - T(nout[x], nin[r.nd[i + 1]]) - ndur[x]);
+        r.lat[i] = v;
     }
-
-    // Check if candidate is an identical clone (dist == 0)
-    for (int i = 0; i < (int)elite_pool.size(); ++i) {
-        int d = calc_assignment_dist(cand.veh_assignment, elite_pool[i].veh_assignment);
-        if (d == 0) {
-            if (cand.obj > elite_pool[i].obj) {
-                elite_pool[i] = cand;
-                return true;
-            }
-            return false;
-        }
-    }
-
-    if ((int)elite_pool.size() < ELITE_POOL_SIZE) {
-        elite_pool.push_back(cand);
-        return true;
-    }
-
-    // Pool is FULL: Apply Bi-criterion Biased Fitness Ranking
-    vector<SolutionState> all_sols = elite_pool;
-    all_sols.push_back(cand);
-    int T = all_sols.size();
-
-    // 1. Fitness Rank R_fit
-    vector<int> fit_order(T);
-    iota(fit_order.begin(), fit_order.end(), 0);
-    sort(fit_order.begin(), fit_order.end(), [&](int a, int b) {
-        return all_sols[a].obj > all_sols[b].obj;
-    });
-    vector<int> r_fit(T);
-    for (int rank = 0; rank < T; ++rank) r_fit[fit_order[rank]] = rank + 1;
-
-    // 2. Diversity Rank R_div
-    vector<int> min_d(T, 1e9);
-    for (int i = 0; i < T; ++i) {
-        for (int j = 0; j < T; ++j) {
-            if (i == j) continue;
-            int d = calc_assignment_dist(all_sols[i].veh_assignment, all_sols[j].veh_assignment);
-            min_d[i] = min(min_d[i], d);
-        }
-    }
-    vector<int> div_order(T);
-    iota(div_order.begin(), div_order.end(), 0);
-    sort(div_order.begin(), div_order.end(), [&](int a, int b) {
-        return min_d[a] > min_d[b];
-    });
-    vector<int> r_div(T);
-    for (int rank = 0; rank < T; ++rank) r_div[div_order[rank]] = rank + 1;
-
-    // 3. Biased Rank Eviction: Score = R_fit + R_div
-    int evict_idx = -1;
-    int worst_score = -1;
-    int worst_r_fit = -1;
-    for (int i = 0; i < T; ++i) {
-        int score = r_fit[i] + r_div[i];
-        if (score > worst_score || (score == worst_score && r_fit[i] > worst_r_fit)) {
-            worst_score = score;
-            worst_r_fit = r_fit[i];
-            evict_idx = i;
-        }
-    }
-
-    if (evict_idx == T - 1) return false;
-
-    elite_pool[evict_idx] = cand;
+    r.cost = cost;
     return true;
 }
 
-// ============================================================================
-// TABU SEARCH ENGINE
-// ============================================================================
-struct Move {
-    long long delta = -INF;
-    int k1 = -1, k2 = -1;
-    vector<int> rt1, rt2;
-    int r_in = 0, r_out = 0;
-    int type = 0;
-};
+static inline void save_best() {
+    best_obj = cur_obj;
+    for (int k = 1; k <= K; ++k) best_nd[k] = rt[k].nd;
+}
 
-void run_tabu_search() {
-    memset(tabu_veh_req, 0, sizeof(tabu_veh_req));
-    memset(veh_of, 0, sizeof(veh_of));
-    for (int k = 1; k <= K; ++k) route_obj[k] = 0;
-    cur_total_obj = 0; global_best_obj = 0;
+static inline void load_best() {
+    fill(veh.begin(), veh.end(), 0);
+    for (int k = 1; k <= K; ++k) {
+        rt[k].nd = best_nd[k]; recompute(k);
+        for (int i = 1; i <= rt[k].n(); ++i) { int x = rt[k].nd[i]; if (x <= R) veh[x] = k; }
+    }
+    cur_obj = best_obj;
+}
+
+// ============================================================================
+// 5. PHASE 1: EXACT COLUMN ENUMERATION & SET PACKING ENGINE
+// ============================================================================
+struct Column { int k; ll profit; int rbeg, rlen, nbeg, nlen; };
+static vector<Column> cols;
+static vector<int> col_req, col_nodes;
+static unordered_map<uint64_t, int> col_index;
+static long long enum_states;
+static bool enum_abort;
+static chrono::steady_clock::time_point enum_deadline;
+static vector<int> e_seq, e_open, e_reqs, e_sorted, e_by_l;
+static vector<ll> e_l;
+static vector<char> e_used;
+
+static void enum_record(int k, ll profit) {
+    e_sorted = e_reqs; sort(e_sorted.begin(), e_sorted.end());
+    uint64_t h = 1469598103934665603ull ^ (uint64_t)k * 0x9E3779B97F4A7C15ull;
+    for (int q : e_sorted) { 
+        h ^= (uint64_t)q + 0x9E3779B97F4A7C15ull + (h << 6) + (h >> 2); 
+        h *= 1099511628211ull; 
+    }
+    auto it = col_index.find(h);
+    if (it != col_index.end()) {
+        Column& c = cols[it->second];
+        if (c.k != k || c.rlen != (int)e_sorted.size() || !equal(e_sorted.begin(), e_sorted.end(), col_req.begin() + c.rbeg)) return;
+        if (profit > c.profit) { 
+            c.profit = profit; 
+            copy(e_seq.begin(), e_seq.end(), col_nodes.begin() + c.nbeg); 
+        }
+        return;
+    }
+    if (cols.size() >= ENUM_COL_CAP) { enum_abort = true; return; }
+    col_index.emplace(h, (int)cols.size());
+    cols.push_back({k, profit, (int)col_req.size(), (int)e_sorted.size(), (int)col_nodes.size(), (int)e_seq.size()});
+    col_req.insert(col_req.end(), e_sorted.begin(), e_sorted.end());
+    col_nodes.insert(col_nodes.end(), e_seq.begin(), e_seq.end());
+}
+
+static inline bool open_ok(ll dep, int v, int skip) {
+    for (int o : e_open) if (o != skip && dep + T(v, nin[R + o]) > nl[R + o]) return false;
+    return true;
+}
+
+static void enum_dfs(int k, int last, ll time, int load, ll profit) {
+    if (enum_abort) return;
+    if (++enum_states > ENUM_STATE_CAP) { enum_abort = true; return; }
+    if ((enum_states & 4095) == 0 && chrono::steady_clock::now() > enum_deadline) { enum_abort = true; return; }
     
-    elite_pool.clear();
-    int epoch_idx = 1;
-    int epoch_iter = 0;
-    long long epoch_best_obj = 0;
-    int epoch_stagnant_iters = 0;
-    SolutionState epoch_best_state;
+    if (e_open.empty() && !e_seq.empty() && profit > 0) enum_record(k, profit);
+    
+    for (size_t oi = 0; oi < e_open.size(); ++oi) {
+        int q = e_open[oi], x = R + q;
+        ll arr = time + T(last, nin[x]);
+        if (arr > nl[x]) continue;
+        ll dep = max(arr, ne[x]) + ndur[x];
+        if (!open_ok(dep, nout[x], q)) continue;
+        e_open[oi] = e_open.back(); e_open.pop_back(); e_seq.push_back(x);
+        enum_dfs(k, nout[x], dep, load + nw[x], profit - C(last, nin[x]) + Rev[q]);
+        e_seq.pop_back(); e_open.push_back(q); swap(e_open[oi], e_open.back());
+    }
 
-    auto start_time = chrono::steady_clock::now();
+    for (size_t idx = lower_bound(e_l.begin(), e_l.end(), time) - e_l.begin(); idx < e_by_l.size(); ++idx) {
+        int q = e_by_l[idx];
+        if (e_used[q]) continue;
+        ll arr = time + T(last, nin[q]);
+        if (arr > nl[q]) continue;
+        ll dep = max(arr, ne[q]) + ndur[q];
+        if (q > N && (load + nw[q] > Q[k] || dep + T(nout[q], nin[R + q]) > nl[R + q])) continue;
+        if (!open_ok(dep, nout[q], -1)) continue;
+        e_used[q] = 1; e_seq.push_back(q); e_reqs.push_back(q);
+        if (q <= N) enum_dfs(k, nout[q], dep, load, profit - C(last, nin[q]) - nic[q] + Rev[q]);
+        else { 
+            e_open.push_back(q); 
+            enum_dfs(k, nout[q], dep, load + nw[q], profit - C(last, nin[q])); 
+            e_open.pop_back(); 
+        }
+        e_used[q] = 0; e_seq.pop_back(); e_reqs.pop_back();
+    }
+}
 
-    for (int iter = 1; iter <= MAX_ITER; ++iter) {
-        // Online Judge Time Guard (checked every 32 iterations)
-        if ((iter & 31) == 0) {
-            auto now = chrono::steady_clock::now();
-            if (chrono::duration<double>(now - start_time).count() >= TIME_LIMIT_SEC) {
+static bool column_solve(const vector<int>& s_list, chrono::steady_clock::time_point t_start) {
+    auto t_p1_start = chrono::steady_clock::now();
+    e_by_l = s_list;
+    sort(e_by_l.begin(), e_by_l.end(), [](int a, int b) { return nl[a] < nl[b]; });
+    e_l.clear(); for (int q : e_by_l) e_l.push_back(nl[q]);
+    e_used.assign(R + 1, 0);
+    enum_states = 0; enum_abort = false;
+    
+    enum_deadline = t_p1_start + chrono::microseconds((ll)(TIME_LIMIT_PHASE1 * ENUM_TIME_FRAC * 1e6));
+
+    auto t_enum_start = chrono::steady_clock::now();
+    for (int k = 1; k <= K && !enum_abort; ++k) {
+        enum_dfs(k, O[k], 0, 0, 0);
+    }
+    col_index = unordered_map<uint64_t, int>();
+
+    if (enum_abort) {
+        cols.clear(); col_req.clear(); col_nodes.clear();
+        return false;
+    }
+
+    const int NC = (int)cols.size();
+    if (NC == 0) return false;
+
+    vector<vector<int>> tcols(K + 1);
+    for (int j = 0; j < NC; ++j) tcols[cols[j].k].push_back(j);
+    for (int k = 1; k <= K; ++k) sort(tcols[k].begin(), tcols[k].end(), [](int a, int b) { return cols[a].profit > cols[b].profit; });
+
+    vector<int> owner(R + 1, -1), chosen(K + 1, -1);
+    ll cur = 0;
+    auto unassign = [&](int k) {
+        int j = chosen[k]; if (j < 0) return;
+        for (int i = 0; i < cols[j].rlen; ++i) owner[col_req[cols[j].rbeg + i]] = -1;
+        cur -= cols[j].profit; chosen[k] = -1;
+    };
+    auto assign = [&](int k, int j) {
+        chosen[k] = j; if (j < 0) return;
+        for (int i = 0; i < cols[j].rlen; ++i) owner[col_req[cols[j].rbeg + i]] = j;
+        cur += cols[j].profit;
+    };
+    auto is_free = [&](int j) {
+        for (int i = 0; i < cols[j].rlen; ++i) if (owner[col_req[cols[j].rbeg + i]] >= 0) return false;
+        return true;
+    };
+
+    // 1. Greedy Initial Selection
+    {
+        vector<int> ord(NC); iota(ord.begin(), ord.end(), 0);
+        sort(ord.begin(), ord.end(), [](int a, int b) { return cols[a].profit > cols[b].profit; });
+        for (int j : ord) if (chosen[cols[j].k] < 0 && is_free(j)) assign(cols[j].k, j);
+    }
+    ll best = cur; vector<int> best_choice = chosen;
+
+    // 2. Lagrangian Relaxation Upper Bound
+    ll ub = LLONG_MAX;
+    bool lagr_exact = false;
+    {
+        vector<double> u(R + 1, 0.0), g(R + 1);
+        double lambda = 2.0, best_bound = 1e300; int stall = 0;
+        const int max_it = (int)min<ll>(LAGR_MAX_IT, LAGR_WORK / max<ll>(1, (ll)col_req.size()));
+        vector<int> relax(K + 1, -1);
+
+        for (int it = 0; it < max_it && NC > 0; ++it) {
+            double L = 0; for (int q : s_list) L += u[q];
+            fill(g.begin(), g.end(), 1.0);
+            for (int k = 1; k <= K; ++k) {
+                double bv = 0; int bj = -1;
+                for (int j : tcols[k]) {
+                    double v = (double)cols[j].profit;
+                    for (int i = 0; i < cols[j].rlen; ++i) v -= u[col_req[cols[j].rbeg + i]];
+                    if (v > bv) { bv = v; bj = j; }
+                }
+                L += bv; relax[k] = bj;
+                if (bj >= 0) for (int i = 0; i < cols[bj].rlen; ++i) g[col_req[cols[bj].rbeg + i]] -= 1.0;
+            }
+            if (L < best_bound - 1e-9) { best_bound = L; stall = 0; } 
+            else if (++stall >= 10) { lambda *= 0.5; stall = 0; }
+
+            if (best_bound < (double)best + 1 - 1e-6) break;
+            double norm = 0; for (int q : s_list) { if (u[q] <= 0 && g[q] > 0) g[q] = 0; norm += g[q] * g[q]; }
+            if (norm < 1e-12) {
+                for (int k = 1; k <= K; ++k) unassign(k);
+                for (int k = 1; k <= K; ++k) assign(k, relax[k]);
+                if (cur > best) { best = cur; best_choice = chosen; }
+                lagr_exact = true;
                 break;
             }
+            double step = lambda * (L - (double)best) / norm;
+            for (int q : s_list) u[q] = max(0.0, u[q] - step * g[q]);
+            if (lambda < 1e-4) break;
         }
+        ub = (ll)floor(best_bound + 1e-6);
+    }
 
-        epoch_iter++;
-        Move best_move;
+    // 3. Set Packing SA (runs up to TIME_LIMIT_PHASE1 = 1.0s)
+    if (best < ub && !lagr_exact && NC > 0) {
+        double avgp = 0; for (int j = 0; j < NC; ++j) avgp += cols[j].profit; avgp /= NC;
+        const double T0 = max(1e-9, 0.3 * avgp), TF = max(1e-9, 0.003 * avgp);
+        vector<int> busy; for (int k = 1; k <= K; ++k) if (!tcols[k].empty()) busy.push_back(k);
+        vector<pair<int, int>> log_;
+        vector<int> refill;
+        auto set_col = [&](int k, int j) { log_.push_back({k, chosen[k]}); unassign(k); assign(k, j); };
+        
+        double elapsed_p1 = chrono::duration<double>(chrono::steady_clock::now() - t_p1_start).count();
+        const double s0 = elapsed_p1, budget_p1 = max(1e-9, TIME_LIMIT_PHASE1 - s0);
+        double temp = T0, last_impr = s0;
 
-        auto test_candidate = [&](int type, int k1, const vector<int>& rt1, long long b1, 
-                                  int k2, const vector<int>& rt2, long long b2, 
-                                  int r_in, int r_out) {
-            if (b1 == -INF || (k2 != -1 && b2 == -INF)) return;
-
-            long long delta = (b1 - route_obj[k1]);
-            if (k2 != -1) delta += (b2 - route_obj[k2]);
-
-            bool is_tabu = false;
-            if (type == 1) { // Insert: r_in into k1
-                if (tabu_veh_req[k1][r_in] >= iter) is_tabu = true;
-            } else if (type == 2) { // Relocate: r_in into k2
-                if (tabu_veh_req[k2][r_in] >= iter) is_tabu = true;
-            } else if (type == 3) { // Swap on same vehicle: r_in into k1
-                if (tabu_veh_req[k1][r_in] >= iter) is_tabu = true;
-            } else if (type == 4) { // Drop: r_out removed from k1
-                // Dropping is always permitted (not tabu)
-            } else if (type == 5) { // Inter-route swap: r_in into k1, r_out into k2
-                if (tabu_veh_req[k1][r_in] >= iter || tabu_veh_req[k2][r_out] >= iter) is_tabu = true;
+        for (long long it = 0;; ++it) {
+            if ((it & 255) == 0) {
+                elapsed_p1 = chrono::duration<double>(chrono::steady_clock::now() - t_p1_start).count();
+                if (elapsed_p1 >= TIME_LIMIT_PHASE1 || elapsed_p1 - last_impr > SP_STALL_SEC) break;
+                temp = T0 * pow(TF / T0, (elapsed_p1 - s0) / budget_p1);
             }
+            int k = busy[rng() % busy.size()];
+            const auto& tc = tcols[k];
+            int j = (rng() & 1) ? tc[rng() % tc.size()] : tc[rng() % min<size_t>(tc.size(), 16)];
+            if (rng() % 16 == 0) j = -1;
+            if (j == chosen[k]) continue;
 
-            if (is_tabu) {
-                if (cur_total_obj + delta <= global_best_obj) return;
+            ll before = cur;
+            log_.clear(); refill.clear();
+            set_col(k, -1);
+            if (j >= 0) {
+                for (int i = 0; i < cols[j].rlen; ++i) {
+                    int c = owner[col_req[cols[j].rbeg + i]];
+                    if (c >= 0) { int k2 = cols[c].k; set_col(k2, -1); refill.push_back(k2); }
+                }
+                set_col(k, j);
             }
+            for (int k2 : refill)
+                for (int c : tcols[k2]) if (is_free(c)) { set_col(k2, c); break; }
 
-            if (delta > best_move.delta || (delta == best_move.delta && rand() % 2 == 0)) {
-                best_move = {delta, k1, k2, rt1, rt2, r_in, r_out, type};
-            }
-        };
-
-        // OPERATOR 1: INSERT (Unserved request into any vehicle)
-        for (int u = 1; u <= N + M; ++u) {
-            if (veh_of[u] != 0 || !profitable[u]) continue;
-            for (int k = 1; k <= K; ++k) {
-                auto [b, rt] = best_insert(k, routes[k], u);
-                test_candidate(1, k, rt, b, -1, {}, 0, u, 0);
-            }
-        }
-
-        // OPERATOR 2: RELOCATE (Move request from k1 to k2)
-        for (int r = 1; r <= N + M; ++r) {
-            if (veh_of[r] == 0) continue;
-            int k1 = veh_of[r];
-            vector<int> rt1 = remove_req(routes[k1], r);
-            long long b1 = eval_single_route(k1, rt1);
-
-            for (int k2 = 1; k2 <= K; ++k2) {
-                if (k2 == k1) continue;
-                auto [b2, rt2] = best_insert(k2, routes[k2], r);
-                test_candidate(2, k1, rt1, b1, k2, rt2, b2, r, r);
-            }
-        }
-
-        // OPERATOR 3: SWAP ON SAME VEHICLE (Replace served r with unserved u)
-        for (int r = 1; r <= N + M; ++r) {
-            if (veh_of[r] == 0) continue;
-            int k = veh_of[r];
-            vector<int> rt_without_r = remove_req(routes[k], r);
-
-            for (int u = 1; u <= N + M; ++u) {
-                if (veh_of[u] != 0 || !profitable[u]) continue;
-                auto [b, rt] = best_insert(k, rt_without_r, u);
-                test_candidate(3, k, rt, b, -1, {}, 0, u, r);
-            }
-        }
-
-        // OPERATOR 4: DROP (Remove served request to unserved pool)
-        for (int r = 1; r <= N + M; ++r) {
-            if (veh_of[r] == 0) continue;
-            int k = veh_of[r];
-            vector<int> rt = remove_req(routes[k], r);
-            long long b = eval_single_route(k, rt);
-            test_candidate(4, k, rt, b, -1, {}, 0, 0, r);
-        }
-
-        // OPERATOR 5: INTER-ROUTE SWAP (Cross swap r1 on k1 with r2 on k2)
-        for (int r1 = 1; r1 <= N + M; ++r1) {
-            if (veh_of[r1] == 0) continue;
-            int k1 = veh_of[r1];
-            for (int r2 = r1 + 1; r2 <= N + M; ++r2) {
-                if (veh_of[r2] == 0) continue;
-                int k2 = veh_of[r2];
-                if (k1 == k2) continue;
-
-                auto rt1_no_r1 = remove_req(routes[k1], r1);
-                auto [b1, new_rt1] = best_insert(k1, rt1_no_r1, r2);
-                if (b1 == -INF) continue;
-
-                auto rt2_no_r2 = remove_req(routes[k2], r2);
-                auto [b2, new_rt2] = best_insert(k2, rt2_no_r2, r1);
-                if (b2 == -INF) continue;
-
-                test_candidate(5, k1, new_rt1, b1, k2, new_rt2, b2, r2, r1);
-            }
-        }
-
-        // APPLY BEST MOVE
-        if (best_move.delta != -INF) {
-            routes[best_move.k1] = best_move.rt1;
-            route_obj[best_move.k1] = eval_single_route(best_move.k1, routes[best_move.k1]);
-
-            if (best_move.k2 != -1) {
-                routes[best_move.k2] = best_move.rt2;
-                route_obj[best_move.k2] = eval_single_route(best_move.k2, routes[best_move.k2]);
-            }
-
-            int tenure = iter + TABU_TENURE_BASE + rand() % TABU_TENURE_RAND;
-
-            if (best_move.type == 1) { // Insert: r_in into k1
-                veh_of[best_move.r_in] = best_move.k1;
-            } else if (best_move.type == 2) { // Relocate: r_in from k1 to k2
-                tabu_veh_req[best_move.k1][best_move.r_in] = tenure;
-                veh_of[best_move.r_in] = best_move.k2;
-            } else if (best_move.type == 3) { // Swap on same: r_out removed from k1, r_in added
-                tabu_veh_req[best_move.k1][best_move.r_out] = tenure;
-                veh_of[best_move.r_out] = 0;
-                veh_of[best_move.r_in] = best_move.k1;
-            } else if (best_move.type == 4) { // Drop: r_out removed from k1
-                tabu_veh_req[best_move.k1][best_move.r_out] = tenure;
-                veh_of[best_move.r_out] = 0;
-            } else if (best_move.type == 5) { // Inter-route swap: r_out from k1 to k2, r_in from k2 to k1
-                tabu_veh_req[best_move.k1][best_move.r_out] = tenure;
-                tabu_veh_req[best_move.k2][best_move.r_in] = tenure;
-                veh_of[best_move.r_in] = best_move.k1;
-                veh_of[best_move.r_out] = best_move.k2;
-            }
-
-            cur_total_obj += best_move.delta;
-
-            if (cur_total_obj > epoch_best_obj) {
-                epoch_best_obj = cur_total_obj;
-                epoch_stagnant_iters = 0;
-                epoch_best_state.obj = cur_total_obj;
-                epoch_best_state.veh_assignment.assign(veh_of, veh_of + N + M + 1);
-                epoch_best_state.routes.resize(K + 1);
-                for (int k = 1; k <= K; ++k) epoch_best_state.routes[k] = routes[k];
+            ll delta = cur - before;
+            if (delta >= 0 || (double)delta > temp * log(rand01() + 1e-300)) {
+                if (cur > best) {
+                    best = cur; best_choice = chosen;
+                    last_impr = chrono::duration<double>(chrono::steady_clock::now() - t_p1_start).count();
+                    if (best >= ub) break; // Proven optimal!
+                }
             } else {
-                epoch_stagnant_iters++;
+                for (int i = (int)log_.size() - 1; i >= 0; --i) { 
+                    unassign(log_[i].first); 
+                    assign(log_[i].first, log_[i].second); 
+                }
             }
-
-            if (cur_total_obj > global_best_obj) {
-                global_best_obj = cur_total_obj;
-                for (int k = 1; k <= K; ++k) best_routes[k] = routes[k];
-            }
-        } else {
-            epoch_stagnant_iters++;
         }
+    }
 
-        // RUIN MECHANISM (Triggered on epoch stagnation)
-        if (epoch_stagnant_iters >= STAGNANT_LIMIT) {
-            // Submit this epoch's mature peak state to Elite Pool before ruin
-            if (epoch_best_state.obj > 0) {
-                update_elite_pool(epoch_best_state);
+    for (int k = 1; k <= K; ++k) {
+        best_nd[k].assign(1, 0);
+        int j = best_choice[k];
+        if (j >= 0) best_nd[k].insert(best_nd[k].end(), col_nodes.begin() + cols[j].nbeg, col_nodes.begin() + cols[j].nbeg + cols[j].nlen);
+    }
+
+    bool is_proven_optimal = (best >= ub || lagr_exact);
+    return is_proven_optimal;
+}
+
+// ============================================================================
+// 6. PHASE 2: CHAMPION GUIDED MULTI-BASIN SISR-SA ENGINE
+// ============================================================================
+static ll best_insert(int k, int q, int& bi, int& bj, bool blink) {
+    const Route& r = rt[k];
+    const int n = r.n();
+    const int* nd = r.nd.data(); const ll* dep = r.dep.data(); const ll* lat = r.lat.data(); const int* ld = r.ld.data();
+    ll best = INFLL;
+
+    if (q <= N) {
+        const int P = nin[q], D = nout[q], ic = nic[q];
+        const ll e = ne[q], l = nl[q], du = ndur[q];
+        for (int i = 0; i <= n; ++i) {
+            if (dep[i] > l) break;
+            int a = i ? nout[nd[i]] : O[k];
+            ll arr = dep[i] + T(a, P);
+            if (arr > l) continue;
+            ll d = max(arr, e) + du, dc = C(a, P) + ic;
+            if (i < n) {
+                int b = nin[nd[i + 1]];
+                if (d + T(D, b) > lat[i + 1]) continue;
+                dc += C(D, b) - C(a, b);
             }
+            if (dc < best && !(blink && (rng() & BLINK_MASK) == 0)) { best = dc; bi = i; }
+        }
+        return best;
+    }
 
-            // 1. Backtrack to an Elite solution from pool
-            if (!elite_pool.empty()) {
-                int best_elite_idx = 0;
-                for (int i = 1; i < (int)elite_pool.size(); ++i) {
-                    if (elite_pool[i].obj > elite_pool[best_elite_idx].obj) best_elite_idx = i;
-                }
+    const int p = q, dn = R + q, Pp = nin[p], Dq = nin[dn], w = nw[p], cap = Q[k];
+    const ll ep = ne[p], lp = nl[p], sp = ndur[p], eq = ne[dn], lq = nl[dn], sq = ndur[dn];
+    const int cPD = C(Pp, Dq), tPD = T(Pp, Dq);
 
-                int elite_sel = best_elite_idx;
-                if (elite_pool.size() > 1 && (rand() % 100 >= INTENSIFICATION_PROB)) {
-                    vector<int> other_indices;
-                    for (int i = 0; i < (int)elite_pool.size(); ++i) {
-                        if (i != best_elite_idx) other_indices.push_back(i);
-                    }
-                    elite_sel = other_indices[rand() % other_indices.size()];
-                }
+    for (int i = 0; i <= n; ++i) {
+        if (dep[i] > lp) break;
+        if (ld[i] + w > cap) continue;
+        int a = i ? nout[nd[i]] : O[k];
+        ll arr = dep[i] + T(a, Pp);
+        if (arr > lp) continue;
+        ll dp = max(arr, ep) + sp, cA = C(a, Pp);
 
-                for (int r = 1; r <= N + M; ++r) veh_of[r] = elite_pool[elite_sel].veh_assignment[r];
-                for (int k = 1; k <= K; ++k) {
-                    routes[k] = elite_pool[elite_sel].routes[k];
-                    route_obj[k] = eval_single_route(k, routes[k]);
-                }
-                cur_total_obj = elite_pool[elite_sel].obj;
+        if (dp + tPD <= lq) {
+            ll dq = max(dp + tPD, eq) + sq, dc = cA + cPD;
+            bool ok = true;
+            if (i < n) {
+                int b = nin[nd[i + 1]];
+                if (dq + T(Dq, b) > lat[i + 1]) ok = false;
+                else dc += C(Dq, b) - C(a, b);
             }
+            if (ok && dc < best && !(blink && (rng() & BLINK_MASK) == 0)) { best = dc; bi = i; bj = i; }
+        }
+        if (i == n) continue;
 
-            vector<int> served;
-            for (int r = 1; r <= N + M; ++r) if (veh_of[r] != 0) served.push_back(r);
+        int b0 = nin[nd[i + 1]], prev = Pp;
+        ll base = cA + C(Pp, b0) - C(a, b0), cur = dp;
+        bool sync = false;
 
-            if (!served.empty()) {
-                // Round-robin Variety Ruin: Each mode gets a dedicated epoch
-                int strat = (epoch_idx - 1) % RUIN_MODES_COUNT;
+        for (int j = i + 1; j <= n; ++j) {
+            int x = nd[j];
+            if (!sync) {
+                ll ar = cur + T(prev, nin[x]);
+                if (ar > nl[x]) break;
+                ll dj = max(ar, ne[x]) + ndur[x];
+                if (dj == dep[j]) sync = true;
+                cur = dj;
+            } else cur = dep[j];
 
-                if (strat == 3) { // Mode 3: Vehicle Dismantle
-                    vector<int> busy;
-                    for (int k = 1; k <= K; ++k) if (!routes[k].empty()) busy.push_back(k);
-                    if (!busy.empty()) {
-                        int k_tgt = busy[rand() % busy.size()];
-                        for (int t : routes[k_tgt]) veh_of[abs(t)] = 0;
-                        routes[k_tgt].clear();
-                        route_obj[k_tgt] = 0;
-                    }
-                } else { // Modes 0, 1, 2: Correlated Request Ruin
-                    int r_seed = served[rand() % served.size()];
-                    sort(served.begin(), served.end(), [&](int a, int b) {
-                        if (strat == 0) return c_mat[P[r_seed]][P[a]] < c_mat[P[r_seed]][P[b]];
-                        if (strat == 1) return t_mat[P[r_seed]][P[a]] < t_mat[P[r_seed]][P[b]];
-                        return abs(E[r_seed] - E[a]) < abs(E[r_seed] - E[b]);
-                    });
-
-                    int num_to_ruin = min((int)served.size(), RUIN_SIZE);
-                    for (int step = 0; step < num_to_ruin; ++step) {
-                        int pick_idx = rand() % min((int)served.size(), RUIN_TOP_CANDIDATE_POOL);
-                        int r = served[pick_idx];
-                        served.erase(served.begin() + pick_idx);
-
-                        int k = veh_of[r];
-                        if (k != 0) {
-                            routes[k] = remove_req(routes[k], r);
-                            route_obj[k] = eval_single_route(k, routes[k]);
-                            veh_of[r] = 0;
-                        }
-                    }
-                }
-
-                cur_total_obj = 0;
-                for (int k = 1; k <= K; ++k) cur_total_obj += route_obj[k];
+            if (ld[j] + w > cap || cur > lq) break;
+            int o = nout[x]; prev = o;
+            ll aq = cur + T(o, Dq);
+            if (aq > lq) continue;
+            ll dq = max(aq, eq) + sq, dc = base + C(o, Dq);
+            if (j < n) {
+                int b2 = nin[nd[j + 1]];
+                if (dq + T(Dq, b2) > lat[j + 1]) continue;
+                dc += C(Dq, b2) - C(o, b2);
             }
+            if (dc < best && !(blink && (rng() & BLINK_MASK) == 0)) { best = dc; bi = i; bj = j; }
+        }
+    }
+    return best;
+}
 
-            // Start New Epoch
-            epoch_idx++;
-            epoch_iter = 0;
-            epoch_best_obj = cur_total_obj;
-            epoch_best_state.obj = cur_total_obj;
-            epoch_best_state.veh_assignment.assign(veh_of, veh_of + N + M + 1);
-            epoch_best_state.routes.resize(K + 1);
-            for (int k = 1; k <= K; ++k) epoch_best_state.routes[k] = routes[k];
-            epoch_stagnant_iters = 0;
-            memset(tabu_veh_req, 0, sizeof(tabu_veh_req)); // Reset Tabu list for clean exploration in new epoch
+static vector<int> touch_stamp, ruin_stamp, cand_stamp, touched, removed, cand, tmp_reqs;
+static int stamp_id = 0;
+static vector<pair<int, int>> veh_log;
+static ll rev_delta = 0;
+
+static inline void touch(int k) {
+    if (touch_stamp[k] != stamp_id) { touch_stamp[k] = stamp_id; touched.push_back(k); backup[k] = rt[k]; }
+}
+static inline void set_veh(int r, int k) {
+    veh_log.push_back({r, veh[r]});
+    if (veh[r] == 0 && k != 0) rev_delta += Rev[r];
+    else if (veh[r] != 0 && k == 0) rev_delta -= Rev[r];
+    veh[r] = k;
+}
+static void do_insert(int k, int q, int i, int j) {
+    touch(k);
+    auto& nd = rt[k].nd;
+    if (q <= N) nd.insert(nd.begin() + i + 1, q);
+    else { nd.insert(nd.begin() + j + 1, R + q); nd.insert(nd.begin() + i + 1, q); }
+    recompute(k);
+    set_veh(q, k);
+}
+
+static void recreate_with_memory(const vector<int>& cands, bool blink) {
+    for (int q : cands) {
+        if (veh[q]) continue;
+        ll best1 = INFLL, best2 = INFLL;
+        int bk = -1, bi = 0, bj = 0;
+        CacheEntry* ce = &icache[(size_t)q * (K + 1)];
+        for (int k = 1; k <= K; ++k) {
+            CacheEntry& e = ce[k];
+            if (e.ver != rver[k]) { e.cost = best_insert(k, q, e.i, e.j, blink); e.ver = rver[k]; }
+            if (e.cost < best1) { best2 = best1; best1 = e.cost; bk = k; bi = e.i; bj = e.j; }
+            else if (e.cost < best2) { best2 = e.cost; }
+        }
+        ll g1 = (best1 < INFLL) ? max(0LL, (ll)Rev[q] - best1) : 0LL;
+        ll g2 = (best2 < INFLL) ? max(0LL, (ll)Rev[q] - best2) : 0LL;
+        ema_regret[q] = 0.80 * ema_regret[q] + 0.20 * (double)(g1 - g2);
+
+        if (bk != -1 && Rev[q] - best1 > 0) {
+            do_insert(bk, q, bi, bj);
         }
     }
 }
 
+static bool remove_from_route(int k) {
+    Route& r = rt[k];
+    touch(k);
+    static vector<int> keep; keep = r.nd;
+    size_t w = 1;
+    for (size_t i = 1; i < r.nd.size(); ++i) {
+        int x = r.nd[i], q = x > R ? x - R : x;
+        if (find(tmp_reqs.begin(), tmp_reqs.end(), q) == tmp_reqs.end()) r.nd[w++] = x;
+    }
+    if (w == r.nd.size()) return false;
+    r.nd.resize(w);
+    if (!recompute(k)) { r.nd = keep; recompute(k); return false; }
+    for (int q : tmp_reqs) if (veh[q]) { set_veh(q, 0); removed.push_back(q); }
+    return true;
+}
+
+static inline int select_seed() {
+    return servable_list[rng() % servable_list.size()];
+}
+
+static int ruin_guided(int seed) {
+    removed.clear();
+    priority_head = -1;
+    int tot_nodes = 0, busy = 0;
+    for (int k = 1; k <= K; ++k) if (rt[k].n()) { tot_nodes += rt[k].n(); ++busy; }
+    if (!busy) return 1;
+
+    double ls_max = min((double)L_MAX, (double)tot_nodes / busy);
+    double ks_max = 4.0 * C_AVG / (1.0 + ls_max) - 1.0;
+    int ks = (int)(rand01() * ks_max) + 1, done = 0;
+
+    auto try_route = [&](int c) {
+        int k = veh[c];
+        if (!k || ruin_stamp[k] == stamp_id) return;
+        ruin_stamp[k] = stamp_id;
+        Route& r = rt[k];
+        int n = r.n(), pos = 1;
+        for (int i = 1; i <= n; ++i) {
+            int q = (r.nd[i] > R) ? (r.nd[i] - R) : r.nd[i];
+            if (q == c) { pos = i; break; }
+        }
+        int len = rand_int(1, max(1, min(n, (int)ls_max)));
+        int st = rand_int(max(1, pos - len + 1), min(pos, n - len + 1));
+        tmp_reqs.clear();
+        for (int i = st; i < st + len; ++i) { int x = r.nd[i]; tmp_reqs.push_back(x > R ? x - R : x); }
+        if (remove_from_route(k)) ++done;
+    };
+
+    int roll = rng() % 100;
+    // Mode 2 (15%): Unserved-Cavity Ruin
+    if (roll >= 75 && roll < 90) {
+        int best_u = -1; double best_score = -1.0;
+        for (int t = 0; t < 6; ++t) {
+            int q = servable_list[rng() % servable_list.size()];
+            if (veh[q] == 0) {
+                double sc = (Rev[q] - nic[q]) + ema_regret[q];
+                if (sc > best_score) { best_score = sc; best_u = q; }
+            }
+        }
+        if (best_u != -1) {
+            priority_head = seed = best_u;
+            for (int c : nbr[best_u]) { if (done >= ks) break; if (veh[c]) try_route(c); }
+            if (done > 0) return 2;
+        }
+    }
+    // Mode 3 (10%): Slack-Bottleneck Substring Ruin
+    if (roll >= 90) {
+        int k1 = rand_int(1, K), k2 = rand_int(1, K);
+        int k = (rt[k1].cost >= rt[k2].cost) ? k1 : k2;
+        if (rt[k].n() > 0) {
+            int worst_pos = 1, n = rt[k].n(); ll max_waste = -1;
+            for (int i = 1; i <= n; ++i) {
+                int x = rt[k].nd[i], prev_v = (i == 1) ? O[k] : nout[rt[k].nd[i - 1]];
+                ll arr = rt[k].dep[i - 1] + T(prev_v, nin[x]);
+                ll wait_t = max(0LL, ne[x] - arr), detour_c = C(prev_v, nin[x]) + nic[x];
+                if (i < n) { int next_v = nin[rt[k].nd[i + 1]]; detour_c += C(nout[x], next_v) - C(prev_v, next_v); }
+                if (wait_t + detour_c > max_waste) { max_waste = wait_t + detour_c; worst_pos = i; }
+            }
+            int b_req = (rt[k].nd[worst_pos] > R) ? (rt[k].nd[worst_pos] - R) : rt[k].nd[worst_pos];
+            try_route(b_req);
+            for (int c : nbr[b_req]) { if (done >= ks) break; try_route(c); }
+            if (done > 0) return 3;
+        }
+    }
+
+    // Mode 1 (75%): Spatio-Temporal String Ruin
+    try_route(seed);
+    for (int c : nbr[seed]) { if (done >= ks) break; try_route(c); }
+    return 1;
+}
+
+static int order_candidates(vector<int>& cands) {
+    if (cands.size() <= 1) return 0;
+    int start_idx = (priority_head != -1 && cands[0] == priority_head) ? 1 : 0;
+    int sub_n = (int)cands.size() - start_idx;
+    if (sub_n <= 1) return 0;
+
+    int sroll = rng() % 100;
+    static vector<pair<double, int>> scored;
+    if (sroll < 50) {
+        scored.resize(sub_n);
+        for (int i = 0; i < sub_n; ++i) {
+            int q = cands[start_idx + i];
+            scored[i] = { -ema_regret[q] * (0.85 + 0.30 * rand01()), q };
+        }
+        sort(scored.begin(), scored.end());
+        for (int i = 0; i < sub_n; ++i) cands[start_idx + i] = scored[i].second;
+        return 0;
+    } else if (sroll < 75) {
+        scored.resize(sub_n);
+        for (int i = 0; i < sub_n; ++i) {
+            int q = cands[start_idx + i];
+            scored[i] = { -(double)(Rev[q] - nic[q]) * (0.90 + 0.20 * rand01()), q };
+        }
+        sort(scored.begin(), scored.end());
+        for (int i = 0; i < sub_n; ++i) cands[start_idx + i] = scored[i].second;
+        return 1;
+    } else {
+        for (int i = sub_n - 1; i > 0; --i) swap(cands[start_idx + i], cands[start_idx + (rng() % (i + 1))]);
+        return 2;
+    }
+}
+
+// SEDCA-V3 U-Valley Thermostat
+struct AdaptiveThermostat {
+    double t_max = 59.5;
+    const double tau_fast = 0.10;
+    const double tau_quench = 0.86;
+    const double phase_up_end = 0.12;
+    const double phase_drop_end = 0.45;
+    const double PI_CONST = 3.14159265358979323846;
+
+    double T_0 = 25.0, T_work = 4.0, T_min = 0.6, micro_delta = 5.0;
+    bool calibrated = false;
+
+    bool in_cycle_mode = false;
+    double cycle_start_tau = 0.0, cycle_duration_tau = 0.0;
+    double cycle_peak_T = 0.0, cycle_work_T = 0.0, cycle_base_T = 0.0;
+    int cycle_count = 0;
+
+    void auto_calibrate(const vector<double>& worsening_deltas, double scale_S) {
+        vector<double> valid;
+        valid.reserve(worsening_deltas.size());
+        for (double d : worsening_deltas) if (d > 0.0 && d <= 0.80 * scale_S) valid.push_back(d);
+        if (valid.size() < 20) valid = worsening_deltas;
+
+        if (valid.empty()) micro_delta = max(1.0, 0.04 * scale_S);
+        else {
+            sort(valid.begin(), valid.end());
+            double p15 = valid[(valid.size() * 15) / 100];
+            micro_delta = clamp(p15, 1.0, max(2.0, 0.06 * scale_S));
+        }
+
+        T_min  = max(0.2, micro_delta / 6.907);
+        T_work = max(T_min * 3.0, micro_delta / 1.05);
+        T_0    = T_work * 5.5;
+        calibrated = true;
+    }
+
+    void start_new_cycle(double current_tau) {
+        in_cycle_mode = true;
+        cycle_start_tau = current_tau;
+        ++cycle_count;
+
+        double osc_progress = clamp((current_tau - tau_fast) / (tau_quench - tau_fast), 0.0, 1.0);
+        double max_peak = 0.65 * T_0, min_peak = 1.50 * T_work;
+        cycle_peak_T = min_peak * pow(max_peak / min_peak, 1.0 - osc_progress);
+        cycle_work_T = T_work * pow(0.65, osc_progress);
+        cycle_base_T = T_min  * pow(0.75, osc_progress);
+
+        double base_span = tau_quench - tau_fast;
+        double remaining_osc_tau = tau_quench - current_tau;
+        double target_duration = base_span * (0.18 + 0.10 * osc_progress);
+        cycle_duration_tau = min(target_duration, max(0.04, remaining_osc_tau));
+    }
+
+    pair<double, bool> get_temperature_tau(double tau) {
+        tau = clamp(tau, 0.0, 1.0);
+        bool triggered_reheat = false;
+
+        if (tau < tau_fast) {
+            double p = tau / tau_fast;
+            double T = (p < 0.4) 
+                ? (T_0 * pow(T_work / T_0, p / 0.4))
+                : (T_work * pow(T_min / T_work, (p - 0.4) / 0.6));
+            return { max(T, T_min), false };
+        }
+
+        if (tau >= tau_quench) {
+            double quench_prog = clamp((tau - tau_quench) / max(0.001, 1.0 - tau_quench), 0.0, 1.0);
+            double T = (0.7 * T_work) * pow((0.5 * T_min) / (0.7 * T_work), quench_prog);
+            return { max(T, 0.2), false };
+        }
+
+        double phi_c = in_cycle_mode ? ((tau - cycle_start_tau) / max(0.0001, cycle_duration_tau)) : 1.0;
+        if (!in_cycle_mode || phi_c >= 1.0) {
+            start_new_cycle(tau);
+            triggered_reheat = true;
+            phi_c = 0.0;
+        }
+        phi_c = clamp(phi_c, 0.0, 1.0);
+
+        double T = cycle_base_T;
+        if (phi_c < phase_up_end) {
+            double u = phi_c / phase_up_end;
+            double cos_factor = 0.5 * (1.0 - cos(PI_CONST * u));
+            T = cycle_base_T + (cycle_peak_T - cycle_base_T) * cos_factor;
+        } else if (phi_c < phase_drop_end) {
+            double u = (phi_c - phase_up_end) / (phase_drop_end - phase_up_end);
+            T = cycle_peak_T * pow(cycle_work_T / cycle_peak_T, u);
+        } else {
+            double u = (phi_c - phase_drop_end) / (1.0 - phase_drop_end);
+            T = cycle_work_T * pow(cycle_base_T / cycle_work_T, u);
+        }
+
+        return { max(T, 0.2), triggered_reheat };
+    }
+
+    pair<double, bool> get_temperature(double elapsed_time) {
+        return get_temperature_tau(elapsed_time / max(0.001, t_max));
+    }
+};
+
 // ============================================================================
-// MAIN ENTRY POINT
+// 7. MAIN ENGINE (JUDGE ENTRYPOINT)
 // ============================================================================
 int main() {
-    // Fast I/O for Online Judge
-    ios_base::sync_with_stdio(false);
-    cin.tie(NULL);
+    ios_base::sync_with_stdio(false); cin.tie(NULL);
+    auto t_start = chrono::steady_clock::now();
 
-    read_input();
-    run_tabu_search();
+    read_all();
+    K = rd(); N = rd(); M = rd();
+    R = N + M; V = 2 * N + 2 * M + K; SV = V + 1;
 
-    // Output strictly in the official contest format:
-    // Line 1: Benefit (Objective)
-    // Next K lines: m_k v_1 v_2 ... v_{m_k}
-    cout << global_best_obj << "\n";
-    for (int k = 1; k <= K; ++k) {
-        vector<int> phys = get_physical_route(best_routes[k]);
-        cout << phys.size();
-        for (int v : phys) cout << " " << v;
-        cout << "\n";
+    O.assign(K + 1, 0); Q.assign(K + 1, 0); Rev.assign(R + 1, 0);
+    for (int k = 1; k <= K; ++k) { O[k] = rd(); Q[k] = rd(); }
+
+    nin.assign(2 * R + 1, 0); nout = nw = nic = nin;
+    ne.assign(2 * R + 1, 0); nl = ndur = ne;
+    servable.assign(R + 1, 1);
+
+    vector<int> P(R + 1), D(R + 1), Sv(R + 1);
+    for (int i = 1; i <= N; ++i) {
+        P[i] = rd(); D[i] = rd(); int e = rd(), l = rd(); Sv[i] = rd(); Rev[i] = rd();
+        ne[i] = e; nl[i] = l;
+        if (e > l) servable[i] = 0;
+    }
+    for (int j = N + 1; j <= R; ++j) {
+        P[j] = rd(); D[j] = rd(); nw[j] = rd();
+        int e = rd(), l = rd(), ed = rd(), lde = rd(); Sv[j] = rd(); Rev[j] = rd();
+        ne[j] = e; nl[j] = l; ne[R + j] = ed; nl[R + j] = lde; nw[R + j] = -nw[j];
+        if (e > l || ed > lde) servable[j] = 0;
     }
 
+    Tm.assign((size_t)SV * SV, 0); Cm.assign((size_t)SV * SV, 0);
+    for (int i = 1; i <= V; ++i) for (int j = 1; j <= V; ++j) Tm[i * SV + j] = rd();
+    for (int i = 1; i <= V; ++i) for (int j = 1; j <= V; ++j) Cm[i * SV + j] = rd();
+
+    int maxQ = *max_element(Q.begin(), Q.end());
+    for (int r = 1; r <= R; ++r) {
+        if (r <= N) {
+            nin[r] = P[r]; nout[r] = D[r];
+            ndur[r] = 2LL * Sv[r] + T(P[r], D[r]); nic[r] = C(P[r], D[r]);
+        } else {
+            nin[r] = nout[r] = P[r]; ndur[r] = Sv[r];
+            nin[R + r] = nout[R + r] = D[r]; ndur[R + r] = Sv[r];
+            if (nw[r] > maxQ) servable[r] = 0;
+        }
+        if (servable[r]) servable_list.push_back(r);
+    }
+
+    if (servable_list.empty() || K == 0) {
+        printf("0\n");
+        for (int k = 1; k <= K; ++k) printf("0\n");
+        return 0;
+    }
+
+    best_nd.assign(K + 1, vector<int>(1, 0));
+    rt.assign(K + 1, Route()); backup.assign(K + 1, Route());
+    rver.assign(K + 1, 0); veh.assign(R + 1, 0);
+    icache.assign((size_t)(R + 1) * (K + 1), CacheEntry());
+
+    // ------------------------------------------------------------------------
+    // ATTEMPT PHASE 1: EXACT COLUMN ENUMERATION & SET PACKING (Limit: 1.0s)
+    // ------------------------------------------------------------------------
+    bool p1_proven_optimal = column_solve(servable_list, t_start);
+
+    if (!p1_proven_optimal) {
+        // ------------------------------------------------------------------------
+        // ATTEMPT PHASE 2: GUIDED MULTI-BASIN SISR-SA (GM-SISR CHAMPION)
+        // ------------------------------------------------------------------------
+        double sum_net = 0.0;
+        ema_regret.assign(R + 1, 0.0);
+        for (int q : servable_list) {
+            double net = max(1.0, (double)(Rev[q] - nic[q]));
+            ema_regret[q] = net;
+            sum_net += net;
+        }
+        S_scale = max(1.0, sum_net / servable_list.size());
+
+        // Normalized spatio-temporal neighbor list
+        double sum_T = 0.0, sum_E = 0.0;
+        long long pairs = 0;
+        for (size_t i = 0; i < servable_list.size(); ++i) {
+            int a = servable_list[i];
+            for (size_t j = i + 1; j < servable_list.size(); ++j) {
+                int b = servable_list[j];
+                sum_T += 0.5 * (T(P[a], P[b]) + T(D[a], D[b]));
+                sum_E += llabs(ne[a] - ne[b]);
+                pairs++;
+            }
+        }
+        double T_bar = (pairs > 0) ? max(1.0, sum_T / pairs) : 1.0;
+        double E_bar = (pairs > 0) ? max(1.0, sum_E / pairs) : 1.0;
+
+        nbr.assign(R + 1, {});
+        vector<pair<double, int>> tmp_nb;
+        for (int a : servable_list) {
+            tmp_nb.clear();
+            ll end_a = (a <= N) ? (ne[a] + ndur[a]) : (ne[R + a] + ndur[R + a]);
+            for (int b : servable_list) if (b != a) {
+                ll end_b = (b <= N) ? (ne[b] + ndur[b]) : (ne[R + b] + ndur[R + b]);
+                double d_para = (0.5 * (T(P[a], P[b]) + T(D[a], D[b])) / T_bar) + (llabs(ne[a] - ne[b]) / E_bar);
+                double d_seq1 = (T(D[a], P[b]) / T_bar) + (llabs(ne[b] - end_a) / E_bar);
+                double d_seq2 = (T(D[b], P[a]) / T_bar) + (llabs(ne[a] - end_b) / E_bar);
+                tmp_nb.push_back({min({d_para, d_seq1, d_seq2}), b});
+            }
+            int s = min((int)tmp_nb.size(), NB_SIZE);
+            partial_sort(tmp_nb.begin(), tmp_nb.begin() + s, tmp_nb.end());
+            for (int i = 0; i < s; ++i) nbr[a].push_back(tmp_nb[i].second);
+        }
+
+        touch_stamp.assign(K + 1, 0); ruin_stamp.assign(K + 1, 0); cand_stamp.assign(R + 1, 0);
+
+        // Inherit Phase 1 solution if valid, else Greedy initialization
+        ll p1_obj = 0;
+        bool p1_valid = true;
+        for (int k = 1; k <= K; ++k) {
+            rt[k].nd = best_nd[k];
+            if (!recompute(k)) { p1_valid = false; break; }
+            p1_obj -= rt[k].cost;
+            for (int i = 1; i <= rt[k].n(); ++i) {
+                int x = rt[k].nd[i];
+                if (x <= R) p1_obj += Rev[x];
+            }
+        }
+
+        if (p1_valid && p1_obj > 0) {
+            cur_obj = p1_obj;
+            fill(veh.begin(), veh.end(), 0);
+            for (int k = 1; k <= K; ++k)
+                for (int i = 1; i <= rt[k].n(); ++i) { int x = rt[k].nd[i]; if (x <= R) veh[x] = k; }
+            save_best();
+        } else {
+            for (int k = 1; k <= K; ++k) { rt[k].nd.assign(1, 0); recompute(k); }
+            fill(veh.begin(), veh.end(), 0);
+            vector<int> init = servable_list;
+            sort(init.begin(), init.end(), [&](int a, int b) { return Rev[a] - nic[a] > Rev[b] - nic[b]; });
+            ++stamp_id; rev_delta = 0;
+            recreate_with_memory(init, false);
+            ll initial_cost = 0; for (int k = 1; k <= K; ++k) initial_cost += rt[k].cost;
+            cur_obj = rev_delta - initial_cost;
+            save_best();
+        }
+
+        // Thermal Schedule Initialization
+        double elapsed = chrono::duration<double>(chrono::steady_clock::now() - t_start).count();
+        const double search_start = elapsed;
+        const double budget = max(0.001, TIME_LIMIT_SEC - search_start);
+
+        AdaptiveThermostat sedca;
+        sedca.t_max = budget;
+        vector<double> warmup_worsening;
+        warmup_worsening.reserve(256);
+        const int WARMUP_COUNT = 200;
+
+        double temp = 0.15 * S_scale;
+        int cur_cycle = 0, cycle_stag = 0;
+        bool improved_in_cycle = false;
+
+        // Search Loop
+        for (long long it = 0;; ++it) {
+            if ((it & 15) == 0) {
+                elapsed = chrono::duration<double>(chrono::steady_clock::now() - t_start).count();
+                if (elapsed >= TIME_LIMIT_SEC) break;
+                double t = max(0.0, elapsed - search_start);
+
+                if (sedca.calibrated) {
+                    auto [new_temp, triggered_reheat] = sedca.get_temperature(t);
+                    temp = new_temp;
+                    if (triggered_reheat) {
+                        if (improved_in_cycle) {
+                            cycle_stag = 0;
+                            load_best();
+                        } else {
+                            cycle_stag++;
+                            load_best();
+                        }
+                        improved_in_cycle = false;
+                    }
+                    cur_cycle = sedca.cycle_count;
+                } else {
+                    temp = 0.08 * S_scale;
+                    cur_cycle = 0;
+                }
+            }
+
+            ++stamp_id; touched.clear(); veh_log.clear(); rev_delta = 0;
+
+            int seed = select_seed();
+            int r_mode = ruin_guided(seed);
+
+            cand.clear();
+            auto add = [&](int q) {
+                if (servable[q] && !veh[q] && cand_stamp[q] != stamp_id) {
+                    cand_stamp[q] = stamp_id; cand.push_back(q);
+                }
+            };
+            if (priority_head != -1) add(priority_head);
+            for (int q : removed) add(q);
+            size_t nrem = cand.size();
+            for (size_t t = 0; t < nrem; ++t) {
+                const auto& nb = nbr[cand[t]];
+                for (int i = 0, lim = min((int)nb.size(), CAND_NB); i < lim; ++i) add(nb[i]);
+            }
+            add(seed);
+            for (int i = 0, lim = min((int)nbr[seed].size(), CAND_NB); i < lim; ++i) add(nbr[seed][i]);
+            for (int i = 0; i < CAND_RAND; ++i) add(servable_list[rng() % servable_list.size()]);
+
+            order_candidates(cand);
+            recreate_with_memory(cand, true);
+
+            ll dcost = 0;
+            for (int k : touched) dcost += rt[k].cost - backup[k].cost;
+            ll new_obj = cur_obj + rev_delta - dcost;
+            ll delta = new_obj - cur_obj;
+
+            if (delta >= 0 || (double)delta > temp * log(rand01() + 1e-300)) {
+                cur_obj = new_obj;
+                if (cur_obj > best_obj) {
+                    save_best();
+                    improved_in_cycle = true;
+                }
+            } else {
+                for (int k : touched) { swap(rt[k], backup[k]); rver[k] = ++gver; }
+                for (int i = (int)veh_log.size() - 1; i >= 0; --i) veh[veh_log[i].first] = veh_log[i].second;
+            }
+
+            if (!sedca.calibrated && delta < 0) {
+                warmup_worsening.push_back((double)llabs(delta));
+                if ((int)warmup_worsening.size() >= WARMUP_COUNT) {
+                    sedca.auto_calibrate(warmup_worsening, S_scale);
+                }
+            }
+        }
+    }
+
+    // ------------------------------------------------------------------------
+    // FINAL INDEPENDENT VERIFICATION & STANDARD JUDGE OUTPUT
+    // ------------------------------------------------------------------------
+    rt.assign(K + 1, Route());
+    rver.assign(K + 1, 0);
+    ll benefit = 0;
+    for (int k = 1; k <= K; ++k) {
+        rt[k].nd = best_nd[k];
+        if (!recompute(k)) { rt[k].nd.assign(1, 0); recompute(k); }
+        benefit -= rt[k].cost;
+        for (int i = 1; i <= rt[k].n(); ++i) { int x = rt[k].nd[i]; if (x <= R) benefit += Rev[x]; }
+    }
+
+    string out;
+    out.reserve(1 << 16);
+    out += to_string(benefit) + '\n';
+    for (int k = 1; k <= K; ++k) {
+        const auto& nd = rt[k].nd;
+        int cnt = 0;
+        for (int i = 1; i < (int)nd.size(); ++i) cnt += (nd[i] <= N) ? 2 : 1;
+        out += to_string(cnt);
+        for (int i = 1; i < (int)nd.size(); ++i) {
+            int x = nd[i];
+            if (x <= N) { out += ' ' + to_string(nin[x]) + ' ' + to_string(nout[x]); }
+            else { out += ' ' + to_string(nin[x]); }
+        }
+        out += '\n';
+    }
+    fwrite(out.data(), 1, out.size(), stdout);
     return 0;
 }
-

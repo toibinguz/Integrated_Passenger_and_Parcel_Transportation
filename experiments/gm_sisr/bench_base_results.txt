@@ -1,7 +1,0 @@
-
---- Benchmark gm_sisr_base.cpp (60.0s, Seeds=[42, 1, 2, 3]) ---
-Mean Obj: 31113.2 | Min: 30861 | Max: 31294 | Std: 215.8 | Mean Speed: 40543 it/s
-Seed 42: Obj=31292 | Speed=39131 it/s | Records=269 | Jumps=0(0) | Val=VALID | Folder=experiments\gm_sisr\output\runs\run_test_850_20261028_223657_s42_sedca
-Seed 1: Obj=30861 | Speed=40369 it/s | Records=261 | Jumps=0(0) | Val=VALID | Folder=experiments\gm_sisr\output\runs\run_test_850_20261028_223757_s1_sedca
-Seed 2: Obj=31294 | Speed=41459 it/s | Records=241 | Jumps=0(0) | Val=VALID | Folder=experiments\gm_sisr\output\runs\run_test_850_20261028_223857_s2_sedca
-Seed 3: Obj=31006 | Speed=41213 it/s | Records=278 | Jumps=0(0) | Val=VALID | Folder=experiments\gm_sisr\output\runs\run_test_850_20261028_223958_s3_sedca

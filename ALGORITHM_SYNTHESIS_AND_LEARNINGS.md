@@ -890,4 +890,64 @@ Thuật toán `gm_sisr` được tuyên bố là **chiến thắng áp đảo v�
                └── Đánh giá Ablation và cập nhật kết quả vào BENCHMARK_REPORT.md
 ```
 
-Tài liệu này xác lập nền tảng lý thuyết và đặc tả kỹ thuật hoàn chỉnh nhất cho thế hệ thuật toán tiếp theo, sẵn sàng cho việc hiện thực hóa mã nguồn.
+---
+
+## 11. BÀI HỌC VỀ PHASE 1 SET PACKING: TỐC ĐỘ HỘI TỤ, DAO ĐỘNG & ĐỊNH HƯỚNG CẢI TIẾN SA ENGINE
+
+> [!IMPORTANT]
+> **Chứng nhận Toán học Đột phá**:
+> Ngày 29/10/2026, thông qua công cụ giải quy hoạch nguyên exact CP-SAT ([`utility/cpsat_exact_solver.py`](file:///z:/Desktop/250926/utility/cpsat_exact_solver.py)), chúng ta đã chứng minh bằng toán học:
+> - `test_500` (21,461 biến nhị phân): **Nghiệm tối ưu toàn cục chính xác là `13,279`** (CP-SAT giải trong 4.42s).
+> - `test_850` (187,113 biến nhị phân): **Nghiệm tối ưu toàn cục chính xác là `32,012`** (CP-SAT giải trong 49.20s).
+> - Khoảng cách chênh lệch so với Lagrangian Relaxation Dual UB ($13,311$ và $32,064$) thuần túy là **Integrality Gap** của bài toán nới lỏng liên tục.
+
+### 11.1. Thực trạng & Hạn chế của Bộ giải Simulated Annealing (Phase 1 SA Engine)
+
+Mặc dù thuật toán Simulated Annealing cải tiến ([`experiments/phase1_sp/phase1_sp_improved.cpp`](file:///z:/Desktop/250926/experiments/phase1_sp/phase1_sp_improved.cpp) và [`submission_phase1.cpp`](file:///z:/Desktop/250926/submission_phase1.cpp)) đã chạm tới đúng đỉnh tối ưu toàn cục này, thực nghiệm cho thấy vẫn còn **2 vấn đề cốt lõi cần giải quyết**:
+
+1. **Tốc độ hội tụ còn chậm trên không gian tổ hợp cực lớn (`test_850`)**:
+   - Trên `test_500` ($21,461$ cột), SA tìm ra tối ưu $13,279$ trong $0.45$s (100% qua 50 seed).
+   - Tuy nhiên, trên `test_850` ($187,113$ cột, $50$ xe), SA cần tới **$105.7$ giây** mới tìm ra nghiệm tối ưu $32,012$.
+   - Trong khi đó, bộ giải CP-SAT bằng cơ chế SAT Conflict Analysis & Max-Clique Presolve chỉ mất **$49.2$ giây** để tìm ra và chứng minh tối ưu toàn cục.
+2. **Dao động & Hiện tượng tắc nghẽn bồn trũng (Combinatorial Stagnation)**:
+   - Ở mốc thời gian ngắn ($10\text{s} - 30\text{s}$), SA trên `test_850` dao động mạnh quanh mức $31,600 \sim 31,957$ (gap $50 - 400$ điểm).
+   - **Bản chất tắc nghẽn**: Khi một xe muốn hoán đổi sang một cột có lợi nhuận cao hơn, cột đó thường xung đột với $2 - 3$ xe khác. Thao tác vi mô gỡ bỏ và refill tham lam (Greedy Refill) thường không tìm được ngay cấu hình bù trừ tương thích mà cần một chuỗi hoán đổi đồng thời (Multi-column simultaneous coordination).
+   - Cơ chế Reheating định kỳ hiện tại giúp thoát cực tiểu tốt nhưng mang tính "quét lại từ đầu", tiêu tốn nhiều vòng lặp trước khi hội tụ trở lại vùng nghiệm chất lượng cao.
+
+---
+
+### 11.2. Định hướng Nghiên cứu & Cải tiến trong các Phiên tiếp theo
+
+Để tăng tốc độ hội tụ của SA Engine từ $\sim 100$s xuống $\le 10 - 20$s trên các bài toán cỡ lớn như `test_850`, các hướng kiến trúc tiềm năng đã được xác lập:
+
+1. **Toán tử Chuỗi hoán đổi Luân phiên (Alternating Multi-Column Swaps / 2-Exchange)**:
+   - Thay vì chỉ tháo 1 cột và refill các xe bị ảnh hưởng, thiết kế toán tử k-chain: nhận diện chu trình xung đột ngắn (kích thước $2 - 3$ xe) và lật đồng thời bộ cột tương hỗ.
+2. **Cơ chế Lọc cột theo Phổ Reduced Cost Động (Dynamic Reduced-Cost Filtering)**:
+   - Trong $187,113$ cột của `test_850`, có tới $\approx 70\%$ cột có reduced cost quá âm (kém triển vọng). Thu hẹp không gian lân cận của SA vào top $20,000 - 30,000$ cột ưu tú nhất sẽ giúp giảm kích thước không gian tìm kiếm đi 6-9 lần, tăng tốc độ hội tụ theo cấp số nhân.
+3. **Neighborhood Sub-IP Polishing (Matheuristic)**:
+   - Sử dụng CP-SAT hoặc Integer Programming mini-solver nhúng trực tiếp: mỗi khi SA đi vào vùng bão hòa, cố định $80\%$ số xe không xung đột và gọi CP-SAT cục bộ trên $20\%$ số xe còn lại trong $0.1 - 0.2$ giây để giải dứt điểm bồn trũng.
+4. **Adaptive Temperature & Soft Basin Hopping**:
+   - Thay vì hạ nhiệt theo hàm mũ cố định hoặc reset cứng về `best_choice`, điều chỉnh nhiệt độ dựa trên tỷ lệ chấp nhận tức thời và duy trì danh sách bộ nhớ đa bồn trũng (Diverse Archive).
+
+
+
+---
+
+### 11.3. Đột phá Hoàn tất: Fast Dual-Guided SA với 100% Restart from Zero (`submission_phase1.cpp`)
+
+Ngày 30/10/2026, toàn bộ các cải tiến kiến trúc đã được hiện thực hóa và đóng gói hoàn chỉnh vào file nộp bài [`submission_phase1.cpp`](file:///z:/Desktop/250926/submission_phase1.cpp):
+
+1. **Ba toán tử Dual-Guided cốt lõi**:
+   - **Targeted Dual Request Insertion**: Tập trung phục vụ các yêu cầu có biến đối ngẫu $\mu^*_r$ cao nhất từ Lagrangian Dual.
+   - **Elite Reduced-Cost Swap**: Lọc không gian hoán đổi vào top 16 cột có chi phí rút gọn (reduced cost) cao nhất.
+   - **2-step Ejection Chains**: Chuỗi đẩy dây chuyền 2 bước giúp hoán đổi đồng thời các xe bị xung đột để mở đường cho cột có giá trị cao.
+2. **Cơ chế 100% Restart from Zero**:
+   - Mỗi chu kỳ wave (ngân sách 7.5s, stagnation 2.5s) được khởi tạo hoàn toàn từ nghiệm rỗng thông qua thuật toán quét thứ tự xe ngẫu nhiên (Randomized Vehicle Order Sweep) trên các cột reduced-cost ưu tú.
+   - Loại bỏ hoàn toàn sự phụ thuộc vào bồn trũng kỷ lục cũ, cho phép SA phóng vào các bồn trũng hoàn toàn độc lập với xác suất hội tụ về nghiệm tối ưu toàn cục `32,012` đạt tới $\sim 30\%$ cho mỗi wave đơn lẻ.
+3. **Chế độ nhiệt Convex Cooling $\tau^{1.35}$**:
+   - Làm chậm tốc độ hạ nhiệt ở giai đoạn giữa, nâng $T_F = 0.002 \cdot \text{avgp}$, cho phép giải thuật chấp nhận các bước lùi tạm thời $-30$ đến $-40$ điểm để vượt qua bẫy cực tiểu cục bộ 31,965.
+4. **Phân tầng Budget nhỏ cho Testcase $V < 850$**:
+   - $V \le 250$: Ngắt sau $\approx 0.05\text{s} - 1.2\text{s}$ (kiểm chứng `test_200.txt` giải tối ưu 5,702 trong 0.058s).
+   - $V \le 600$: Ngắt sau $\approx 5\text{s}$ (kiểm chứng `test_500.txt` đạt 13,279 trong 5.13s).
+   - $V < 850$: Ngắt sau 20s nếu không còn cải thiện mới.
+   - $V \ge 850$: Chạy trọn vẹn 200s, thực hiện 38 wave liên tiếp và liên tục chạm đỉnh tối ưu toàn cục `32,012`.

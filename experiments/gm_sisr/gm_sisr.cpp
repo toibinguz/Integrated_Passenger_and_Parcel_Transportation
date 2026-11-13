@@ -9,7 +9,14 @@ namespace fs = std::filesystem;
 // ============================================================================
 static double TIME_LIMIT_SEC = 2.0;      // Wall-clock search budget (seconds)
 static long long MAX_ITERS = 0;          // Deterministic iteration budget (0 = use wall-clock)
-static int ABLATION_MASK = 0;            // Bitmask to ablate components (0 = full champion)
+// DEFAULT = final champion (ablation vong 1-4 + multi-instance Phase B):
+//   H1 (128), H2 (256), H3 (512) all ABLATED. Only H5 (2048 = yield-based operator
+//   bandit) is kept ON, on top of the primal single-cycle exponential thermal.
+// Evidence on test_850 (60s): H2 off +234, H3 off +216 (together +525) plus ~40-60%
+//   throughput recovery; H1 pooled effect +13 +- 28 (not significant) and it lost 6/10
+//   instances in multi-instance Phase B, so it is dropped too.
+// Legacy SEDCA-V3 reference config for A/B = 896 | 4096 = 4992.
+static int ABLATION_MASK = 128 | 256 | 512;   // Bitmask to ablate components (0 = everything ON)
 // Bit 0 (1): disable regret in recreate ordering (fallback to 50% net profit / 50% random)
 // Bit 1 (2): disable Mode 2: Unserved Cavity Ruin
 // Bit 2 (4): disable Mode 3: Slack Bottleneck Ruin
@@ -19,12 +26,28 @@ static int ABLATION_MASK = 0;            // Bitmask to ablate components (0 = fu
 // Bit 6 (64): use Blink 1/32 and CAND_RAND 10 (default 0 = Blink 1/64, CAND_RAND 6)
 
 static const int NB_SIZE = 60;           // Normalized spatio-temporal neighbor list size
-static const double C_AVG = 10.0;        // SISR: average removed requests
-static const int L_MAX = 10;             // SISR: maximum string length
+static double C_AVG = 10.0;              // SISR: average removed requests (H2: dynamic by heat)
+static int L_MAX = 10;                   // SISR: maximum string length (H2: dynamic by heat)
 static int CAND_NB = 3;                  // Unserved neighbors offered to recreate
 static int CAND_RAND = 10;               // Random unserved requests offered to recreate (Proven Sweet Spot)
-static unsigned BLINK_MASK = 31;         // Christiaens blink probability (1/32, Proven Sweet Spot)
+static unsigned BLINK_MASK = 31;         // Christiaens blink probability (H2: dynamic by heat)
 static const ll INFLL = (ll)4e18;
+
+// ---- H2 dynamic operator scale (updated per thermal step) ----
+static double C_AVG_DYN = 10.0, L_MAX_DYN = 10.0;
+// ---- H1 soft-deficit strength ----
+static double SOFT_EPS0 = 0.0;           // set to 0.08*S_scale when H1 active
+// ---- H3 basin kick ----
+static const double KICK_FRAC = 0.20;    // fraction of served requests ripped by basin kick
+static bool pending_kick = false;
+// ---- H5 adaptive operator bandit (ruin-mode weights; idx 1..3) ----
+// Prior encodes the proven 75/15/10 split; yield only modulates it within [0.5,2]x.
+static const double BANDIT_PRIOR[4] = {0.0, 7.5, 1.5, 1.0};
+static double bandit_w[5] = {0.0, 7.5, 1.5, 1.0, 1.0};
+// ---- operator-coupling knob: normalized heat h in [0,1] ----
+static double sedca_heat = 0.0;
+// ---- telemetry for new operators ----
+static long long soft_inserts = 0, kick_count = 0, kick_records = 0;
 
 // ============================================================================
 // FAST INPUT READER & ULTRA-FAST RNG (Xorshift64)
@@ -98,7 +121,7 @@ static vector<double> ema_regret;
 static int priority_head = -1;
 
 // Telemetry
-static long long mode_tries[4] = {0}, mode_improve[4] = {0}, mode_records[4] = {0}, sort_records[3] = {0};
+static long long mode_tries[5] = {0}, mode_improve[5] = {0}, mode_records[5] = {0}, sort_records[3] = {0};
 
 // ============================================================================
 // ROUTE EVALUATION & O(1) SLACK INSERTION
@@ -252,7 +275,10 @@ static void recreate_with_memory(const vector<int>& cands, bool blink) {
         ll g2 = (best2 < INFLL) ? max(0LL, (ll)Rev[q] - best2) : 0LL;
         ema_regret[q] = 0.80 * ema_regret[q] + 0.20 * (double)(g1 - g2);
 
-        if (bk != -1 && Rev[q] - best1 > 0) {
+        double eps = (ABLATION_MASK & 128) ? 0.0 : SOFT_EPS0 * sedca_heat;
+        if (eps > 0.0) eps *= (0.5 + rand01());  // jitter breaks greedy determinism
+        if (bk != -1 && (double)(Rev[q] - best1) > -eps) {
+            if (Rev[q] - best1 <= 0) ++soft_inserts;
             do_insert(bk, q, bi, bj);
         }
     }
@@ -288,6 +314,39 @@ static int select_seed() {
     return servable_list[rng() % servable_list.size()];
 }
 
+// H3: Stagnation Basin Kick — rip ~KICK_FRAC of all served requests, worst routes first.
+static int basin_kick() {
+    int served = 0;
+    for (int q = 1; q <= R; ++q) if (veh[q]) ++served;
+    if (!served) return 1;
+    int target = max(1, (int)(KICK_FRAC * served) + rand_int(0, 2));
+    static vector<int> ord; ord.clear();
+    for (int k = 1; k <= K; ++k) if (rt[k].n()) ord.push_back(k);
+    sort(ord.begin(), ord.end(), [](int a, int b) { return rt[a].cost > rt[b].cost; });
+    int done = 0;
+    for (int k : ord) {
+        if (done >= target) break;
+        tmp_reqs.clear();
+        for (int i = 1; i <= rt[k].n(); ++i) { int x = rt[k].nd[i]; tmp_reqs.push_back(x > R ? x - R : x); }
+        if (remove_from_route(k)) done += (int)tmp_reqs.size();
+    }
+    return 4;
+}
+
+// H5: yield-based operator weights. Relative yield (records per call) modulates the
+// prior split, bounded so no operator can be starved — fixes the earlier saturation
+// where the multiplicative reward pinned Mode 1 at the cap.
+static void update_bandit() {
+    double y[4] = {0.0, 0.0, 0.0, 0.0};
+    for (int m = 1; m <= 3; ++m)
+        y[m] = (double)(mode_records[m] + 1) / (double)(mode_tries[m] + 200);
+    double ymean = (y[1] + y[2] + y[3]) / 3.0;
+    for (int m = 1; m <= 3; ++m) {
+        double rel = (ymean > 0.0) ? (y[m] / ymean) : 1.0;
+        bandit_w[m] = BANDIT_PRIOR[m] * clamp(0.5 + 0.5 * rel, 0.5, 2.0);
+    }
+}
+
 static int ruin_guided(int seed) {
     removed.clear();
     priority_head = -1;
@@ -295,9 +354,12 @@ static int ruin_guided(int seed) {
     for (int k = 1; k <= K; ++k) if (rt[k].n()) { tot_nodes += rt[k].n(); ++busy; }
     if (!busy) return 1;
 
-    double ls_max = min((double)L_MAX, (double)tot_nodes / busy);
-    double ks_max = 4.0 * C_AVG / (1.0 + ls_max) - 1.0;
-    int ks = (int)(rand01() * ks_max) + 1, done = 0;
+    if (pending_kick && !(ABLATION_MASK & 512)) { pending_kick = false; return basin_kick(); }
+    pending_kick = false;
+
+    double ls_max = min(L_MAX_DYN, (double)tot_nodes / busy);
+    double ks_max = 4.0 * C_AVG_DYN / (1.0 + ls_max) - 1.0;
+    int ks = max(1, (int)(rand01() * max(1.0, ks_max)) + 1), done = 0;
 
     auto try_route = [&](int c) {
         int k = veh[c];
@@ -316,7 +378,14 @@ static int ruin_guided(int seed) {
         if (remove_from_route(k)) ++done;
     };
 
-    int roll = rng() % 100;
+    int roll;
+    if (!(ABLATION_MASK & 2048)) {                       // H5: bandit-weighted mode choice
+        double bw1 = bandit_w[1], bw2 = bandit_w[2], bw3 = bandit_w[3];
+        double r = rand01() * (bw1 + bw2 + bw3);
+        if ((r -= bw1) < 0) roll = 0; else if ((r -= bw2) < 0) roll = 75; else roll = 90;
+    } else {
+        roll = rng() % 100;
+    }
     // Mode 2 (15%): Unserved-Cavity Ruin
     if (!(ABLATION_MASK & 2)) {
         if (roll >= 75 && roll < 90) {
@@ -437,6 +506,8 @@ struct AdaptiveThermostat {
     double T_work = 4.0;
     double T_min = 0.6;
     double micro_delta = 5.0;
+    double T_peak_base = 25.0, T_min_base = 0.6;   // operator-coupling bounds
+    int stag = 0;                                   // stagnation cycles (adaptive dwell)
     bool calibrated = false;
 
     bool in_cycle_mode = false;
@@ -463,7 +534,31 @@ struct AdaptiveThermostat {
         T_min  = max(0.2, micro_delta / 6.907);
         T_work = max(T_min * 3.0, micro_delta / 1.05);
         T_0    = T_work * 5.5;
+        T_min_base = T_min;
+        T_peak_base = max(2.0 * T_min, 0.65 * T_0);
         calibrated = true;
+    }
+
+    // Online micro-recalibration from a recent window of worsening deltas (T4).
+    void online_recalibrate(const vector<double>& deltas, double scale_S) {
+        vector<double> valid;
+        for (double d : deltas) if (d > 0.0 && d <= 0.80 * scale_S) valid.push_back(d);
+        if (valid.size() < 20) return;
+        sort(valid.begin(), valid.end());
+        double p15 = valid[(valid.size() * 15) / 100];
+        micro_delta = clamp(p15, 1.0, max(2.0, 0.06 * scale_S));
+        T_min  = max(0.2, micro_delta / 6.907);
+        T_work = max(T_min * 3.0, micro_delta / 1.05);
+        T_0    = T_work * 5.5;
+        T_min_base = T_min;
+        T_peak_base = max(2.0 * T_min, 0.65 * T_0);
+    }
+
+    // Normalized heat h in [0,1] — the single knob all operators couple to.
+    double heat_of(double T) const {
+        double a = log(max(0.2, T_min_base)), b = log(max(0.3, T_peak_base));
+        if (b <= a) return 1.0;
+        return clamp((log(max(0.2, T)) - a) / (b - a), 0.0, 1.0);
     }
 
     void start_new_cycle(double current_tau) {
@@ -471,18 +566,29 @@ struct AdaptiveThermostat {
         cycle_start_tau = current_tau;
         ++cycle_count;
 
-        double osc_progress = clamp((current_tau - tau_fast) / (tau_quench - tau_fast), 0.0, 1.0);
-        double max_peak = 0.65 * T_0;
-        double min_peak = 1.50 * T_work;
-        cycle_peak_T = min_peak * pow(max_peak / min_peak, 1.0 - osc_progress);
-
-        cycle_work_T = T_work * pow(0.65, osc_progress);
-        cycle_base_T = T_min  * pow(0.75, osc_progress);
-
         double base_span = tau_quench - tau_fast;
         double remaining_osc_tau = tau_quench - current_tau;
-        double target_duration = base_span * (0.18 + 0.10 * osc_progress);
-        cycle_duration_tau = min(target_duration, max(0.04, remaining_osc_tau));
+
+        if (ABLATION_MASK & 4096) {
+            // Legacy SEDCA-V3 U-valley (peak decays, 55% dwell)
+            double osc_progress = clamp((current_tau - tau_fast) / base_span, 0.0, 1.0);
+            double max_peak = 0.65 * T_0;
+            double min_peak = 1.50 * T_work;
+            cycle_peak_T = min_peak * pow(max_peak / min_peak, 1.0 - osc_progress);
+            cycle_work_T = T_work * pow(0.65, osc_progress);
+            cycle_base_T = T_min  * pow(0.75, osc_progress);
+            double target_duration = base_span * (0.18 + 0.10 * osc_progress);
+            cycle_duration_tau = min(target_duration, max(0.04, remaining_osc_tau));
+            return;
+        }
+
+        // NEW: exponential-tooth engine — constant peak, adaptive dwell, no bottom dwell
+        double stag_factor = 1.0 / (1.0 + 0.7 * min(3, stag));
+        cycle_peak_T  = max(T_peak_base, 2.0 * T_min_base);   // peak does NOT decay
+        cycle_base_T  = T_min_base;
+        cycle_work_T  = sqrt(cycle_peak_T * cycle_base_T);
+        double target_duration = base_span * 0.12 * stag_factor;
+        cycle_duration_tau = min(target_duration, max(0.03, remaining_osc_tau));
     }
 
     int cur_sawtooth_wave = -1;
@@ -526,17 +632,24 @@ struct AdaptiveThermostat {
         }
         phi_c = clamp(phi_c, 0.0, 1.0);
 
-        double T = cycle_base_T;
-        if (phi_c < phase_up_end) {
-            double u = phi_c / phase_up_end;
-            double cos_factor = 0.5 * (1.0 - cos(PI_CONST * u));
-            T = cycle_base_T + (cycle_peak_T - cycle_base_T) * cos_factor;
-        } else if (phi_c < phase_drop_end) {
-            double u = (phi_c - phase_up_end) / (phase_drop_end - phase_up_end);
-            T = cycle_peak_T * pow(cycle_work_T / cycle_peak_T, u);
+        double T;
+        if (ABLATION_MASK & 4096) {
+            // Legacy U-valley shape
+            T = cycle_base_T;
+            if (phi_c < phase_up_end) {
+                double u = phi_c / phase_up_end;
+                double cos_factor = 0.5 * (1.0 - cos(PI_CONST * u));
+                T = cycle_base_T + (cycle_peak_T - cycle_base_T) * cos_factor;
+            } else if (phi_c < phase_drop_end) {
+                double u = (phi_c - phase_up_end) / (phase_drop_end - phase_up_end);
+                T = cycle_peak_T * pow(cycle_work_T / cycle_peak_T, u);
+            } else {
+                double u = (phi_c - phase_drop_end) / (1.0 - phase_drop_end);
+                T = cycle_work_T * pow(cycle_base_T / cycle_work_T, u);
+            }
         } else {
-            double u = (phi_c - phase_drop_end) / (1.0 - phase_drop_end);
-            T = cycle_work_T * pow(cycle_base_T / cycle_work_T, u);
+            // NEW: single exponential tooth, no bottom dwell
+            T = cycle_peak_T * pow(cycle_base_T / cycle_peak_T, phi_c);
         }
 
         return { max(T, 0.2), triggered_reheat };
@@ -662,6 +775,7 @@ int main(int argc, char** argv) {
         sum_net += net;
     }
     S_scale = max(1.0, sum_net / servable_list.size());
+    if (!(ABLATION_MASK & 128)) SOFT_EPS0 = 0.08 * S_scale;
 
     // 2. Build Normalized Spatio-Temporal Neighbor List
     double sum_T = 0.0, sum_E = 0.0;
@@ -727,6 +841,24 @@ int main(int argc, char** argv) {
     bool improved_in_cycle = false;
     double time_last_improve = search_start;
     long long total_iters = 0, accepted_count = 0, improved_count = 0;
+    double recent_delta[128] = {0}; int recent_pos = 0, recent_filled = 0;   // T4 recalibration ring
+
+    // ---- STRUCTURAL TELEMETRY: how often is a ruin+recreate move a literal no-op? ----
+    // If delta==0 the move is an exact fixed point of the greedy repair: accepted but
+    // changes nothing. touched.empty() => the ruin removed nothing AND nothing was
+    // reinserted, i.e. the iteration was pure overhead.
+    long long st_null_delta = 0, st_null_accepted = 0, st_touched_empty = 0;
+    long long st_ruin_failed = 0, st_downhill = 0;
+
+    // H2: couple all operator scales to the single thermal knob (heat h).
+    auto thermal_step = [&]() {
+        sedca_heat = sedca.calibrated ? sedca.heat_of(temp) : 0.5;
+        if (!(ABLATION_MASK & 256) && !(ABLATION_MASK & 64)) {
+            BLINK_MASK  = (unsigned)max(3, min(63, 3 + (int)lround(60.0 * (1.0 - sedca_heat))));
+            C_AVG_DYN   = 6.0 + 8.0 * sedca_heat;
+            L_MAX_DYN   = 8.0 + 8.0 * sedca_heat;
+        } else { BLINK_MASK = 31; C_AVG_DYN = 10.0; L_MAX_DYN = 10.0; }
+    };
 
     // 5. Main Search Loop
     for (long long it = 0;; ++it) {
@@ -746,18 +878,27 @@ int main(int argc, char** argv) {
                             if ((ABLATION_MASK & 8) && cur_obj >= best_obj - (ll)(2.0 * sedca.micro_delta)) {
                                 // Old soft drift
                             } else {
-                                load_best(); // Default: Proven Hard Reset (+44 pts, Min 30,756, Max 31,469)
+                                load_best(); // Proven Hard Reset to incumbent
+                            }
+                            // H3: even a productive cycle earns a kick at high heat on alternating
+                            // cycles, so the operator is actually exercised (was ~1 kick / 9 cycles).
+                            if (!(ABLATION_MASK & 512) && sedca_heat >= 0.65 && (sedca.cycle_count & 1) == 0) {
+                                pending_kick = true; ++kick_count;
                             }
                         } else {
                             cycle_stag++;
                             load_best();
+                            if (!(ABLATION_MASK & 512)) { pending_kick = true; ++kick_count; }
                         }
                         improved_in_cycle = false;
                     }
                     cur_cycle = sedca.cycle_count;
+                    sedca.stag = cycle_stag;
+                    thermal_step();
                 } else {
                     temp = 0.08 * S_scale;
                     cur_cycle = 0;
+                    thermal_step();
                 }
             }
         } else {
@@ -776,18 +917,27 @@ int main(int argc, char** argv) {
                             if ((ABLATION_MASK & 8) && cur_obj >= best_obj - (ll)(2.0 * sedca.micro_delta)) {
                                 // Old soft drift
                             } else {
-                                load_best(); // Default: Proven Hard Reset (+44 pts, Min 30,756, Max 31,469)
+                                load_best(); // Proven Hard Reset to incumbent
+                            }
+                            // H3: even a productive cycle earns a kick at high heat on alternating
+                            // cycles, so the operator is actually exercised (was ~1 kick / 9 cycles).
+                            if (!(ABLATION_MASK & 512) && sedca_heat >= 0.65 && (sedca.cycle_count & 1) == 0) {
+                                pending_kick = true; ++kick_count;
                             }
                         } else {
                             cycle_stag++;
                             load_best();
+                            if (!(ABLATION_MASK & 512)) { pending_kick = true; ++kick_count; }
                         }
                         improved_in_cycle = false;
                     }
                     cur_cycle = sedca.cycle_count;
+                    sedca.stag = cycle_stag;
+                    thermal_step();
                 } else {
                     temp = 0.08 * S_scale;
                     cur_cycle = 0;
+                    thermal_step();
                 }
             }
         }
@@ -798,6 +948,8 @@ int main(int argc, char** argv) {
         int r_mode = ruin_guided(seed);
         mode_tries[r_mode]++;
         int n_rem = (int)removed.size();
+        if (touched.empty()) ++st_touched_empty;   // ruin removed 0 routes' worth of requests
+        if (n_rem == 0) ++st_ruin_failed;
 
         cand.clear();
         auto add = [&](int q) {
@@ -823,17 +975,20 @@ int main(int argc, char** argv) {
         for (int k : touched) dcost += rt[k].cost - backup[k].cost;
         ll new_obj = cur_obj + rev_delta - dcost;
         ll delta = new_obj - cur_obj;
+        if (delta == 0) ++st_null_delta; else if (delta < 0) ++st_downhill;
 
         string status = "REJECT";
         if (delta >= 0 || (double)delta > temp * log(rand01() + 1e-300)) {
             cur_obj = new_obj;
             ++accepted_count;
+            if (delta == 0) ++st_null_accepted;
             if (cur_obj > best_obj) {
                 save_best();
                 ++improved_count;
                 improved_in_cycle = true;
                 mode_records[r_mode]++;
                 sort_records[s_mode]++;
+                if (r_mode == 4 && !(ABLATION_MASK & 512)) ++kick_records;          // H3 yield
                 status = "IMPROVE_GLOBAL";
             } else if (delta > 0) {
                 mode_improve[r_mode]++;
@@ -853,12 +1008,22 @@ int main(int argc, char** argv) {
                  << cur_obj << "," << best_obj << "," << status << "\n";
         }
 
+        if (delta < 0) {
+            recent_delta[recent_pos] = (double)llabs(delta);
+            recent_pos = (recent_pos + 1) & 127;
+            if (recent_filled < 128) ++recent_filled;
+        }
         if (!sedca.calibrated && delta < 0) {
             warmup_worsening.push_back((double)llabs(delta));
             if ((int)warmup_worsening.size() >= WARMUP_COUNT) {
                 sedca.auto_calibrate(warmup_worsening, S_scale);
             }
         }
+        if (!(ABLATION_MASK & 8192) && sedca.calibrated && recent_filled >= 64 && (it % 20000 == 0) && it > 0) {
+            vector<double> rec(recent_delta, recent_delta + recent_filled);
+            sedca.online_recalibrate(rec, S_scale);
+        }
+        if (!(ABLATION_MASK & 2048) && (it % 20000 == 0) && it > 0) update_bandit();
     }
 
     double total_wall_time = chrono::duration<double>(chrono::steady_clock::now() - t_start).count();
@@ -902,7 +1067,7 @@ int main(int argc, char** argv) {
                     << "      GUIDED MULTI-BASIN SISR-SA (GM-SISR): FULL EXPERIMENT REPORT     \n"
                     << "======================================================================\n\n"
                     << "  * Instance             : " << test_filepath << "\n"
-                    << "  * Thermal Strategy     : SEDCA-V3 (Flat-Bottomed U-Valley & Micro-Step Calibration)\n"
+                    << "  * Thermal Strategy     : SEDCA-V4 (exponential-tooth, operator-coupled, bit4096=legacy)\n"
                     << "  * Problem Dimensions   : K=" << K << ", N=" << N << ", M=" << M << ", V=" << V << "\n"
                     << "  * Wall-clock Budget    : " << TIME_LIMIT_SEC << "s (Elapsed: " << total_wall_time << "s)\n"
                     << "  * Random Seed          : " << run_seed << "\n"
@@ -919,6 +1084,14 @@ int main(int argc, char** argv) {
                     << "  * Mode 1 (String Ruin) : Calls=" << mode_tries[1] << " | Improves=" << mode_improve[1] << " | Records=" << mode_records[1] << "\n"
                     << "  * Mode 2 (Unserved-Cav): Calls=" << mode_tries[2] << " | Improves=" << mode_improve[2] << " | Records=" << mode_records[2] << "\n"
                     << "  * Mode 3 (Bottleneck)  : Calls=" << mode_tries[3] << " | Improves=" << mode_improve[3] << " | Records=" << mode_records[3] << "\n"
+                    << "  * Mode 4 (Basin Kick)  : Calls=" << mode_tries[4] << " | Records=" << mode_records[4] << " | Kicks=" << kick_count << " | KickRecords=" << kick_records << "\n"
+                    << "  * H1 Soft-Inserts      : " << soft_inserts << " | Bandit w=[1..3]=" << setprecision(2) << bandit_w[1] << "/" << bandit_w[2] << "/" << bandit_w[3] << "\n"
+                    << "  * STRUCT no-op (delta==0): " << st_null_delta << " / " << total_iters
+                    << " (" << fixed << setprecision(2) << (total_iters ? st_null_delta * 100.0 / total_iters : 0) << "%)"
+                    << " | accepted null: " << st_null_accepted << "\n"
+                    << "  * STRUCT ruin-empty      : " << st_ruin_failed << " (" << (total_iters ? st_ruin_failed * 100.0 / total_iters : 0) << "%)"
+                    << " | touched-empty: " << st_touched_empty << " (" << (total_iters ? st_touched_empty * 100.0 / total_iters : 0) << "%)"
+                    << " | downhill: " << (total_iters ? st_downhill * 100.0 / total_iters : 0) << "%\n"
                     << "  * Sort Records (0/1/2) : " << sort_records[0] << " / " << sort_records[1] << " / " << sort_records[2] << "\n"
                     << "======================================================================\n";
             freport.close();

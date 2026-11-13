@@ -6,8 +6,8 @@ typedef long long ll;
 // ============================================================================
 // 1. GLOBAL PARAMETERS & HYPERPARAMETERS (ONLINE JUDGE SPECIFICATION)
 // ============================================================================
-static double TIME_LIMIT_SEC = 69.8;              // Total search budget (seconds, safe for 70s limit)
-static double TIME_LIMIT_PHASE1 = 10.0;           // Phase 1 exact budget (seconds)
+static double TIME_LIMIT_SEC = 201.0;            // Total search budget (judge limit 300s; self-imposed 201s)
+static double TIME_LIMIT_PHASE1 = 60.0;          // Phase 1 exact budget (seconds)
 static long long MAX_ITERS = 0;                  // Phase 2 deterministic iteration budget (0 = wall-clock)
 
 // --- PHASE 1 HYPERPARAMETERS (DFS Column Enumeration + Set Packing) ---
@@ -15,7 +15,7 @@ static const long long ENUM_STATE_CAP = 500000000;// State cap for DFS
 static const size_t ENUM_COL_CAP = 20000000;      // Unique column memory cap
 static const int LAGR_MAX_IT = 2000;              // Lagrangian subgradient max iterations
 static const ll LAGR_WORK = 200000000;            // Max subgradient work
-static const double ENUM_TIME_FRAC = 0.65;        // Max fraction of Phase 1 time for DFS (up to 6.5s in 10s budget)
+static const double ENUM_TIME_FRAC = 0.65;        // Max fraction of Phase 1 budget for DFS
 static double SP_STALL_SEC = 3.5;                 // Stagnation threshold for Set Packing SA
 
 // --- PHASE 2 HYPERPARAMETERS (Champion Guided Multi-Basin SISR-SA) ---
@@ -26,6 +26,15 @@ static int CAND_NB = 3;                           // Unserved neighbors offered 
 static int CAND_RAND = 10;                        // Random unserved requests offered to recreate
 static unsigned BLINK_MASK = 31;                  // Christiaens blink probability (1/32)
 static const ll INFLL = (ll)4e18;
+
+// --- H5: yield-based operator bandit (ruin-mode weights, idx 1..3) -----------
+// The prior encodes the proven 75/15/10 mode split; the observed yield only
+// modulates it within [0.5, 2]x so no operator can ever be starved.
+static const double BANDIT_PRIOR[4] = {0.0, 7.5, 1.5, 1.0};
+static double bandit_w[5] = {0.0, 7.5, 1.5, 1.0, 1.0};
+static long long mode_tries[5] = {0}, mode_records[5] = {0};
+static const long long BANDIT_UPDATE_ITERS = 20000;
+static const int RECALIB_UPDATE_ITERS = 20000;
 
 // ============================================================================
 // 2. FAST INPUT READER & ULTRA-FAST RNG (Xorshift64)
@@ -318,7 +327,7 @@ static bool column_solve(const vector<int>& s_list, chrono::steady_clock::time_p
         ub = (ll)floor(best_bound + 1e-6);
     }
 
-    // 3. Set Packing SA (runs up to TIME_LIMIT_PHASE1 = 1.0s)
+    // 3. Set Packing SA (runs until TIME_LIMIT_PHASE1 or SP_STALL_SEC of no improvement)
     if (best < ub && !lagr_exact && NC > 0) {
         double avgp = 0; for (int j = 0; j < NC; ++j) avgp += cols[j].profit; avgp /= NC;
         const double T0 = max(1e-9, 0.3 * avgp), TF = max(1e-9, 0.003 * avgp);
@@ -529,6 +538,19 @@ static inline int select_seed() {
     return servable_list[rng() % servable_list.size()];
 }
 
+// H5: yield-based operator weights. Relative yield (records per call) modulates the
+// prior split, bounded so no operator can be starved.
+static void update_bandit() {
+    double y[4] = {0.0, 0.0, 0.0, 0.0};
+    for (int m = 1; m <= 3; ++m)
+        y[m] = (double)(mode_records[m] + 1) / (double)(mode_tries[m] + 200);
+    double ymean = (y[1] + y[2] + y[3]) / 3.0;
+    for (int m = 1; m <= 3; ++m) {
+        double rel = (ymean > 0.0) ? (y[m] / ymean) : 1.0;
+        bandit_w[m] = BANDIT_PRIOR[m] * clamp(0.5 + 0.5 * rel, 0.5, 2.0);
+    }
+}
+
 static int ruin_guided(int seed) {
     removed.clear();
     priority_head = -1;
@@ -538,7 +560,7 @@ static int ruin_guided(int seed) {
 
     double ls_max = min((double)L_MAX, (double)tot_nodes / busy);
     double ks_max = 4.0 * C_AVG / (1.0 + ls_max) - 1.0;
-    int ks = (int)(rand01() * ks_max) + 1, done = 0;
+    int ks = max(1, (int)(rand01() * max(1.0, ks_max)) + 1), done = 0;
 
     auto try_route = [&](int c) {
         int k = veh[c];
@@ -557,7 +579,13 @@ static int ruin_guided(int seed) {
         if (remove_from_route(k)) ++done;
     };
 
-    int roll = rng() % 100;
+    int roll;
+    {
+        // H5: bandit-weighted mode choice (roulette over yield-modulated prior weights).
+        double bw1 = bandit_w[1], bw2 = bandit_w[2], bw3 = bandit_w[3];
+        double r = rand01() * (bw1 + bw2 + bw3);
+        if ((r -= bw1) < 0) roll = 0; else if ((r -= bw2) < 0) roll = 75; else roll = 90;
+    }
     // Mode 2 (15%): Unserved-Cavity Ruin
     if (roll >= 75 && roll < 90) {
         int best_u = -1; double best_score = -1.0;
@@ -634,7 +662,7 @@ static int order_candidates(vector<int>& cands) {
 
 // SEDCA-V3 U-Valley Thermostat
 struct AdaptiveThermostat {
-    double t_max = 59.5;
+    double t_max = 60.0;   // placeholder only: overwritten with the real budget in main()
     const double tau_fast = 0.10;
     const double tau_quench = 0.86;
     const double phase_up_end = 0.12;
@@ -642,6 +670,8 @@ struct AdaptiveThermostat {
     const double PI_CONST = 3.14159265358979323846;
 
     double T_0 = 25.0, T_work = 4.0, T_min = 0.6, micro_delta = 5.0;
+    double T_peak_base = 25.0, T_min_base = 0.6;   // operator-coupling bounds
+    int stag = 0;                                   // stagnation cycles (drives adaptive dwell)
     bool calibrated = false;
 
     bool in_cycle_mode = false;
@@ -665,24 +695,44 @@ struct AdaptiveThermostat {
         T_min  = max(0.2, micro_delta / 6.907);
         T_work = max(T_min * 3.0, micro_delta / 1.05);
         T_0    = T_work * 5.5;
+        T_min_base = T_min;
+        T_peak_base = max(2.0 * T_min, 0.65 * T_0);
         calibrated = true;
     }
 
+    // T4: online micro-recalibration from a recent window of worsening deltas.
+    // Keeps the thermal ladder anchored to the *current* cost scale instead of the
+    // start-of-run scale (the landscape's delta magnitudes drift as the solution improves).
+    void online_recalibrate(const vector<double>& deltas, double scale_S) {
+        vector<double> valid;
+        for (double d : deltas) if (d > 0.0 && d <= 0.80 * scale_S) valid.push_back(d);
+        if (valid.size() < 20) return;
+        sort(valid.begin(), valid.end());
+        double p15 = valid[(valid.size() * 15) / 100];
+        micro_delta = clamp(p15, 1.0, max(2.0, 0.06 * scale_S));
+        T_min  = max(0.2, micro_delta / 6.907);
+        T_work = max(T_min * 3.0, micro_delta / 1.05);
+        T_0    = T_work * 5.5;
+        T_min_base = T_min;
+        T_peak_base = max(2.0 * T_min, 0.65 * T_0);
+    }
+
+    // Single exponential tooth: constant peak (does NOT decay), adaptive dwell driven by
+    // stagnation, and NO bottom dwell — the moment the tooth reaches base we reheat again.
     void start_new_cycle(double current_tau) {
         in_cycle_mode = true;
         cycle_start_tau = current_tau;
         ++cycle_count;
 
-        double osc_progress = clamp((current_tau - tau_fast) / (tau_quench - tau_fast), 0.0, 1.0);
-        double max_peak = 0.65 * T_0, min_peak = 1.50 * T_work;
-        cycle_peak_T = min_peak * pow(max_peak / min_peak, 1.0 - osc_progress);
-        cycle_work_T = T_work * pow(0.65, osc_progress);
-        cycle_base_T = T_min  * pow(0.75, osc_progress);
-
         double base_span = tau_quench - tau_fast;
         double remaining_osc_tau = tau_quench - current_tau;
-        double target_duration = base_span * (0.18 + 0.10 * osc_progress);
-        cycle_duration_tau = min(target_duration, max(0.04, remaining_osc_tau));
+
+        double stag_factor = 1.0 / (1.0 + 0.7 * min(3, stag));
+        cycle_peak_T = max(T_peak_base, 2.0 * T_min_base);
+        cycle_base_T = T_min_base;
+        cycle_work_T = sqrt(cycle_peak_T * cycle_base_T);
+        double target_duration = base_span * 0.12 * stag_factor;
+        cycle_duration_tau = min(target_duration, max(0.03, remaining_osc_tau));
     }
 
     pair<double, bool> get_temperature_tau(double tau) {
@@ -711,19 +761,7 @@ struct AdaptiveThermostat {
         }
         phi_c = clamp(phi_c, 0.0, 1.0);
 
-        double T = cycle_base_T;
-        if (phi_c < phase_up_end) {
-            double u = phi_c / phase_up_end;
-            double cos_factor = 0.5 * (1.0 - cos(PI_CONST * u));
-            T = cycle_base_T + (cycle_peak_T - cycle_base_T) * cos_factor;
-        } else if (phi_c < phase_drop_end) {
-            double u = (phi_c - phase_up_end) / (phase_drop_end - phase_up_end);
-            T = cycle_peak_T * pow(cycle_work_T / cycle_peak_T, u);
-        } else {
-            double u = (phi_c - phase_drop_end) / (1.0 - phase_drop_end);
-            T = cycle_work_T * pow(cycle_base_T / cycle_work_T, u);
-        }
-
+        double T = cycle_peak_T * pow(cycle_base_T / cycle_peak_T, phi_c);
         return { max(T, 0.2), triggered_reheat };
     }
 
@@ -888,6 +926,7 @@ int main() {
         double temp = 0.15 * S_scale;
         int cur_cycle = 0, cycle_stag = 0;
         bool improved_in_cycle = false;
+        double recent_delta[128] = {0}; int recent_pos = 0, recent_filled = 0;   // T4 recalibration ring
 
         // Search Loop
         for (long long it = 0;; ++it) {
@@ -910,6 +949,7 @@ int main() {
                         improved_in_cycle = false;
                     }
                     cur_cycle = sedca.cycle_count;
+                    sedca.stag = cycle_stag;   // adaptive dwell: more stagnation => shorter tooth
                 } else {
                     temp = 0.08 * S_scale;
                     cur_cycle = 0;
@@ -920,6 +960,7 @@ int main() {
 
             int seed = select_seed();
             int r_mode = ruin_guided(seed);
+            mode_tries[r_mode]++;
 
             cand.clear();
             auto add = [&](int q) {
@@ -951,18 +992,29 @@ int main() {
                 if (cur_obj > best_obj) {
                     save_best();
                     improved_in_cycle = true;
+                    mode_records[r_mode]++;
                 }
             } else {
                 for (int k : touched) { swap(rt[k], backup[k]); rver[k] = ++gver; }
                 for (int i = (int)veh_log.size() - 1; i >= 0; --i) veh[veh_log[i].first] = veh_log[i].second;
             }
 
+            if (delta < 0) {
+                recent_delta[recent_pos] = (double)llabs(delta);
+                recent_pos = (recent_pos + 1) & 127;
+                if (recent_filled < 128) ++recent_filled;
+            }
             if (!sedca.calibrated && delta < 0) {
                 warmup_worsening.push_back((double)llabs(delta));
                 if ((int)warmup_worsening.size() >= WARMUP_COUNT) {
                     sedca.auto_calibrate(warmup_worsening, S_scale);
                 }
             }
+            if (sedca.calibrated && recent_filled >= 64 && it > 0 && (it % RECALIB_UPDATE_ITERS == 0)) {
+                vector<double> rec(recent_delta, recent_delta + recent_filled);
+                sedca.online_recalibrate(rec, S_scale);
+            }
+            if (it > 0 && (it % BANDIT_UPDATE_ITERS == 0)) update_bandit();
         }
     }
 

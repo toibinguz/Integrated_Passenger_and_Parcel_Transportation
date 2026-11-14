@@ -4,30 +4,73 @@ using namespace std;
 typedef long long ll;
 
 // ============================================================================
-// 1. GLOBAL PARAMETERS & HYPERPARAMETERS (ONLINE JUDGE & BENCHMARK SPEC)
+// 1. GLOBAL CONTROL PARAMETERS & HYPERPARAMETERS (ONLINE JUDGE & BENCHMARK)
 // ============================================================================
-static double TIME_LIMIT_SEC = 145.0;             // Default judge search budget (seconds)
-static bool VERBOSE_LOG = false;                  // Diagnostics to stderr when enabled
 
-// --- PHASE 1 HYPERPARAMETERS (Balanced DFS Enumeration + Dual-Guided SP-SA) ---
-static const long long ENUM_STATE_CAP = 500000000;// State cap for DFS
-static const size_t ENUM_MEM_CAP = 150ull * 1024 * 1024;// 150 MB budget for column structures
-static const size_t ENUM_COL_CAP = 1500000;       // Secondary unique column count cap
-static const int LAGR_MAX_IT = 2000;              // Lagrangian subgradient max iterations
-static const ll LAGR_WORK = 200000000;            // Max subgradient work
+// --- 1.1. Time Budgets & Phase 1 / Phase 2 Scheduling ---
+static double TIME_LIMIT_SEC = 145.0;             // Default judge search budget (seconds)
+static bool VERBOSE_LOG = false;                  // Diagnostics to stderr when enabled (--verbose/-v)
+
+static const double P1_ENUM_MAX_SEC = 1.8;        // Hard time cap for Phase 1 DFS column enumeration (s)
+static const double P1_ENUM_TIME_FRAC = 0.15;     // Max fraction of TIME_LIMIT_SEC spent enumerating columns
+static const long long P1_ENUM_MIN_SLICE_US = 120000LL; // Minimum per-taxi preferred slice (120ms)
+static const long long P1_ENUM_SLICE_AVG_MULT = 3LL;    // Multiplier on average remaining time per taxi
+static const long long P1_ENUM_FLOOR_US = 5000LL;       // Emergency floor slice per taxi near deadline (5ms)
+
+static const double P1_SP_GATE_GREEDY_RATIO = 0.90;     // Min P1/P2-greedy ratio to run SP-SA when enum_partial
+static const double P1_SP_MAX_SEC_COMPLETE = 25.0;      // Max Phase 1 SP-SA time when column pool is complete
+static const double P1_SP_TIME_FRAC_COMPLETE = 0.75;    // Max fraction of TIME_LIMIT_SEC for complete SP-SA
+static const double P1_SP_MAX_SEC_PARTIAL = 4.0;        // Max Phase 1 SP-SA time when enum_partial=true
+static const double P1_SP_TIME_FRAC_PARTIAL = 0.30;     // Max fraction of TIME_LIMIT_SEC for partial SP-SA
+static const double P1_WAVE_MAX_SEC_CAP = 5.5;          // Max duration per SP-SA wave (s)
+static const double P1_WAVE_MIN_SEC = 0.5;              // Min duration per SP-SA wave (s)
+static const double P1_WAVE_BUDGET_FRAC = 0.45;         // Fraction of sp_budget allocated to a single wave
+static const double P1_WAVE_STALL_MAX_SEC = 2.5;        // Max no-improvement stall inside a wave (s)
+static const double P1_WAVE_STALL_MIN_SEC = 0.3;        // Min no-improvement stall inside a wave (s)
+static const double P1_WAVE_STALL_FRAC = 0.45;          // Stall threshold as fraction of wave_max_sec
+static const int P1_MAX_STAGNANT_WAVES = 2;             // Consecutive non-improving waves before handing to P2
+
+// --- 1.2. Phase 1 DFS Enumeration Quotas & Memory Caps ---
+static const long long ENUM_STATE_CAP = 500000000;      // Max DFS states across Phase 1
+static const size_t ENUM_MEM_CAP = 150ull * 1024 * 1024;// Total memory budget for column storage (150 MB)
+static const size_t ENUM_COL_CAP = 1500000;             // Total unique column count cap
+static const long long ENUM_MIN_COL_PER_TAXI = 4096;    // Minimum guaranteed column quota per taxi
+
+// --- 1.3. Phase 1 Lagrangian Relaxation & Multi-Wave Set Packing SA ---
+static const int LAGR_MAX_IT = 2000;              // Max Lagrangian subgradient iterations
+static const ll LAGR_WORK = 200000000;            // Work budget for Lagrangian subgradient
+static const double LAGR_INIT_LAMBDA = 2.0;       // Initial subgradient step multiplier
+static const int LAGR_STALL_ITERS = 10;           // Iterations without bound gain before halving lambda
 static const int SP_TCOL_RC_CAP = 2048;           // Elite reduced-cost columns kept per taxi
 static const int SP_REQ_COL_CAP = 96;             // Elite columns kept per request
+static const double SP_T0_PROFIT_MULT = 0.15;     // Initial SA temperature multiplier of avg column profit
+static const double SP_TF_PROFIT_MULT = 0.002;    // Final SA temperature multiplier of avg column profit
+static const double SP_COOLING_EXP = 1.35;        // Convex cooling exponent for SP-SA wave temperature
+static const int SP_PERTURB_DROP_PCT = 20;        // % of taxis dropped on even-wave perturbation restarts
+static const int SP_OP1_PROB_CUTOFF = 45;         // Cumulative % prob for Op1 (Dual Insertion)
+static const int SP_OP2_PROB_CUTOFF = 80;         // Cumulative % prob for Op2 (Elite Swap); rest is Op3
 
-// --- PHASE 2 HYPERPARAMETERS (GM-SISR mask=896 + Eject50 + O1 Relocate Polish) ---
+// --- 1.4. Phase 2 Hyperparameters (GM-SISR mask=896 + Eject50 + O1 + SEDCA-V4) ---
 static const int NB_SIZE = 60;                    // Normalized spatio-temporal neighbor list size
 static const double C_AVG = 10.0;                 // SISR: average removed requests
 static const int L_MAX = 10;                      // SISR: maximum string length
 static const int CAND_NB = 3;                     // Unserved neighbors offered to recreate
 static const int CAND_RAND = 10;                  // Random unserved requests offered to recreate
 static const unsigned BLINK_MASK = 31;            // Christiaens blink probability (1/32)
+static const double REGRET_EMA_DECAY = 0.80;      // EMA persistence factor for request regret memory
+static const long long EJECT_ITER_MASK = 1;       // Run Eject50 when (it & EJECT_ITER_MASK) == 0 (50%)
+static const int EJECT_PROBES = 6;                // Blocked high-value requests probed per Eject50 step
+static const int EJECT_MAX_MOVES = 3;             // Max successful ejection chains per Eject50 pass
+static const int EJECT_NBR_SCAN = 14;             // Max neighbors scanned per blocked request in Eject50
+static const int EJECT_NBR_TRIES = 7;             // Max occupied neighbors evaluated per blocked request
+static const long long O1_ITER_MASK = 31;         // Run O1 polish on accepted move when (it & O1_ITER_MASK) == 0
 static const int O1_POOL_CAP = 12;                // Max touched requests scanned per O1 polish
 static const int O1_MAX_STEPS = 4;                // Max improving cross-route relocates per polish
-static const int EJECT_PROBES = 6;                // Blocked high-value requests probed per Eject50 step
+static const int P2_WARMUP_DELTAS = 200;          // Negative deltas collected before SEDCA-V4 calibration
+static const double P2_TAU_FAST = 0.10;           // Normalized time fraction for initial fast cooling phase
+static const double P2_TAU_QUENCH = 0.86;         // Normalized time fraction starting final quench phase
+static const double P2_CYCLE_SPAN_FRAC = 0.12;    // Reheat cycle base width relative to (tau_quench - tau_fast)
+static const double P2_MIN_CYCLE_TAU = 0.03;      // Minimum normalized tooth duration near quench boundary
 static const ll INFLL = (ll)4e18;
 
 // --- Yield-Based Operator Bandit (Ruin Modes 1..3; prior 75 / 15 / 10) ---
@@ -280,13 +323,13 @@ static bool column_solve(const vector<int>& s_list, chrono::steady_clock::time_p
     e_used.assign(R + 1, 0);
     enum_states = 0; enum_abort = false; enum_partial = false;
 
-    const double enum_budget = min(1.8, TIME_LIMIT_SEC * 0.15);
+    const double enum_budget = min(P1_ENUM_MAX_SEC, TIME_LIMIT_SEC * P1_ENUM_TIME_FRAC);
     auto t_enum_start = chrono::steady_clock::now();
     enum_deadline = t_enum_start + chrono::microseconds((ll)(enum_budget * 1e6));
 
     const int KK = max(1, K);
     enum_mem_per_taxi = ENUM_MEM_CAP / (size_t)KK;
-    enum_col_per_taxi = (size_t)max<ll>(4096, (ll)ENUM_COL_CAP / KK);
+    enum_col_per_taxi = (size_t)max<ll>(ENUM_MIN_COL_PER_TAXI, (ll)ENUM_COL_CAP / KK);
 
     for (int k = 1; k <= K && !enum_abort; ++k) {
         auto now = chrono::steady_clock::now();
@@ -294,9 +337,9 @@ static bool column_solve(const vector<int>& s_list, chrono::steady_clock::time_p
         long long rem_us = chrono::duration_cast<chrono::microseconds>(enum_deadline - now).count();
         long long min_per_rem = (long long)(enum_budget * 1e6) / (2 * KK);
         long long reserve_rest = (long long)(K - k) * min_per_rem;
-        long long avail_us = max(5000LL, rem_us - reserve_rest);
+        long long avail_us = max(P1_ENUM_FLOOR_US, rem_us - reserve_rest);
         long long avg_us = rem_us / (K - k + 1);
-        long long slice_us = min(avail_us, max(120000LL, 3LL * avg_us));
+        long long slice_us = min(avail_us, max(P1_ENUM_MIN_SLICE_US, P1_ENUM_SLICE_AVG_MULT * avg_us));
 
         enum_k_cut = false;
         enum_k_col0 = cols.size(); enum_k_req0 = col_req.size();
@@ -339,7 +382,7 @@ static bool column_solve(const vector<int>& s_list, chrono::steady_clock::time_p
     // 2. Smart gate: run Lagrangian Relaxation + Multi-Wave SP-SA if complete OR near Phase 2 greedy
     ll ub = LLONG_MAX;
     bool lagr_exact = false;
-    bool should_run_sp = !enum_partial || (best >= (p2_greedy_obj * 9) / 10);
+    bool should_run_sp = !enum_partial || ((double)best >= (double)p2_greedy_obj * P1_SP_GATE_GREEDY_RATIO);
     if (should_run_sp) {
         vector<vector<int>> tcols(K + 1);
         for (int j = 0; j < NC; ++j) tcols[cols[j].k].push_back(j);
@@ -348,7 +391,7 @@ static bool column_solve(const vector<int>& s_list, chrono::steady_clock::time_p
         vector<double> u_best(R + 1, 0.0);
         {
             vector<double> u(R + 1, 0.0), g(R + 1);
-            double lambda = 2.0, best_bound = 1e300; int stall = 0;
+            double lambda = LAGR_INIT_LAMBDA, best_bound = 1e300; int stall = 0;
             const int max_it = (int)min<ll>(LAGR_MAX_IT, LAGR_WORK / max<ll>(1, (ll)col_req.size()));
             vector<int> relax(K + 1, -1);
 
@@ -366,7 +409,7 @@ static bool column_solve(const vector<int>& s_list, chrono::steady_clock::time_p
                     if (bj >= 0) for (int i = 0; i < cols[bj].rlen; ++i) g[col_req[cols[bj].rbeg + i]] -= 1.0;
                 }
                 if (L < best_bound - 1e-9) { best_bound = L; u_best = u; stall = 0; }
-                else if (++stall >= 10) { lambda *= 0.5; stall = 0; }
+                else if (++stall >= LAGR_STALL_ITERS) { lambda *= 0.5; stall = 0; }
 
                 if (best_bound < (double)best + 1 - 1e-6) break;
                 double norm = 0; for (int q : s_list) { if (u[q] <= 0 && g[q] > 0) g[q] = 0; norm += g[q] * g[q]; }
@@ -426,7 +469,7 @@ static bool column_solve(const vector<int>& s_list, chrono::steady_clock::time_p
 
             if (!busy.empty()) {
                 double avgp = 0; for (int j = 0; j < NC; ++j) avgp += cols[j].profit; avgp /= NC;
-                const double T0 = max(1e-9, 0.15 * avgp), TF = max(1e-9, 0.002 * avgp);
+                const double T0 = max(1e-9, SP_T0_PROFIT_MULT * avgp), TF = max(1e-9, SP_TF_PROFIT_MULT * avgp);
 
                 vector<pair<int, int>> log_;
                 vector<int> refill;
@@ -454,10 +497,10 @@ static bool column_solve(const vector<int>& s_list, chrono::steady_clock::time_p
                 const double used_total = chrono::duration<double>(chrono::steady_clock::now() - t_start).count();
                 const double rem_total = max(0.05, TIME_LIMIT_SEC - used_total);
                 double sp_budget = !enum_partial
-                    ? min({25.0, TIME_LIMIT_SEC * 0.75, rem_total})
-                    : min({4.0, TIME_LIMIT_SEC * 0.30, rem_total});
-                double wave_max_sec = min(5.5, max(0.5, sp_budget * 0.45));
-                double wave_stall_sec = min(2.5, max(0.3, wave_max_sec * 0.45));
+                    ? min({P1_SP_MAX_SEC_COMPLETE, TIME_LIMIT_SEC * P1_SP_TIME_FRAC_COMPLETE, rem_total})
+                    : min({P1_SP_MAX_SEC_PARTIAL, TIME_LIMIT_SEC * P1_SP_TIME_FRAC_PARTIAL, rem_total});
+                double wave_max_sec = min(P1_WAVE_MAX_SEC_CAP, max(P1_WAVE_MIN_SEC, sp_budget * P1_WAVE_BUDGET_FRAC));
+                double wave_stall_sec = min(P1_WAVE_STALL_MAX_SEC, max(P1_WAVE_STALL_MIN_SEC, wave_max_sec * P1_WAVE_STALL_FRAC));
 
                 auto sp_start = chrono::steady_clock::now();
                 auto sp_deadline = sp_start + chrono::microseconds((ll)(sp_budget * 1e6));
@@ -479,7 +522,7 @@ static bool column_solve(const vector<int>& s_list, chrono::steady_clock::time_p
                     } else {
                         for (int k = 1; k <= K; ++k) assign(k, best_choice[k]);
                         vector<int> dropped;
-                        for (int k : busy) if ((rng() % 100) < 20) { unassign(k); dropped.push_back(k); }
+                        for (int k : busy) if ((int)(rng() % 100) < SP_PERTURB_DROP_PCT) { unassign(k); dropped.push_back(k); }
                         for (size_t i = dropped.size(); i > 1; --i) swap(dropped[i - 1], dropped[rng() % i]);
                         for (int k : dropped) for (int c : tcols_rc[k]) if (is_free(c)) { assign(k, c); break; }
                         sweep_free_vehicles();
@@ -503,14 +546,14 @@ static bool column_solve(const vector<int>& s_list, chrono::steady_clock::time_p
                             double w_el = chrono::duration<double>(tnow - w_start).count();
                             if (w_el > wave_budget || w_el - w_last_impr > wave_stall_sec) break;
                             double tau = clamp(w_el / max(1e-6, wave_budget), 0.0, 1.0);
-                            temp = T0 * pow(TF / T0, pow(tau, 1.35));
+                            temp = T0 * pow(TF / T0, pow(tau, SP_COOLING_EXP));
                         }
 
                         int roll = (int)(rng() % 100);
                         ll before = cur;
                         log_.clear(); refill.clear();
 
-                        if (roll < 45) {
+                        if (roll < SP_OP1_PROB_CUTOFF) {
                             int target_req = -1;
                             size_t dual_lim = max<size_t>(1, min<size_t>(reqs_by_dual.size(), max<size_t>(16, reqs_by_dual.size() / 4)));
                             for (int t = 0; t < 10; ++t) {
@@ -529,7 +572,7 @@ static bool column_solve(const vector<int>& s_list, chrono::steady_clock::time_p
                                 if (j == chosen[k]) continue;
                                 apply_col_evict(k, j);
                             }
-                        } else if (roll < 80) {
+                        } else if (roll < SP_OP2_PROB_CUTOFF) {
                             int k = busy[rng() % busy.size()];
                             const auto& tc = tcols_rc[k];
                             size_t sample_lim = (rng() % 100 < 85) ? min<size_t>(tc.size(), 12) : min<size_t>(tc.size(), 32);
@@ -621,7 +664,7 @@ static bool column_solve(const vector<int>& s_list, chrono::steady_clock::time_p
                     }
 
                     if (global_impr_this_wave) waves_no_impr = 0;
-                    else if (++waves_no_impr >= 2) break;
+                    else if (++waves_no_impr >= P1_MAX_STAGNANT_WAVES) break;
                 }
             }
         }
@@ -771,7 +814,7 @@ static void recreate_with_memory(const vector<int>& cands, bool blink) {
         }
         ll g1 = (best1 < INFLL) ? max(0LL, (ll)Rev[q] - best1) : 0LL;
         ll g2 = (best2 < INFLL) ? max(0LL, (ll)Rev[q] - best2) : 0LL;
-        ema_regret[q] = 0.80 * ema_regret[q] + 0.20 * (double)(g1 - g2);
+        ema_regret[q] = REGRET_EMA_DECAY * ema_regret[q] + (1.0 - REGRET_EMA_DECAY) * (double)(g1 - g2);
 
         if (bk != -1 && Rev[q] - best1 > 0) {
             do_insert(bk, q, bi, bj);
@@ -821,7 +864,7 @@ static void run_ejection_pass(const vector<int>& blocked, int max_probes) {
     }
 
     int ejects_done = 0;
-    for (int pi = 0; pi < limit && ejects_done < 3; ++pi) {
+    for (int pi = 0; pi < limit && ejects_done < EJECT_MAX_MOVES; ++pi) {
         int q = pool[pi];
         if (veh[q] != 0) continue;
 
@@ -831,8 +874,8 @@ static void run_ejection_pass(const vector<int>& blocked, int max_probes) {
         bool best_is_chain = false;
 
         int tried_nbr = 0;
-        const int nlim = min(14, (int)nbr[q].size());
-        for (int idx = 0; idx < nlim && tried_nbr < 7; ++idx) {
+        const int nlim = min(EJECT_NBR_SCAN, (int)nbr[q].size());
+        for (int idx = 0; idx < nlim && tried_nbr < EJECT_NBR_TRIES; ++idx) {
             int q_old = nbr[q][idx];
             int k = veh[q_old];
             if (k == 0) continue;
@@ -1102,8 +1145,8 @@ static int order_candidates(vector<int>& cands) {
 // SEDCA-V4 Thermostat (Exponential-Tooth Reheat + Online Micro-Recalibration)
 struct AdaptiveThermostat {
     double t_max = 60.0;
-    const double tau_fast = 0.10;
-    const double tau_quench = 0.86;
+    const double tau_fast = P2_TAU_FAST;
+    const double tau_quench = P2_TAU_QUENCH;
 
     double T_0 = 25.0, T_work = 4.0, T_min = 0.6, micro_delta = 5.0;
     double T_peak_base = 25.0, T_min_base = 0.6;
@@ -1147,8 +1190,8 @@ struct AdaptiveThermostat {
         double stag_factor = 1.0 / (1.0 + 0.7 * min(3, stag));
         cycle_peak_T = max(T_peak_base, 2.0 * T_min_base);
         cycle_base_T = T_min_base;
-        double target_duration = base_span * 0.12 * stag_factor;
-        cycle_duration_tau = min(target_duration, max(0.03, remaining_osc_tau));
+        double target_duration = base_span * P2_CYCLE_SPAN_FRAC * stag_factor;
+        cycle_duration_tau = min(target_duration, max(P2_MIN_CYCLE_TAU, remaining_osc_tau));
     }
 
     pair<double, bool> get_temperature(double elapsed_time) {
@@ -1352,8 +1395,8 @@ int main(int argc, char** argv) {
         AdaptiveThermostat sedca;
         sedca.t_max = budget;
         vector<double> warmup_worsening;
-        warmup_worsening.reserve(256);
-        const int WARMUP_COUNT = 200;
+        warmup_worsening.reserve(max(256, P2_WARMUP_DELTAS));
+        const int WARMUP_COUNT = P2_WARMUP_DELTAS;
 
         double temp = 0.15 * S_scale;
         int cycle_stag = 0;
@@ -1410,7 +1453,7 @@ int main(int argc, char** argv) {
             recreate_with_memory(cand, true);
 
             // Eject50: Depth <= 2 Ejection-Chain Recreate on 50% of iterations
-            if ((it & 1) == 0) run_ejection_pass(cand, EJECT_PROBES);
+            if ((it & EJECT_ITER_MASK) == 0) run_ejection_pass(cand, EJECT_PROBES);
 
             ll dcost = 0;
             for (int k : touched) dcost += rt[k].cost - backup[k].cost;
@@ -1426,7 +1469,7 @@ int main(int argc, char** argv) {
                     mode_records[r_mode]++;
                 }
                 // O1: Bounded exact cross-route relocate polish after accepted moves
-                if (!touched.empty() && (it & 31) == 0) {
+                if (!touched.empty() && (it & O1_ITER_MASK) == 0) {
                     ls_pool.clear();
                     for (int k : touched) {
                         for (int i = 1; i <= rt[k].n() && (int)ls_pool.size() < O1_POOL_CAP; ++i) {

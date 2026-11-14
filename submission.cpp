@@ -4,32 +4,33 @@ using namespace std;
 typedef long long ll;
 
 // ============================================================================
-// 1. GLOBAL PARAMETERS & HYPERPARAMETERS (ONLINE JUDGE SPECIFICATION)
+// 1. GLOBAL PARAMETERS & HYPERPARAMETERS (ONLINE JUDGE & BENCHMARK SPEC)
 // ============================================================================
-static double TIME_LIMIT_SEC = 201.0;            // Total search budget (judge limit 300s; self-imposed 201s)
-static double TIME_LIMIT_PHASE1 = 60.0;          // Phase 1 exact budget (seconds)
-static long long MAX_ITERS = 0;                  // Phase 2 deterministic iteration budget (0 = wall-clock)
+static double TIME_LIMIT_SEC = 145.0;             // Default judge search budget (seconds)
+static bool VERBOSE_LOG = false;                  // Diagnostics to stderr when enabled
 
-// --- PHASE 1 HYPERPARAMETERS (DFS Column Enumeration + Set Packing) ---
+// --- PHASE 1 HYPERPARAMETERS (Balanced DFS Enumeration + Dual-Guided SP-SA) ---
 static const long long ENUM_STATE_CAP = 500000000;// State cap for DFS
-static const size_t ENUM_COL_CAP = 20000000;      // Unique column memory cap
+static const size_t ENUM_MEM_CAP = 150ull * 1024 * 1024;// 150 MB budget for column structures
+static const size_t ENUM_COL_CAP = 1500000;       // Secondary unique column count cap
 static const int LAGR_MAX_IT = 2000;              // Lagrangian subgradient max iterations
 static const ll LAGR_WORK = 200000000;            // Max subgradient work
-static const double ENUM_TIME_FRAC = 0.65;        // Max fraction of Phase 1 budget for DFS
-static double SP_STALL_SEC = 3.5;                 // Stagnation threshold for Set Packing SA
+static const int SP_TCOL_RC_CAP = 2048;           // Elite reduced-cost columns kept per taxi
+static const int SP_REQ_COL_CAP = 96;             // Elite columns kept per request
 
-// --- PHASE 2 HYPERPARAMETERS (Champion Guided Multi-Basin SISR-SA) ---
+// --- PHASE 2 HYPERPARAMETERS (GM-SISR mask=896 + Eject50 + O1 Relocate Polish) ---
 static const int NB_SIZE = 60;                    // Normalized spatio-temporal neighbor list size
 static const double C_AVG = 10.0;                 // SISR: average removed requests
 static const int L_MAX = 10;                      // SISR: maximum string length
-static int CAND_NB = 3;                           // Unserved neighbors offered to recreate
-static int CAND_RAND = 10;                        // Random unserved requests offered to recreate
-static unsigned BLINK_MASK = 31;                  // Christiaens blink probability (1/32)
+static const int CAND_NB = 3;                     // Unserved neighbors offered to recreate
+static const int CAND_RAND = 10;                  // Random unserved requests offered to recreate
+static const unsigned BLINK_MASK = 31;            // Christiaens blink probability (1/32)
+static const int O1_POOL_CAP = 12;                // Max touched requests scanned per O1 polish
+static const int O1_MAX_STEPS = 4;                // Max improving cross-route relocates per polish
+static const int EJECT_PROBES = 6;                // Blocked high-value requests probed per Eject50 step
 static const ll INFLL = (ll)4e18;
 
-// --- H5: yield-based operator bandit (ruin-mode weights, idx 1..3) -----------
-// The prior encodes the proven 75/15/10 mode split; the observed yield only
-// modulates it within [0.5, 2]x so no operator can ever be starved.
+// --- Yield-Based Operator Bandit (Ruin Modes 1..3; prior 75 / 15 / 10) ---
 static const double BANDIT_PRIOR[4] = {0.0, 7.5, 1.5, 1.0};
 static double bandit_w[5] = {0.0, 7.5, 1.5, 1.0, 1.0};
 static long long mode_tries[5] = {0}, mode_records[5] = {0};
@@ -39,8 +40,8 @@ static const int RECALIB_UPDATE_ITERS = 20000;
 // ============================================================================
 // 2. FAST INPUT READER & ULTRA-FAST RNG (Xorshift64)
 // ============================================================================
-static char* ibuf; 
-static size_t ilen, ipos;
+static char* ibuf = nullptr;
+static size_t ilen = 0, ipos = 0;
 static void read_all() {
     size_t cap = 1 << 22; ibuf = (char*)malloc(cap); ilen = 0;
     for (;;) {
@@ -90,7 +91,7 @@ static double S_scale = 100.0;
 // 4. SOLUTION STATE & VERIFICATION STRUCTURES
 // ============================================================================
 struct Route {
-    vector<int> nd;   // nd[1..n] (nd[0] unused)
+    vector<int> nd;   // nd[1..n] (nd[0] = 0 unused depot anchor)
     vector<ll> dep;   // dep[i]: departure time from position i
     vector<ll> lat;   // lat[i]: backward latest arrival slack
     vector<int> ld;   // ld[i]: cumulative parcel load
@@ -110,10 +111,8 @@ static vector<vector<int>> best_nd;
 static vector<double> ema_regret;
 static int priority_head = -1;
 
-// Route evaluation & recompute
-static bool recompute(int k) {
-    Route& r = rt[k];
-    rver[k] = ++gver;
+// Side-effect-free route evaluation used by both rt[k] and probe routes (tmp_r)
+static bool recompute_route(int k, Route& r) {
     int n = r.n();
     r.dep.resize(n + 1); r.lat.resize(n + 2); r.ld.resize(n + 1);
     r.dep[0] = 0; r.ld[0] = 0;
@@ -139,6 +138,12 @@ static bool recompute(int k) {
     return true;
 }
 
+static inline bool recompute(int k) {
+    if (!recompute_route(k, rt[k])) return false;
+    rver[k] = ++gver;
+    return true;
+}
+
 static inline void save_best() {
     best_obj = cur_obj;
     for (int k = 1; k <= K; ++k) best_nd[k] = rt[k].nd;
@@ -154,7 +159,7 @@ static inline void load_best() {
 }
 
 // ============================================================================
-// 5. PHASE 1: EXACT COLUMN ENUMERATION & SET PACKING ENGINE
+// 5. PHASE 1: BALANCED COLUMN ENUMERATION + DUAL-GUIDED MULTI-WAVE SP-SA
 // ============================================================================
 struct Column { int k; ll profit; int rbeg, rlen, nbeg, nlen; };
 static vector<Column> cols;
@@ -162,29 +167,59 @@ static vector<int> col_req, col_nodes;
 static unordered_map<uint64_t, int> col_index;
 static long long enum_states;
 static bool enum_abort;
+static bool enum_partial;
+static bool enum_k_cut;
 static chrono::steady_clock::time_point enum_deadline;
+static size_t enum_mem_per_taxi = 0, enum_col_per_taxi = 0;
+static chrono::steady_clock::time_point enum_k_deadline;
+static size_t enum_k_col0 = 0, enum_k_req0 = 0, enum_k_nodes0 = 0, enum_k_idx0 = 0;
 static vector<int> e_seq, e_open, e_reqs, e_sorted, e_by_l;
 static vector<ll> e_l;
 static vector<char> e_used;
 
+static inline size_t enum_bytes() {
+    size_t live = cols.size() * sizeof(Column)
+                + col_req.size() * sizeof(int)
+                + col_nodes.size() * sizeof(int);
+    return live + live / 2 + col_index.size() * 64;
+}
+
+static inline size_t enum_k_bytes() {
+    size_t live = (cols.size()      - enum_k_col0)  * sizeof(Column)
+                + (col_req.size()   - enum_k_req0)  * sizeof(int)
+                + (col_nodes.size() - enum_k_nodes0)* sizeof(int);
+    return live + live / 2 + (col_index.size() - enum_k_idx0) * 64;
+}
+
+static inline void release_cols() {
+    vector<Column>().swap(cols);
+    vector<int>().swap(col_req);
+    vector<int>().swap(col_nodes);
+    unordered_map<uint64_t, int>().swap(col_index);
+}
+
 static void enum_record(int k, ll profit) {
     e_sorted = e_reqs; sort(e_sorted.begin(), e_sorted.end());
     uint64_t h = 1469598103934665603ull ^ (uint64_t)k * 0x9E3779B97F4A7C15ull;
-    for (int q : e_sorted) { 
-        h ^= (uint64_t)q + 0x9E3779B97F4A7C15ull + (h << 6) + (h >> 2); 
-        h *= 1099511628211ull; 
+    for (int q : e_sorted) {
+        h ^= (uint64_t)q + 0x9E3779B97F4A7C15ull + (h << 6) + (h >> 2);
+        h *= 1099511628211ull;
     }
     auto it = col_index.find(h);
     if (it != col_index.end()) {
         Column& c = cols[it->second];
         if (c.k != k || c.rlen != (int)e_sorted.size() || !equal(e_sorted.begin(), e_sorted.end(), col_req.begin() + c.rbeg)) return;
-        if (profit > c.profit) { 
-            c.profit = profit; 
-            copy(e_seq.begin(), e_seq.end(), col_nodes.begin() + c.nbeg); 
+        if (profit > c.profit) {
+            c.profit = profit;
+            copy(e_seq.begin(), e_seq.end(), col_nodes.begin() + c.nbeg);
         }
         return;
     }
-    if (cols.size() >= ENUM_COL_CAP) { enum_abort = true; return; }
+    size_t col_add = sizeof(Column) + e_sorted.size() * sizeof(int) + e_seq.size() * sizeof(int);
+    col_add += col_add / 2 + 64;
+    if (cols.size() - enum_k_col0 >= enum_col_per_taxi) { enum_k_cut = true; enum_partial = true; return; }
+    if (enum_k_bytes() + col_add > enum_mem_per_taxi) { enum_k_cut = true; enum_partial = true; return; }
+    if (cols.size() >= ENUM_COL_CAP) { enum_abort = true; enum_partial = true; return; }
     col_index.emplace(h, (int)cols.size());
     cols.push_back({k, profit, (int)col_req.size(), (int)e_sorted.size(), (int)col_nodes.size(), (int)e_seq.size()});
     col_req.insert(col_req.end(), e_sorted.begin(), e_sorted.end());
@@ -197,12 +232,17 @@ static inline bool open_ok(ll dep, int v, int skip) {
 }
 
 static void enum_dfs(int k, int last, ll time, int load, ll profit) {
-    if (enum_abort) return;
-    if (++enum_states > ENUM_STATE_CAP) { enum_abort = true; return; }
-    if ((enum_states & 4095) == 0 && chrono::steady_clock::now() > enum_deadline) { enum_abort = true; return; }
-    
+    if (enum_abort || enum_k_cut) return;
+    if (++enum_states > ENUM_STATE_CAP) { enum_abort = true; enum_partial = true; return; }
+    if ((enum_states & 4095) == 0) {
+        auto now = chrono::steady_clock::now();
+        if (now > enum_k_deadline || now > enum_deadline) { enum_k_cut = true; enum_partial = true; return; }
+        if (enum_k_bytes() > enum_mem_per_taxi) { enum_k_cut = true; enum_partial = true; return; }
+        if (enum_bytes() > ENUM_MEM_CAP) { enum_abort = true; enum_partial = true; return; }
+    }
+
     if (e_open.empty() && !e_seq.empty() && profit > 0) enum_record(k, profit);
-    
+
     for (size_t oi = 0; oi < e_open.size(); ++oi) {
         int q = e_open[oi], x = R + q;
         ll arr = time + T(last, nin[x]);
@@ -224,42 +264,51 @@ static void enum_dfs(int k, int last, ll time, int load, ll profit) {
         if (!open_ok(dep, nout[q], -1)) continue;
         e_used[q] = 1; e_seq.push_back(q); e_reqs.push_back(q);
         if (q <= N) enum_dfs(k, nout[q], dep, load, profit - C(last, nin[q]) - nic[q] + Rev[q]);
-        else { 
-            e_open.push_back(q); 
-            enum_dfs(k, nout[q], dep, load + nw[q], profit - C(last, nin[q])); 
-            e_open.pop_back(); 
+        else {
+            e_open.push_back(q);
+            enum_dfs(k, nout[q], dep, load + nw[q], profit - C(last, nin[q]));
+            e_open.pop_back();
         }
         e_used[q] = 0; e_seq.pop_back(); e_reqs.pop_back();
     }
 }
 
-static bool column_solve(const vector<int>& s_list, chrono::steady_clock::time_point t_start) {
-    auto t_p1_start = chrono::steady_clock::now();
+static bool column_solve(const vector<int>& s_list, chrono::steady_clock::time_point t_start, ll p2_greedy_obj) {
     e_by_l = s_list;
     sort(e_by_l.begin(), e_by_l.end(), [](int a, int b) { return nl[a] < nl[b]; });
     e_l.clear(); for (int q : e_by_l) e_l.push_back(nl[q]);
     e_used.assign(R + 1, 0);
-    enum_states = 0; enum_abort = false;
-    
-    enum_deadline = t_p1_start + chrono::microseconds((ll)(TIME_LIMIT_PHASE1 * ENUM_TIME_FRAC * 1e6));
+    enum_states = 0; enum_abort = false; enum_partial = false;
 
+    const double enum_budget = min(1.8, TIME_LIMIT_SEC * 0.15);
     auto t_enum_start = chrono::steady_clock::now();
+    enum_deadline = t_enum_start + chrono::microseconds((ll)(enum_budget * 1e6));
+
+    const int KK = max(1, K);
+    enum_mem_per_taxi = ENUM_MEM_CAP / (size_t)KK;
+    enum_col_per_taxi = (size_t)max<ll>(4096, (ll)ENUM_COL_CAP / KK);
+
     for (int k = 1; k <= K && !enum_abort; ++k) {
+        auto now = chrono::steady_clock::now();
+        if (now >= enum_deadline) { enum_abort = true; enum_partial = true; break; }
+        long long rem_us = chrono::duration_cast<chrono::microseconds>(enum_deadline - now).count();
+        long long min_per_rem = (long long)(enum_budget * 1e6) / (2 * KK);
+        long long reserve_rest = (long long)(K - k) * min_per_rem;
+        long long avail_us = max(5000LL, rem_us - reserve_rest);
+        long long avg_us = rem_us / (K - k + 1);
+        long long slice_us = min(avail_us, max(120000LL, 3LL * avg_us));
+
+        enum_k_cut = false;
+        enum_k_col0 = cols.size(); enum_k_req0 = col_req.size();
+        enum_k_nodes0 = col_nodes.size(); enum_k_idx0 = col_index.size();
+        enum_k_deadline = now + chrono::microseconds(slice_us);
         enum_dfs(k, O[k], 0, 0, 0);
     }
     col_index = unordered_map<uint64_t, int>();
 
-    if (enum_abort) {
-        cols.clear(); col_req.clear(); col_nodes.clear();
-        return false;
-    }
-
+    double enum_sec = chrono::duration<double>(chrono::steady_clock::now() - t_enum_start).count();
     const int NC = (int)cols.size();
     if (NC == 0) return false;
-
-    vector<vector<int>> tcols(K + 1);
-    for (int j = 0; j < NC; ++j) tcols[cols[j].k].push_back(j);
-    for (int k = 1; k <= K; ++k) sort(tcols[k].begin(), tcols[k].end(), [](int a, int b) { return cols[a].profit > cols[b].profit; });
 
     vector<int> owner(R + 1, -1), chosen(K + 1, -1);
     ll cur = 0;
@@ -269,6 +318,7 @@ static bool column_solve(const vector<int>& s_list, chrono::steady_clock::time_p
         cur -= cols[j].profit; chosen[k] = -1;
     };
     auto assign = [&](int k, int j) {
+        if (chosen[k] >= 0) unassign(k);
         chosen[k] = j; if (j < 0) return;
         for (int i = 0; i < cols[j].rlen; ++i) owner[col_req[cols[j].rbeg + i]] = j;
         cur += cols[j].profit;
@@ -278,7 +328,7 @@ static bool column_solve(const vector<int>& s_list, chrono::steady_clock::time_p
         return true;
     };
 
-    // 1. Greedy Initial Selection
+    // 1. Greedy Initial Selection (always runs to seed a warm start for Phase 2)
     {
         vector<int> ord(NC); iota(ord.begin(), ord.end(), 0);
         sort(ord.begin(), ord.end(), [](int a, int b) { return cols[a].profit > cols[b].profit; });
@@ -286,99 +336,298 @@ static bool column_solve(const vector<int>& s_list, chrono::steady_clock::time_p
     }
     ll best = cur; vector<int> best_choice = chosen;
 
-    // 2. Lagrangian Relaxation Upper Bound
+    // 2. Smart gate: run Lagrangian Relaxation + Multi-Wave SP-SA if complete OR near Phase 2 greedy
     ll ub = LLONG_MAX;
     bool lagr_exact = false;
-    {
-        vector<double> u(R + 1, 0.0), g(R + 1);
-        double lambda = 2.0, best_bound = 1e300; int stall = 0;
-        const int max_it = (int)min<ll>(LAGR_MAX_IT, LAGR_WORK / max<ll>(1, (ll)col_req.size()));
-        vector<int> relax(K + 1, -1);
+    bool should_run_sp = !enum_partial || (best >= (p2_greedy_obj * 9) / 10);
+    if (should_run_sp) {
+        vector<vector<int>> tcols(K + 1);
+        for (int j = 0; j < NC; ++j) tcols[cols[j].k].push_back(j);
+        for (int k = 1; k <= K; ++k) sort(tcols[k].begin(), tcols[k].end(), [](int a, int b) { return cols[a].profit > cols[b].profit; });
 
-        for (int it = 0; it < max_it && NC > 0; ++it) {
-            double L = 0; for (int q : s_list) L += u[q];
-            fill(g.begin(), g.end(), 1.0);
+        vector<double> u_best(R + 1, 0.0);
+        {
+            vector<double> u(R + 1, 0.0), g(R + 1);
+            double lambda = 2.0, best_bound = 1e300; int stall = 0;
+            const int max_it = (int)min<ll>(LAGR_MAX_IT, LAGR_WORK / max<ll>(1, (ll)col_req.size()));
+            vector<int> relax(K + 1, -1);
+
+            for (int it = 0; it < max_it && NC > 0; ++it) {
+                double L = 0; for (int q : s_list) L += u[q];
+                fill(g.begin(), g.end(), 1.0);
+                for (int k = 1; k <= K; ++k) {
+                    double bv = 0; int bj = -1;
+                    for (int j : tcols[k]) {
+                        double v = (double)cols[j].profit;
+                        for (int i = 0; i < cols[j].rlen; ++i) v -= u[col_req[cols[j].rbeg + i]];
+                        if (v > bv) { bv = v; bj = j; }
+                    }
+                    L += bv; relax[k] = bj;
+                    if (bj >= 0) for (int i = 0; i < cols[bj].rlen; ++i) g[col_req[cols[bj].rbeg + i]] -= 1.0;
+                }
+                if (L < best_bound - 1e-9) { best_bound = L; u_best = u; stall = 0; }
+                else if (++stall >= 10) { lambda *= 0.5; stall = 0; }
+
+                if (best_bound < (double)best + 1 - 1e-6) break;
+                double norm = 0; for (int q : s_list) { if (u[q] <= 0 && g[q] > 0) g[q] = 0; norm += g[q] * g[q]; }
+                if (norm < 1e-12) {
+                    for (int k = 1; k <= K; ++k) unassign(k);
+                    for (int k = 1; k <= K; ++k) assign(k, relax[k]);
+                    if (cur > best) { best = cur; best_choice = chosen; }
+                    lagr_exact = true;
+                    break;
+                }
+                double step = lambda * (L - (double)best) / norm;
+                for (int q : s_list) u[q] = max(0.0, u[q] - step * g[q]);
+                if (lambda < 1e-4) break;
+            }
+            ub = (ll)floor(best_bound + 1e-6);
+        }
+
+        if (VERBOSE_LOG) {
+            fprintf(stderr, "[P1: ENUM] cols=%d partial=%d enum_t=%.3fs | UB=%lld greedy=%lld lagr_exact=%d\n",
+                    NC, (int)enum_partial, enum_sec, ub, best, (int)lagr_exact);
+        }
+
+        // 3. Fast Dual-Guided Multi-Wave Set Packing SA
+        if (best < ub && !lagr_exact && NC > 0) {
+            vector<double> col_rc(NC, 0.0);
+            for (int j = 0; j < NC; ++j) {
+                double rc = (double)cols[j].profit;
+                for (int i = 0; i < cols[j].rlen; ++i) rc -= u_best[col_req[cols[j].rbeg + i]];
+                col_rc[j] = rc;
+            }
+
+            vector<vector<int>> tcols_rc(K + 1);
             for (int k = 1; k <= K; ++k) {
-                double bv = 0; int bj = -1;
-                for (int j : tcols[k]) {
-                    double v = (double)cols[j].profit;
-                    for (int i = 0; i < cols[j].rlen; ++i) v -= u[col_req[cols[j].rbeg + i]];
-                    if (v > bv) { bv = v; bj = j; }
-                }
-                L += bv; relax[k] = bj;
-                if (bj >= 0) for (int i = 0; i < cols[bj].rlen; ++i) g[col_req[cols[bj].rbeg + i]] -= 1.0;
+                tcols_rc[k] = tcols[k];
+                int keep = min((int)tcols_rc[k].size(), SP_TCOL_RC_CAP);
+                partial_sort(tcols_rc[k].begin(), tcols_rc[k].begin() + keep, tcols_rc[k].end(),
+                             [&](int a, int b) { return col_rc[a] > col_rc[b]; });
+                tcols_rc[k].resize(keep);
             }
-            if (L < best_bound - 1e-9) { best_bound = L; stall = 0; } 
-            else if (++stall >= 10) { lambda *= 0.5; stall = 0; }
 
-            if (best_bound < (double)best + 1 - 1e-6) break;
-            double norm = 0; for (int q : s_list) { if (u[q] <= 0 && g[q] > 0) g[q] = 0; norm += g[q] * g[q]; }
-            if (norm < 1e-12) {
-                for (int k = 1; k <= K; ++k) unassign(k);
-                for (int k = 1; k <= K; ++k) assign(k, relax[k]);
-                if (cur > best) { best = cur; best_choice = chosen; }
-                lagr_exact = true;
-                break;
+            vector<vector<int>> req_cols(R + 1);
+            for (int j = 0; j < NC; ++j) {
+                for (int i = 0; i < cols[j].rlen; ++i) req_cols[col_req[cols[j].rbeg + i]].push_back(j);
             }
-            double step = lambda * (L - (double)best) / norm;
-            for (int q : s_list) u[q] = max(0.0, u[q] - step * g[q]);
-            if (lambda < 1e-4) break;
+            for (int r : s_list) {
+                int keep = min((int)req_cols[r].size(), SP_REQ_COL_CAP);
+                partial_sort(req_cols[r].begin(), req_cols[r].begin() + keep, req_cols[r].end(),
+                             [&](int a, int b) { return col_rc[a] > col_rc[b]; });
+                req_cols[r].resize(keep);
+            }
+
+            vector<int> reqs_by_dual = s_list;
+            sort(reqs_by_dual.begin(), reqs_by_dual.end(), [&](int a, int b) { return u_best[a] > u_best[b]; });
+
+            vector<int> busy;
+            for (int k = 1; k <= K; ++k) if (!tcols_rc[k].empty()) busy.push_back(k);
+
+            if (!busy.empty()) {
+                double avgp = 0; for (int j = 0; j < NC; ++j) avgp += cols[j].profit; avgp /= NC;
+                const double T0 = max(1e-9, 0.15 * avgp), TF = max(1e-9, 0.002 * avgp);
+
+                vector<pair<int, int>> log_;
+                vector<int> refill;
+                auto set_col = [&](int k, int j) { log_.push_back({k, chosen[k]}); unassign(k); assign(k, j); };
+                auto refill_vehicles = [&](const vector<int>& rf) {
+                    for (int k2 : rf) for (int c : tcols_rc[k2]) if (is_free(c)) { set_col(k2, c); break; }
+                };
+                auto apply_col_evict = [&](int k, int j) {
+                    set_col(k, -1);
+                    if (j >= 0) {
+                        for (int i = 0; i < cols[j].rlen; ++i) {
+                            int c = owner[col_req[cols[j].rbeg + i]];
+                            if (c >= 0) { int k2 = cols[c].k; set_col(k2, -1); refill.push_back(k2); }
+                        }
+                        set_col(k, j);
+                    }
+                    refill_vehicles(refill);
+                };
+                auto sweep_free_vehicles = [&]() {
+                    for (int k : busy) if (chosen[k] < 0) {
+                        for (int c : tcols_rc[k]) if (is_free(c)) { assign(k, c); break; }
+                    }
+                };
+
+                const double used_total = chrono::duration<double>(chrono::steady_clock::now() - t_start).count();
+                const double rem_total = max(0.05, TIME_LIMIT_SEC - used_total);
+                double sp_budget = !enum_partial
+                    ? min({25.0, TIME_LIMIT_SEC * 0.75, rem_total})
+                    : min({4.0, TIME_LIMIT_SEC * 0.30, rem_total});
+                double wave_max_sec = min(5.5, max(0.5, sp_budget * 0.45));
+                double wave_stall_sec = min(2.5, max(0.3, wave_max_sec * 0.45));
+
+                auto sp_start = chrono::steady_clock::now();
+                auto sp_deadline = sp_start + chrono::microseconds((ll)(sp_budget * 1e6));
+                int waves_no_impr = 0;
+
+                for (int wave_id = 0;; ++wave_id) {
+                    auto now = chrono::steady_clock::now();
+                    if (now >= sp_deadline || best >= ub) break;
+
+                    for (int k = 1; k <= K; ++k) unassign(k);
+                    if (wave_id == 0) {
+                        for (int k = 1; k <= K; ++k) assign(k, best_choice[k]);
+                        sweep_free_vehicles();
+                    } else if (wave_id % 2 == 1) {
+                        vector<int> v_ord = busy;
+                        for (size_t i = v_ord.size() - 1; i > 0; --i) swap(v_ord[i], v_ord[rng() % (i + 1)]);
+                        for (int k : v_ord) for (int c : tcols_rc[k]) if (is_free(c)) { assign(k, c); break; }
+                        sweep_free_vehicles();
+                    } else {
+                        for (int k = 1; k <= K; ++k) assign(k, best_choice[k]);
+                        vector<int> dropped;
+                        for (int k : busy) if ((rng() % 100) < 20) { unassign(k); dropped.push_back(k); }
+                        for (size_t i = dropped.size(); i > 1; --i) swap(dropped[i - 1], dropped[rng() % i]);
+                        for (int k : dropped) for (int c : tcols_rc[k]) if (is_free(c)) { assign(k, c); break; }
+                        sweep_free_vehicles();
+                    }
+
+                    bool global_impr_this_wave = false;
+                    if (cur > best) { best = cur; best_choice = chosen; global_impr_this_wave = true; }
+                    if (best >= ub) break;
+
+                    ll wave_best = cur;
+                    auto w_start = chrono::steady_clock::now();
+                    double rem_sp = chrono::duration<double>(sp_deadline - w_start).count();
+                    double wave_budget = min(wave_max_sec, rem_sp);
+                    if (wave_budget <= 0.005) break;
+                    double w_last_impr = 0.0, temp = T0;
+
+                    for (long long it = 0;; ++it) {
+                        if ((it & 255) == 0) {
+                            auto tnow = chrono::steady_clock::now();
+                            if (tnow >= sp_deadline) break;
+                            double w_el = chrono::duration<double>(tnow - w_start).count();
+                            if (w_el > wave_budget || w_el - w_last_impr > wave_stall_sec) break;
+                            double tau = clamp(w_el / max(1e-6, wave_budget), 0.0, 1.0);
+                            temp = T0 * pow(TF / T0, pow(tau, 1.35));
+                        }
+
+                        int roll = (int)(rng() % 100);
+                        ll before = cur;
+                        log_.clear(); refill.clear();
+
+                        if (roll < 45) {
+                            int target_req = -1;
+                            size_t dual_lim = max<size_t>(1, min<size_t>(reqs_by_dual.size(), max<size_t>(16, reqs_by_dual.size() / 4)));
+                            for (int t = 0; t < 10; ++t) {
+                                int cand_r = reqs_by_dual[rng() % dual_lim];
+                                if (owner[cand_r] < 0 && !req_cols[cand_r].empty()) { target_req = cand_r; break; }
+                            }
+                            if (target_req != -1) {
+                                const auto& cc = req_cols[target_req];
+                                int j = cc[rng() % min<size_t>(cc.size(), 8)];
+                                if (j == chosen[cols[j].k]) continue;
+                                apply_col_evict(cols[j].k, j);
+                            } else {
+                                int k = busy[rng() % busy.size()];
+                                const auto& tc = tcols_rc[k];
+                                int j = tc[rng() % min<size_t>(tc.size(), 16)];
+                                if (j == chosen[k]) continue;
+                                apply_col_evict(k, j);
+                            }
+                        } else if (roll < 80) {
+                            int k = busy[rng() % busy.size()];
+                            const auto& tc = tcols_rc[k];
+                            size_t sample_lim = (rng() % 100 < 85) ? min<size_t>(tc.size(), 12) : min<size_t>(tc.size(), 32);
+                            int j = tc[rng() % sample_lim];
+                            if (rng() % 24 == 0) j = -1;
+                            if (j == chosen[k]) continue;
+                            apply_col_evict(k, j);
+                        } else {
+                            int k = busy[rng() % busy.size()];
+                            const auto& tc = tcols_rc[k];
+                            int j = tc[rng() % min<size_t>(tc.size(), 12)];
+                            if (j == chosen[k]) continue;
+
+                            int evict_k2 = -1; bool multi_evict = false;
+                            for (int i = 0; i < cols[j].rlen; ++i) {
+                                int c = owner[col_req[cols[j].rbeg + i]];
+                                if (c >= 0) {
+                                    int ko = cols[c].k;
+                                    if (ko == k) continue;
+                                    if (evict_k2 == -1) evict_k2 = ko;
+                                    else if (evict_k2 != ko) { multi_evict = true; break; }
+                                }
+                            }
+
+                            if (!multi_evict && evict_k2 != -1) {
+                                set_col(k, -1);
+                                set_col(evict_k2, -1);
+                                set_col(k, j);
+
+                                int best_c2 = -1, best_c3 = -1, best_k3 = -1;
+                                ll best_chain_p = -INFLL;
+                                const auto& tc2 = tcols_rc[evict_k2];
+                                for (size_t idx2 = 0; idx2 < min<size_t>(tc2.size(), 10); ++idx2) {
+                                    int c2 = tc2[idx2];
+                                    if (is_free(c2)) {
+                                        ll cp = cols[j].profit + cols[c2].profit;
+                                        if (cp > best_chain_p) { best_chain_p = cp; best_c2 = c2; best_k3 = -1; best_c3 = -1; }
+                                        break;
+                                    }
+                                    int evict_k3 = -1; bool c2_multi = false;
+                                    for (int i = 0; i < cols[c2].rlen; ++i) {
+                                        int c = owner[col_req[cols[c2].rbeg + i]];
+                                        if (c >= 0) {
+                                            int ko = cols[c].k;
+                                            if (ko == k) { c2_multi = true; break; }
+                                            if (evict_k3 == -1) evict_k3 = ko;
+                                            else if (evict_k3 != ko) { c2_multi = true; break; }
+                                        }
+                                    }
+                                    if (!c2_multi && evict_k3 >= 1 && evict_k3 != evict_k2 && evict_k3 != k) {
+                                        int old_c3 = chosen[evict_k3];
+                                        unassign(evict_k3);
+                                        assign(evict_k2, c2);
+                                        int free_c3 = -1;
+                                        for (int cc3 : tcols_rc[evict_k3]) if (is_free(cc3)) { free_c3 = cc3; break; }
+                                        ll cp = cols[j].profit + cols[c2].profit + (free_c3 >= 0 ? cols[free_c3].profit : 0);
+                                        if (cp > best_chain_p) { best_chain_p = cp; best_c2 = c2; best_k3 = evict_k3; best_c3 = free_c3; }
+                                        unassign(evict_k2);
+                                        assign(evict_k3, old_c3);
+                                    }
+                                }
+                                if (best_c2 >= 0) {
+                                    if (best_k3 >= 1) set_col(best_k3, -1);
+                                    set_col(evict_k2, best_c2);
+                                    if (best_c3 >= 0) set_col(best_k3, best_c3);
+                                }
+                            } else {
+                                apply_col_evict(k, j);
+                            }
+                        }
+
+                        ll delta = cur - before;
+                        if (delta >= 0 || (double)delta > temp * log(rand01() + 1e-300)) {
+                            sweep_free_vehicles();
+                            if (cur > wave_best) {
+                                wave_best = cur;
+                                w_last_impr = chrono::duration<double>(chrono::steady_clock::now() - w_start).count();
+                            }
+                            if (cur > best) {
+                                best = cur; best_choice = chosen; global_impr_this_wave = true;
+                                if (best >= ub) break;
+                            }
+                        } else {
+                            for (int i = (int)log_.size() - 1; i >= 0; --i) {
+                                unassign(log_[i].first);
+                                assign(log_[i].first, log_[i].second);
+                            }
+                        }
+                    }
+
+                    if (global_impr_this_wave) waves_no_impr = 0;
+                    else if (++waves_no_impr >= 2) break;
+                }
+            }
         }
-        ub = (ll)floor(best_bound + 1e-6);
-    }
-
-    // 3. Set Packing SA (runs until TIME_LIMIT_PHASE1 or SP_STALL_SEC of no improvement)
-    if (best < ub && !lagr_exact && NC > 0) {
-        double avgp = 0; for (int j = 0; j < NC; ++j) avgp += cols[j].profit; avgp /= NC;
-        const double T0 = max(1e-9, 0.3 * avgp), TF = max(1e-9, 0.003 * avgp);
-        vector<int> busy; for (int k = 1; k <= K; ++k) if (!tcols[k].empty()) busy.push_back(k);
-        vector<pair<int, int>> log_;
-        vector<int> refill;
-        auto set_col = [&](int k, int j) { log_.push_back({k, chosen[k]}); unassign(k); assign(k, j); };
-        
-        double elapsed_p1 = chrono::duration<double>(chrono::steady_clock::now() - t_p1_start).count();
-        const double s0 = elapsed_p1, budget_p1 = max(1e-9, TIME_LIMIT_PHASE1 - s0);
-        double temp = T0, last_impr = s0;
-
-        for (long long it = 0;; ++it) {
-            if ((it & 255) == 0) {
-                elapsed_p1 = chrono::duration<double>(chrono::steady_clock::now() - t_p1_start).count();
-                if (elapsed_p1 >= TIME_LIMIT_PHASE1 || elapsed_p1 - last_impr > SP_STALL_SEC) break;
-                temp = T0 * pow(TF / T0, (elapsed_p1 - s0) / budget_p1);
-            }
-            int k = busy[rng() % busy.size()];
-            const auto& tc = tcols[k];
-            int j = (rng() & 1) ? tc[rng() % tc.size()] : tc[rng() % min<size_t>(tc.size(), 16)];
-            if (rng() % 16 == 0) j = -1;
-            if (j == chosen[k]) continue;
-
-            ll before = cur;
-            log_.clear(); refill.clear();
-            set_col(k, -1);
-            if (j >= 0) {
-                for (int i = 0; i < cols[j].rlen; ++i) {
-                    int c = owner[col_req[cols[j].rbeg + i]];
-                    if (c >= 0) { int k2 = cols[c].k; set_col(k2, -1); refill.push_back(k2); }
-                }
-                set_col(k, j);
-            }
-            for (int k2 : refill)
-                for (int c : tcols[k2]) if (is_free(c)) { set_col(k2, c); break; }
-
-            ll delta = cur - before;
-            if (delta >= 0 || (double)delta > temp * log(rand01() + 1e-300)) {
-                if (cur > best) {
-                    best = cur; best_choice = chosen;
-                    last_impr = chrono::duration<double>(chrono::steady_clock::now() - t_p1_start).count();
-                    if (best >= ub) break; // Proven optimal!
-                }
-            } else {
-                for (int i = (int)log_.size() - 1; i >= 0; --i) { 
-                    unassign(log_[i].first); 
-                    assign(log_[i].first, log_[i].second); 
-                }
-            }
-        }
+    } else if (VERBOSE_LOG) {
+        fprintf(stderr, "[P1: ENUM] cols=%d partial=1 enum_t=%.3fs | greedy=%lld -> handoff to Phase 2\n",
+                NC, enum_sec, best);
     }
 
     for (int k = 1; k <= K; ++k) {
@@ -387,15 +636,20 @@ static bool column_solve(const vector<int>& s_list, chrono::steady_clock::time_p
         if (j >= 0) best_nd[k].insert(best_nd[k].end(), col_nodes.begin() + cols[j].nbeg, col_nodes.begin() + cols[j].nbeg + cols[j].nlen);
     }
 
-    bool is_proven_optimal = (best >= ub || lagr_exact);
+    bool is_proven_optimal = (best >= ub || lagr_exact) && !enum_partial;
+    if (VERBOSE_LOG) {
+        double p1_total = chrono::duration<double>(chrono::steady_clock::now() - t_start).count();
+        fprintf(stderr, "[P1: DONE] best=%lld UB=%lld proven=%d p1_time=%.3fs\n",
+                best, ub, (int)is_proven_optimal, p1_total);
+    }
+    release_cols();
     return is_proven_optimal;
 }
 
 // ============================================================================
-// 6. PHASE 2: CHAMPION GUIDED MULTI-BASIN SISR-SA ENGINE
+// 6. PHASE 2: ELITE GM-SISR (mask=896) + EJECT50 + O1 RELOCATE POLISH
 // ============================================================================
-static ll best_insert(int k, int q, int& bi, int& bj, bool blink) {
-    const Route& r = rt[k];
+static ll best_insert_on(int k, const Route& r, int q, int& bi, int& bj, bool blink) {
     const int n = r.n();
     const int* nd = r.nd.data(); const ll* dep = r.dep.data(); const ll* lat = r.lat.data(); const int* ld = r.ld.data();
     ll best = INFLL;
@@ -414,11 +668,12 @@ static ll best_insert(int k, int q, int& bi, int& bj, bool blink) {
                 if (d + T(D, b) > lat[i + 1]) continue;
                 dc += C(D, b) - C(a, b);
             }
-            if (dc < best && !(blink && (rng() & BLINK_MASK) == 0)) { best = dc; bi = i; }
+            if (dc < best && !(blink && (rng() & BLINK_MASK) == 0)) { best = dc; bi = i; bj = i; }
         }
         return best;
     }
 
+    if (nw[q] > Q[k]) return INFLL;
     const int p = q, dn = R + q, Pp = nin[p], Dq = nin[dn], w = nw[p], cap = Q[k];
     const ll ep = ne[p], lp = nl[p], sp = ndur[p], eq = ne[dn], lq = nl[dn], sq = ndur[dn];
     const int cPD = C(Pp, Dq), tPD = T(Pp, Dq);
@@ -473,10 +728,16 @@ static ll best_insert(int k, int q, int& bi, int& bj, bool blink) {
     return best;
 }
 
+static inline ll best_insert(int k, int q, int& bi, int& bj, bool blink) {
+    return best_insert_on(k, rt[k], q, bi, bj, blink);
+}
+
 static vector<int> touch_stamp, ruin_stamp, cand_stamp, touched, removed, cand, tmp_reqs;
 static int stamp_id = 0;
 static vector<pair<int, int>> veh_log;
 static ll rev_delta = 0;
+static Route tmp_r;
+static long long st_eject_moves = 0, st_eject_chains = 0, st_ls_moves = 0, st_ls_gain = 0;
 
 static inline void touch(int k) {
     if (touch_stamp[k] != stamp_id) { touch_stamp[k] = stamp_id; touched.push_back(k); backup[k] = rt[k]; }
@@ -518,6 +779,192 @@ static void recreate_with_memory(const vector<int>& cands, bool blink) {
     }
 }
 
+static bool build_route_without(int k, int drop_q, Route& dst) {
+    const auto& src = rt[k].nd;
+    dst.nd.clear();
+    dst.nd.reserve(src.size());
+    dst.nd.push_back(0);
+    for (int i = 1; i < (int)src.size(); ++i) {
+        int x = src[i], qx = (x > R) ? (x - R) : x;
+        if (qx != drop_q) dst.nd.push_back(x);
+    }
+    return recompute_route(k, dst);
+}
+
+// Bounded Depth <= 2 Ejection-Chain Recreate (Eject50)
+static void run_ejection_pass(const vector<int>& blocked, int max_probes) {
+    if (blocked.empty()) return;
+    static vector<int> pool;
+    pool.clear();
+    for (int q : blocked) if (veh[q] == 0 && servable[q]) pool.push_back(q);
+    if (pool.empty()) return;
+
+    int start = 0;
+    if (priority_head != -1) {
+        for (size_t i = 0; i < pool.size(); ++i) {
+            if (pool[i] == priority_head) { swap(pool[0], pool[i]); start = 1; break; }
+        }
+    }
+    int limit = min((int)pool.size(), max_probes);
+    if ((int)pool.size() - start > 1) {
+        static vector<pair<double, int>> bscored;
+        bscored.resize((int)pool.size() - start);
+        for (int i = start; i < (int)pool.size(); ++i) {
+            int q = pool[i];
+            bscored[i - start] = { -(double)(Rev[q] - nic[q]) * (0.85 + 0.30 * rand01()), q };
+        }
+        int k_top = min(max(0, limit - start), (int)bscored.size());
+        if (k_top > 0) {
+            partial_sort(bscored.begin(), bscored.begin() + k_top, bscored.end());
+            for (int i = 0; i < k_top; ++i) pool[start + i] = bscored[i].second;
+        }
+    }
+
+    int ejects_done = 0;
+    for (int pi = 0; pi < limit && ejects_done < 3; ++pi) {
+        int q = pool[pi];
+        if (veh[q] != 0) continue;
+
+        ll best_delta = 0;
+        int best_k = -1, best_q_old = -1, best_bi = 0, best_bj = 0;
+        int best_k2 = -1, best_bi2 = 0, best_bj2 = 0;
+        bool best_is_chain = false;
+
+        int tried_nbr = 0;
+        const int nlim = min(14, (int)nbr[q].size());
+        for (int idx = 0; idx < nlim && tried_nbr < 7; ++idx) {
+            int q_old = nbr[q][idx];
+            int k = veh[q_old];
+            if (k == 0) continue;
+            if (q > N && nw[q] > Q[k]) continue;
+            ++tried_nbr;
+
+            if (!build_route_without(k, q_old, tmp_r)) continue;
+            int bi = 0, bj = 0;
+            ll dc1 = best_insert_on(k, tmp_r, q, bi, bj, false);
+            if (dc1 >= INFLL) continue;
+
+            ll d_cost_k = (tmp_r.cost + dc1) - rt[k].cost;
+            ll d_direct = ((ll)Rev[q] - (ll)Rev[q_old]) - d_cost_k;
+            if (d_direct > best_delta) {
+                best_delta = d_direct;
+                best_k = k; best_q_old = q_old; best_bi = bi; best_bj = bj;
+                best_k2 = -1; best_is_chain = false;
+            }
+
+            ll best_dc2 = INFLL;
+            int bk2 = -1, bi2 = 0, bj2 = 0;
+            CacheEntry* ce_old = &icache[(size_t)q_old * (K + 1)];
+            for (int k2 = 1; k2 <= K; ++k2) {
+                if (k2 == k) continue;
+                CacheEntry& e = ce_old[k2];
+                if (e.ver != rver[k2]) { e.cost = best_insert(k2, q_old, e.i, e.j, false); e.ver = rver[k2]; }
+                if (e.cost < best_dc2) { best_dc2 = e.cost; bk2 = k2; bi2 = e.i; bj2 = e.j; }
+            }
+            if (bk2 != -1 && best_dc2 < INFLL) {
+                ll d_chain = (ll)Rev[q] - d_cost_k - best_dc2;
+                if (d_chain > best_delta) {
+                    best_delta = d_chain;
+                    best_k = k; best_q_old = q_old; best_bi = bi; best_bj = bj;
+                    best_k2 = bk2; best_bi2 = bi2; best_bj2 = bj2; best_is_chain = true;
+                }
+            }
+        }
+
+        if (best_k != -1 && best_delta > 0 && build_route_without(best_k, best_q_old, tmp_r)) {
+            touch(best_k);
+            rt[best_k].nd = tmp_r.nd;
+            if (q <= N) rt[best_k].nd.insert(rt[best_k].nd.begin() + best_bi + 1, q);
+            else {
+                rt[best_k].nd.insert(rt[best_k].nd.begin() + best_bj + 1, R + q);
+                rt[best_k].nd.insert(rt[best_k].nd.begin() + best_bi + 1, q);
+            }
+            recompute(best_k);
+            set_veh(best_q_old, 0);
+            set_veh(q, best_k);
+            ++st_eject_moves;
+            ++ejects_done;
+
+            if (best_is_chain && best_k2 != -1) {
+                do_insert(best_k2, best_q_old, best_bi2, best_bj2);
+                ++st_eject_chains;
+            }
+        }
+    }
+}
+
+// Side-effect-free feasibility & cost check for O1 relocate polish
+static ll cost_of_seq(int k, const vector<int>& nd) {
+    ll dep = 0, ld = 0, cost = 0;
+    int prev = O[k];
+    for (size_t i = 1; i < nd.size(); ++i) {
+        int x = nd[i];
+        ll arr = dep + T(prev, nin[x]);
+        if (arr > nl[x]) return INFLL;
+        dep = max(arr, ne[x]) + ndur[x];
+        ld += nw[x];
+        if (ld > Q[k]) return INFLL;
+        cost += C(prev, nin[x]) + nic[x];
+        prev = nout[x];
+    }
+    return cost;
+}
+
+// Exact Cross-Route (and Intra-Route) Relocate Polish (O1, monotone; post-SA accept only)
+static bool try_relocate_one(int q, ll& improvement) {
+    int a = veh[q];
+    if (!a) return false;
+    Route& ra = rt[a];
+    static vector<int> nd_wo;
+    nd_wo.clear(); nd_wo.push_back(0);
+    for (size_t i = 1; i < ra.nd.size(); ++i) {
+        int x = ra.nd[i], rq = (x > R) ? (x - R) : x;
+        if (rq != q) nd_wo.push_back(x);
+    }
+    if (nd_wo.size() == ra.nd.size()) return false;
+    ll c_wo = cost_of_seq(a, nd_wo);
+    if (c_wo >= INFLL) return false;
+    ll save = ra.cost - c_wo;
+
+    Route old_ra = ra;
+    ra.nd = nd_wo;
+    if (!recompute(a)) { ra = std::move(old_ra); rver[a] = ++gver; return false; }
+    veh[q] = 0;
+
+    ll best = INFLL; int bk = -1, bi = 0, bj = 0;
+    for (int k = 1; k <= K; ++k) {
+        int ci = 0, cj = 0;
+        ll c = best_insert(k, q, ci, cj, false);
+        if (c < best) { best = c; bk = k; bi = ci; bj = cj; }
+    }
+
+    if (bk != -1 && best < save) {
+        auto& nd = rt[bk].nd;
+        if (q <= N) nd.insert(nd.begin() + bi + 1, q);
+        else { nd.insert(nd.begin() + bj + 1, R + q); nd.insert(nd.begin() + bi + 1, q); }
+        recompute(bk);
+        veh[q] = bk;
+        improvement = save - best;
+        ++st_ls_moves;
+        return true;
+    }
+    ra = std::move(old_ra);
+    rver[a] = ++gver;
+    veh[q] = a;
+    return false;
+}
+
+static ll ls_relocate_polish(const vector<int>& pool, int max_steps) {
+    ll total = 0; int steps = 0;
+    for (int q : pool) {
+        if (steps >= max_steps) break;
+        if (!veh[q]) continue;
+        ll imp = 0;
+        if (try_relocate_one(q, imp)) { total += imp; ++steps; }
+    }
+    return total;
+}
+
 static bool remove_from_route(int k) {
     Route& r = rt[k];
     touch(k);
@@ -534,12 +981,8 @@ static bool remove_from_route(int k) {
     return true;
 }
 
-static inline int select_seed() {
-    return servable_list[rng() % servable_list.size()];
-}
+static inline int select_seed() { return servable_list[rng() % servable_list.size()]; }
 
-// H5: yield-based operator weights. Relative yield (records per call) modulates the
-// prior split, bounded so no operator can be starved.
 static void update_bandit() {
     double y[4] = {0.0, 0.0, 0.0, 0.0};
     for (int m = 1; m <= 3; ++m)
@@ -581,12 +1024,10 @@ static int ruin_guided(int seed) {
 
     int roll;
     {
-        // H5: bandit-weighted mode choice (roulette over yield-modulated prior weights).
         double bw1 = bandit_w[1], bw2 = bandit_w[2], bw3 = bandit_w[3];
         double r = rand01() * (bw1 + bw2 + bw3);
         if ((r -= bw1) < 0) roll = 0; else if ((r -= bw2) < 0) roll = 75; else roll = 90;
     }
-    // Mode 2 (15%): Unserved-Cavity Ruin
     if (roll >= 75 && roll < 90) {
         int best_u = -1; double best_score = -1.0;
         for (int t = 0; t < 6; ++t) {
@@ -602,7 +1043,6 @@ static int ruin_guided(int seed) {
             if (done > 0) return 2;
         }
     }
-    // Mode 3 (10%): Slack-Bottleneck Substring Ruin
     if (roll >= 90) {
         int k1 = rand_int(1, K), k2 = rand_int(1, K);
         int k = (rt[k1].cost >= rt[k2].cost) ? k1 : k2;
@@ -622,7 +1062,6 @@ static int ruin_guided(int seed) {
         }
     }
 
-    // Mode 1 (75%): Spatio-Temporal String Ruin
     try_route(seed);
     for (int c : nbr[seed]) { if (done >= ks) break; try_route(c); }
     return 1;
@@ -634,7 +1073,7 @@ static int order_candidates(vector<int>& cands) {
     int sub_n = (int)cands.size() - start_idx;
     if (sub_n <= 1) return 0;
 
-    int sroll = rng() % 100;
+    int sroll = (int)(rng() % 100);
     static vector<pair<double, int>> scored;
     if (sroll < 50) {
         scored.resize(sub_n);
@@ -660,30 +1099,28 @@ static int order_candidates(vector<int>& cands) {
     }
 }
 
-// SEDCA-V3 U-Valley Thermostat
+// SEDCA-V4 Thermostat (Exponential-Tooth Reheat + Online Micro-Recalibration)
 struct AdaptiveThermostat {
-    double t_max = 60.0;   // placeholder only: overwritten with the real budget in main()
+    double t_max = 60.0;
     const double tau_fast = 0.10;
     const double tau_quench = 0.86;
-    const double phase_up_end = 0.12;
-    const double phase_drop_end = 0.45;
-    const double PI_CONST = 3.14159265358979323846;
 
     double T_0 = 25.0, T_work = 4.0, T_min = 0.6, micro_delta = 5.0;
-    double T_peak_base = 25.0, T_min_base = 0.6;   // operator-coupling bounds
-    int stag = 0;                                   // stagnation cycles (drives adaptive dwell)
+    double T_peak_base = 25.0, T_min_base = 0.6;
+    int stag = 0;
     bool calibrated = false;
 
     bool in_cycle_mode = false;
     double cycle_start_tau = 0.0, cycle_duration_tau = 0.0;
-    double cycle_peak_T = 0.0, cycle_work_T = 0.0, cycle_base_T = 0.0;
+    double cycle_peak_T = 0.0, cycle_base_T = 0.0;
     int cycle_count = 0;
 
-    void auto_calibrate(const vector<double>& worsening_deltas, double scale_S) {
+    void apply_deltas(const vector<double>& deltas, double scale_S, bool init_mode) {
         vector<double> valid;
-        valid.reserve(worsening_deltas.size());
-        for (double d : worsening_deltas) if (d > 0.0 && d <= 0.80 * scale_S) valid.push_back(d);
-        if (valid.size() < 20) valid = worsening_deltas;
+        valid.reserve(deltas.size());
+        for (double d : deltas) if (d > 0.0 && d <= 0.80 * scale_S) valid.push_back(d);
+        if (init_mode && valid.size() < 20) valid = deltas;
+        if (!init_mode && valid.size() < 20) return;
 
         if (valid.empty()) micro_delta = max(1.0, 0.04 * scale_S);
         else {
@@ -697,28 +1134,9 @@ struct AdaptiveThermostat {
         T_0    = T_work * 5.5;
         T_min_base = T_min;
         T_peak_base = max(2.0 * T_min, 0.65 * T_0);
-        calibrated = true;
+        if (init_mode) calibrated = true;
     }
 
-    // T4: online micro-recalibration from a recent window of worsening deltas.
-    // Keeps the thermal ladder anchored to the *current* cost scale instead of the
-    // start-of-run scale (the landscape's delta magnitudes drift as the solution improves).
-    void online_recalibrate(const vector<double>& deltas, double scale_S) {
-        vector<double> valid;
-        for (double d : deltas) if (d > 0.0 && d <= 0.80 * scale_S) valid.push_back(d);
-        if (valid.size() < 20) return;
-        sort(valid.begin(), valid.end());
-        double p15 = valid[(valid.size() * 15) / 100];
-        micro_delta = clamp(p15, 1.0, max(2.0, 0.06 * scale_S));
-        T_min  = max(0.2, micro_delta / 6.907);
-        T_work = max(T_min * 3.0, micro_delta / 1.05);
-        T_0    = T_work * 5.5;
-        T_min_base = T_min;
-        T_peak_base = max(2.0 * T_min, 0.65 * T_0);
-    }
-
-    // Single exponential tooth: constant peak (does NOT decay), adaptive dwell driven by
-    // stagnation, and NO bottom dwell — the moment the tooth reaches base we reheat again.
     void start_new_cycle(double current_tau) {
         in_cycle_mode = true;
         cycle_start_tau = current_tau;
@@ -726,27 +1144,24 @@ struct AdaptiveThermostat {
 
         double base_span = tau_quench - tau_fast;
         double remaining_osc_tau = tau_quench - current_tau;
-
         double stag_factor = 1.0 / (1.0 + 0.7 * min(3, stag));
         cycle_peak_T = max(T_peak_base, 2.0 * T_min_base);
         cycle_base_T = T_min_base;
-        cycle_work_T = sqrt(cycle_peak_T * cycle_base_T);
         double target_duration = base_span * 0.12 * stag_factor;
         cycle_duration_tau = min(target_duration, max(0.03, remaining_osc_tau));
     }
 
-    pair<double, bool> get_temperature_tau(double tau) {
-        tau = clamp(tau, 0.0, 1.0);
+    pair<double, bool> get_temperature(double elapsed_time) {
+        double tau = clamp(elapsed_time / max(0.001, t_max), 0.0, 1.0);
         bool triggered_reheat = false;
 
         if (tau < tau_fast) {
             double p = tau / tau_fast;
-            double T = (p < 0.4) 
+            double T = (p < 0.4)
                 ? (T_0 * pow(T_work / T_0, p / 0.4))
                 : (T_work * pow(T_min / T_work, (p - 0.4) / 0.6));
             return { max(T, T_min), false };
         }
-
         if (tau >= tau_quench) {
             double quench_prog = clamp((tau - tau_quench) / max(0.001, 1.0 - tau_quench), 0.0, 1.0);
             double T = (0.7 * T_work) * pow((0.5 * T_min) / (0.7 * T_work), quench_prog);
@@ -760,22 +1175,37 @@ struct AdaptiveThermostat {
             phi_c = 0.0;
         }
         phi_c = clamp(phi_c, 0.0, 1.0);
-
         double T = cycle_peak_T * pow(cycle_base_T / cycle_peak_T, phi_c);
         return { max(T, 0.2), triggered_reheat };
-    }
-
-    pair<double, bool> get_temperature(double elapsed_time) {
-        return get_temperature_tau(elapsed_time / max(0.001, t_max));
     }
 };
 
 // ============================================================================
-// 7. MAIN ENGINE (JUDGE ENTRYPOINT)
+// 7. MAIN ENGINE (JUDGE & BENCHMARK ENTRYPOINT)
 // ============================================================================
-int main() {
+int main(int argc, char** argv) {
     ios_base::sync_with_stdio(false); cin.tie(NULL);
     auto t_start = chrono::steady_clock::now();
+
+    vector<string> pos_args;
+    for (int i = 1; i < argc; ++i) {
+        string a = argv[i];
+        if (a == "--verbose" || a == "-v") VERBOSE_LOG = true;
+        else pos_args.push_back(a);
+    }
+    if (pos_args.size() >= 1) TIME_LIMIT_SEC = max(0.1, atof(pos_args[0].c_str()));
+    if (pos_args.size() >= 2 && pos_args[1] != "-") {
+        if (!freopen(pos_args[1].c_str(), "r", stdin)) {
+            if (VERBOSE_LOG) fprintf(stderr, "ERROR: Failed to open %s\n", pos_args[1].c_str());
+            return 1;
+        }
+    }
+    if (pos_args.size() >= 3) {
+        long long seed_val = atoll(pos_args[2].c_str());
+        rng_s = 0x9E3779B97F4A7C15ull ^ ((uint64_t)seed_val * 0xBF58476D1CE4E5B9ull + 0x94D049BB133111EBull);
+        if (rng_s == 0) rng_s = 0x9E3779B97F4A7C15ull;
+        for (int w = 0; w < 16; ++w) rng();
+    }
 
     read_all();
     K = rd(); N = rd(); M = rd();
@@ -828,26 +1258,38 @@ int main() {
     rt.assign(K + 1, Route()); backup.assign(K + 1, Route());
     rver.assign(K + 1, 0); veh.assign(R + 1, 0);
     icache.assign((size_t)(R + 1) * (K + 1), CacheEntry());
+    touch_stamp.assign(K + 1, 0); ruin_stamp.assign(K + 1, 0); cand_stamp.assign(R + 1, 0);
+
+    // Precompute Phase 2 Greedy (~1-2ms) so Phase 1 can skip SP-SA when partial columns lag behind
+    double sum_net = 0.0;
+    ema_regret.assign(R + 1, 0.0);
+    for (int q : servable_list) {
+        double net = max(1.0, (double)(Rev[q] - nic[q]));
+        ema_regret[q] = net;
+        sum_net += net;
+    }
+    S_scale = max(1.0, sum_net / servable_list.size());
+
+    for (int k = 1; k <= K; ++k) { rt[k].nd.assign(1, 0); recompute(k); }
+    vector<int> greedy_init_ord = servable_list;
+    sort(greedy_init_ord.begin(), greedy_init_ord.end(), [&](int a, int b) { return Rev[a] - nic[a] > Rev[b] - nic[b]; });
+    ++stamp_id; rev_delta = 0;
+    recreate_with_memory(greedy_init_ord, false);
+    ll greedy_cost = 0; for (int k = 1; k <= K; ++k) greedy_cost += rt[k].cost;
+    ll greedy_obj = rev_delta - greedy_cost;
+    vector<vector<int>> greedy_nd(K + 1);
+    for (int k = 1; k <= K; ++k) greedy_nd[k] = rt[k].nd;
 
     // ------------------------------------------------------------------------
-    // ATTEMPT PHASE 1: EXACT COLUMN ENUMERATION & SET PACKING (Limit: 1.0s)
+    // PHASE 1: BALANCED COLUMN ENUMERATION + DUAL-GUIDED MULTI-WAVE SP-SA
     // ------------------------------------------------------------------------
-    bool p1_proven_optimal = column_solve(servable_list, t_start);
+    bool p1_proven_optimal = column_solve(servable_list, t_start, greedy_obj);
 
+    long long total_iters = 0;
     if (!p1_proven_optimal) {
-        // ------------------------------------------------------------------------
-        // ATTEMPT PHASE 2: GUIDED MULTI-BASIN SISR-SA (GM-SISR CHAMPION)
-        // ------------------------------------------------------------------------
-        double sum_net = 0.0;
-        ema_regret.assign(R + 1, 0.0);
-        for (int q : servable_list) {
-            double net = max(1.0, (double)(Rev[q] - nic[q]));
-            ema_regret[q] = net;
-            sum_net += net;
-        }
-        S_scale = max(1.0, sum_net / servable_list.size());
-
-        // Normalized spatio-temporal neighbor list
+        // --------------------------------------------------------------------
+        // PHASE 2: GM-SISR (mask=896) + EJECT50 + O1 CROSS-ROUTE POLISH
+        // --------------------------------------------------------------------
         double sum_T = 0.0, sum_E = 0.0;
         long long pairs = 0;
         for (size_t i = 0; i < servable_list.size(); ++i) {
@@ -879,40 +1321,30 @@ int main() {
             for (int i = 0; i < s; ++i) nbr[a].push_back(tmp_nb[i].second);
         }
 
-        touch_stamp.assign(K + 1, 0); ruin_stamp.assign(K + 1, 0); cand_stamp.assign(R + 1, 0);
-
-        // Inherit Phase 1 solution if valid, else Greedy initialization
+        // Compare Phase 1 solution cleanly against precomputed Phase 2 Greedy
+        vector<vector<int>> p1_nd = best_nd;
         ll p1_obj = 0;
         bool p1_valid = true;
         for (int k = 1; k <= K; ++k) {
-            rt[k].nd = best_nd[k];
+            rt[k].nd = p1_nd[k];
             if (!recompute(k)) { p1_valid = false; break; }
             p1_obj -= rt[k].cost;
-            for (int i = 1; i <= rt[k].n(); ++i) {
-                int x = rt[k].nd[i];
-                if (x <= R) p1_obj += Rev[x];
-            }
+            for (int i = 1; i <= rt[k].n(); ++i) { int x = rt[k].nd[i]; if (x <= R) p1_obj += Rev[x]; }
         }
 
-        if (p1_valid && p1_obj > 0) {
-            cur_obj = p1_obj;
-            fill(veh.begin(), veh.end(), 0);
-            for (int k = 1; k <= K; ++k)
-                for (int i = 1; i <= rt[k].n(); ++i) { int x = rt[k].nd[i]; if (x <= R) veh[x] = k; }
-            save_best();
-        } else {
-            for (int k = 1; k <= K; ++k) { rt[k].nd.assign(1, 0); recompute(k); }
-            fill(veh.begin(), veh.end(), 0);
-            vector<int> init = servable_list;
-            sort(init.begin(), init.end(), [&](int a, int b) { return Rev[a] - nic[a] > Rev[b] - nic[b]; });
-            ++stamp_id; rev_delta = 0;
-            recreate_with_memory(init, false);
-            ll initial_cost = 0; for (int k = 1; k <= K; ++k) initial_cost += rt[k].cost;
-            cur_obj = rev_delta - initial_cost;
-            save_best();
+        const vector<vector<int>>& start_nd = (p1_valid && p1_obj >= greedy_obj) ? p1_nd : greedy_nd;
+        fill(veh.begin(), veh.end(), 0);
+        for (int k = 1; k <= K; ++k) {
+            rt[k].nd = start_nd[k]; recompute(k);
+            for (int i = 1; i <= rt[k].n(); ++i) { int x = rt[k].nd[i]; if (x <= R) veh[x] = k; }
+        }
+        cur_obj = (p1_valid && p1_obj >= greedy_obj) ? p1_obj : greedy_obj;
+        save_best();
+        if (VERBOSE_LOG) {
+            fprintf(stderr, "[P2: INIT] p1_obj=%lld (valid=%d) greedy_obj=%lld -> start=%lld\n",
+                    p1_obj, (int)p1_valid, greedy_obj, best_obj);
         }
 
-        // Thermal Schedule Initialization
         double elapsed = chrono::duration<double>(chrono::steady_clock::now() - t_start).count();
         const double search_start = elapsed;
         const double budget = max(0.001, TIME_LIMIT_SEC - search_start);
@@ -924,11 +1356,11 @@ int main() {
         const int WARMUP_COUNT = 200;
 
         double temp = 0.15 * S_scale;
-        int cur_cycle = 0, cycle_stag = 0;
+        int cycle_stag = 0;
         bool improved_in_cycle = false;
-        double recent_delta[128] = {0}; int recent_pos = 0, recent_filled = 0;   // T4 recalibration ring
+        double recent_delta[128] = {0}; int recent_pos = 0, recent_filled = 0;
+        static vector<int> ls_pool;
 
-        // Search Loop
         for (long long it = 0;; ++it) {
             if ((it & 15) == 0) {
                 elapsed = chrono::duration<double>(chrono::steady_clock::now() - t_start).count();
@@ -939,22 +1371,17 @@ int main() {
                     auto [new_temp, triggered_reheat] = sedca.get_temperature(t);
                     temp = new_temp;
                     if (triggered_reheat) {
-                        if (improved_in_cycle) {
-                            cycle_stag = 0;
-                            load_best();
-                        } else {
-                            cycle_stag++;
-                            load_best();
-                        }
+                        if (improved_in_cycle) cycle_stag = 0;
+                        else ++cycle_stag;
+                        load_best();
                         improved_in_cycle = false;
                     }
-                    cur_cycle = sedca.cycle_count;
-                    sedca.stag = cycle_stag;   // adaptive dwell: more stagnation => shorter tooth
+                    sedca.stag = cycle_stag;
                 } else {
                     temp = 0.08 * S_scale;
-                    cur_cycle = 0;
                 }
             }
+            ++total_iters;
 
             ++stamp_id; touched.clear(); veh_log.clear(); rev_delta = 0;
 
@@ -982,17 +1409,42 @@ int main() {
             order_candidates(cand);
             recreate_with_memory(cand, true);
 
+            // Eject50: Depth <= 2 Ejection-Chain Recreate on 50% of iterations
+            if ((it & 1) == 0) run_ejection_pass(cand, EJECT_PROBES);
+
             ll dcost = 0;
             for (int k : touched) dcost += rt[k].cost - backup[k].cost;
             ll new_obj = cur_obj + rev_delta - dcost;
             ll delta = new_obj - cur_obj;
 
-            if (delta >= 0 || (double)delta > temp * log(rand01() + 1e-300)) {
+            bool accepted = (delta >= 0 || (double)delta > temp * log(rand01() + 1e-300));
+            if (accepted) {
                 cur_obj = new_obj;
                 if (cur_obj > best_obj) {
                     save_best();
                     improved_in_cycle = true;
                     mode_records[r_mode]++;
+                }
+                // O1: Bounded exact cross-route relocate polish after accepted moves
+                if (!touched.empty() && (it & 31) == 0) {
+                    ls_pool.clear();
+                    for (int k : touched) {
+                        for (int i = 1; i <= rt[k].n() && (int)ls_pool.size() < O1_POOL_CAP; ++i) {
+                            int x = rt[k].nd[i];
+                            ls_pool.push_back((x > R) ? (x - R) : x);
+                        }
+                        if ((int)ls_pool.size() >= O1_POOL_CAP) break;
+                    }
+                    if (!ls_pool.empty()) {
+                        sort(ls_pool.begin(), ls_pool.end());
+                        ls_pool.erase(unique(ls_pool.begin(), ls_pool.end()), ls_pool.end());
+                        ll gain = ls_relocate_polish(ls_pool, O1_MAX_STEPS);
+                        if (gain > 0) {
+                            cur_obj += gain;
+                            st_ls_gain += gain;
+                            if (cur_obj > best_obj) { save_best(); improved_in_cycle = true; }
+                        }
+                    }
                 }
             } else {
                 for (int k : touched) { swap(rt[k], backup[k]); rver[k] = ++gver; }
@@ -1007,12 +1459,12 @@ int main() {
             if (!sedca.calibrated && delta < 0) {
                 warmup_worsening.push_back((double)llabs(delta));
                 if ((int)warmup_worsening.size() >= WARMUP_COUNT) {
-                    sedca.auto_calibrate(warmup_worsening, S_scale);
+                    sedca.apply_deltas(warmup_worsening, S_scale, true);
                 }
             }
             if (sedca.calibrated && recent_filled >= 64 && it > 0 && (it % RECALIB_UPDATE_ITERS == 0)) {
                 vector<double> rec(recent_delta, recent_delta + recent_filled);
-                sedca.online_recalibrate(rec, S_scale);
+                sedca.apply_deltas(rec, S_scale, false);
             }
             if (it > 0 && (it % BANDIT_UPDATE_ITERS == 0)) update_bandit();
         }
@@ -1029,6 +1481,12 @@ int main() {
         if (!recompute(k)) { rt[k].nd.assign(1, 0); recompute(k); }
         benefit -= rt[k].cost;
         for (int i = 1; i <= rt[k].n(); ++i) { int x = rt[k].nd[i]; if (x <= R) benefit += Rev[x]; }
+    }
+
+    if (VERBOSE_LOG) {
+        double tot_t = chrono::duration<double>(chrono::steady_clock::now() - t_start).count();
+        fprintf(stderr, "RESULT: obj=%lld p2_iters=%lld eject_mv=%lld eject_ch=%lld ls_mv=%lld ls_gain=%lld time=%.3fs\n",
+                benefit, total_iters, st_eject_moves, st_eject_chains, st_ls_moves, st_ls_gain, tot_t);
     }
 
     string out;

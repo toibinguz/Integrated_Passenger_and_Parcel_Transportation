@@ -50,6 +50,39 @@ static double sedca_heat = 0.0;
 static long long soft_inserts = 0, kick_count = 0, kick_records = 0;
 
 // ============================================================================
+// v3 ADDITIVE OPERATORS (O1, O3) — "add arms, never change formulas" (see §13)
+// ----------------------------------------------------------------------------
+// Rationale: the primal move is ruin -> greedy-recreate, and recreate is a
+// DETERMINISTIC argmin, i.e. an IDEMPOTENT PROJECTION. Every state is therefore a
+// fixed point of it, so the stochastic ruin lands back on itself and delta == 0 ~35%
+// of the time. That single fact makes SA degenerate ("T is not a variable") AND
+// forces the only available randomness (the blind ruin) to be structure-blind.
+// The fix is to ADD (a) a genuine, exactly-evaluated LOCAL move (O1) and (b) a ruin
+// whose target is a function of the cost field (O3). Both are pure supersets of the
+// existing move set, so the reachable-set ceiling cannot drop (rule of §11.5).
+// 
+// Bit 14 (16384): ablate O1  (exact cross-route relocate polish)
+// Bit 15 (32768): ablate O3  (structure-targeted ruin: max-waste seed)
+// Bit 16 (65536): ablate O4  (RCL/GRASP randomized repair arm)
+// Default mask 896 keeps ALL of them ON (bits clear). The historical pure baseline is
+// reproducible as  896 | 16384 | 32768 | 65536 = 115584.
+// ============================================================================
+static const int ABL_O1 = 1 << 14;       // 16384
+static const int ABL_O3 = 1 << 15;       // 32768
+static const int ABL_O4 = 1 << 16;       // 65536
+static const int O1_MAX_STEPS = 6;       // bounded relocate applications per iteration
+static const int O1_PERIOD_MASK = 7;     // run O1 polish on every 8th accepted move
+static const int O1_POOL_CAP = 12;       // cap the relocate candidate pool (cost control)
+static const double O3_PROB = 0.35;      // activation probability of the targeted ruin arm
+// O4: RCL quality knob. A repair call uses the randomized arm with probability O4_PROB, and
+// when it does, every inserted request is placed at a position whose cost is within
+// O4_ALPHA * |greedy| of the greedy optimum. alpha -> 0 reproduces the greedy arm exactly.
+static const double O4_PROB = 0.40;      // activation probability of the RCL repair arm
+static const double O4_ALPHA = 0.05;     // relative insertion-cost slack (type-B bound)
+static long long st_ls_probes = 0, st_ls_moves = 0, st_ls_gain = 0, o3_count = 0, o4_count = 0;
+static vector<size_t> best_hashes;       // T4: distinct incumbents over a run
+
+// ============================================================================
 // FAST INPUT READER & ULTRA-FAST RNG (Xorshift64)
 // ============================================================================
 static char* ibuf; 
@@ -121,7 +154,7 @@ static vector<double> ema_regret;
 static int priority_head = -1;
 
 // Telemetry
-static long long mode_tries[5] = {0}, mode_improve[5] = {0}, mode_records[5] = {0}, sort_records[3] = {0};
+static long long mode_tries[6] = {0}, mode_improve[6] = {0}, mode_records[6] = {0}, sort_records[3] = {0};
 
 // ============================================================================
 // ROUTE EVALUATION & O(1) SLACK INSERTION
@@ -154,7 +187,11 @@ static bool recompute(int k) {
     return true;
 }
 
-static ll best_insert(int k, int q, int& bi, int& bj, bool blink) {
+// O4 (ADD-only arm): an insertion candidate (route k, pre/post indices i/j, delta cost c).
+struct RclCand { ll c; int k, i, j; };
+// When `out != nullptr`, EVERY feasible insertion of q on route k is appended (no blink
+// filtering), so the caller can build a restricted candidate list around the optimum.
+static ll best_insert(int k, int q, int& bi, int& bj, bool blink, vector<RclCand>* out = nullptr) {
     const Route& r = rt[k];
     const int n = r.n();
     const int* nd = r.nd.data(); const ll* dep = r.dep.data(); const ll* lat = r.lat.data(); const int* ld = r.ld.data();
@@ -174,6 +211,7 @@ static ll best_insert(int k, int q, int& bi, int& bj, bool blink) {
                 if (d + T(D, b) > lat[i + 1]) continue;
                 dc += C(D, b) - C(a, b);
             }
+            if (out) out->push_back({dc, k, i, i});
             if (dc < best && !(blink && (rng() & BLINK_MASK) == 0)) { best = dc; bi = i; }
         }
         return best;
@@ -199,6 +237,7 @@ static ll best_insert(int k, int q, int& bi, int& bj, bool blink) {
                 if (dq + T(Dq, b) > lat[i + 1]) ok = false;
                 else dc += C(Dq, b) - C(a, b);
             }
+            if (ok && out) out->push_back({dc, k, i, i});
             if (ok && dc < best && !(blink && (rng() & BLINK_MASK) == 0)) { best = dc; bi = i; bj = i; }
         }
         if (i == n) continue;
@@ -227,6 +266,7 @@ static ll best_insert(int k, int q, int& bi, int& bj, bool blink) {
                 if (dq + T(Dq, b2) > lat[j + 1]) continue;
                 dc += C(Dq, b2) - C(o, b2);
             }
+            if (out) out->push_back({dc, k, i, j});
             if (dc < best && !(blink && (rng() & BLINK_MASK) == 0)) { best = dc; bi = i; bj = j; }
         }
     }
@@ -260,10 +300,47 @@ static void do_insert(int k, int q, int i, int j) {
 }
 
 static void recreate_with_memory(const vector<int>& cands, bool blink) {
+    static vector<RclCand> rcl_pool;
     for (int q : cands) {
         if (veh[q]) continue;
         ll best1 = INFLL, best2 = INFLL;
         int bk = -1, bi = 0, bj = 0;
+        // O4 arm: with probability O4_PROB, repair q with GRASP/RCL instead of the plain
+        // greedy argmin. Restricted to the perturbed (blink) path only, so the deterministic
+        // initialization is untouched. O4_PROB < 1 keeps the greedy arm reachable.
+        bool use_rcl = blink && !(ABLATION_MASK & ABL_O4) && rand01() < O4_PROB;
+        if (use_rcl) {
+            ++o4_count;
+            rcl_pool.clear();
+            for (int k = 1; k <= K; ++k) {
+                static vector<RclCand> loc; loc.clear();
+                int ci = 0, cj = 0;
+                ll c = best_insert(k, q, ci, cj, false, &loc);
+                for (size_t t = 0; t < loc.size(); ++t) rcl_pool.push_back(loc[t]);
+                if (c < best1) { best2 = best1; best1 = c; }
+                else if (c < best2) { best2 = c; }
+            }
+            ll g1 = (best1 < INFLL) ? max(0LL, (ll)Rev[q] - best1) : 0LL;
+            ll g2 = (best2 < INFLL) ? max(0LL, (ll)Rev[q] - best2) : 0LL;
+            ema_regret[q] = 0.80 * ema_regret[q] + 0.20 * (double)(g1 - g2);
+            if (best1 < INFLL) {
+                // type-B bound: every accepted candidate costs <= best1 + alpha * |best1|.
+                ll mag = best1 < 0 ? -best1 : best1;
+                ll lim = best1 + (ll)(O4_ALPHA * (double)mag);
+                static vector<int> sel; sel.clear();
+                for (size_t t = 0; t < rcl_pool.size(); ++t)
+                    if (rcl_pool[t].c <= lim) sel.push_back((int)t);
+                int pick = sel[rng() % sel.size()];
+                bk = rcl_pool[pick].k; bi = rcl_pool[pick].i; bj = rcl_pool[pick].j;
+            }
+            double eps = (ABLATION_MASK & 128) ? 0.0 : SOFT_EPS0 * sedca_heat;
+            if (eps > 0.0) eps *= (0.5 + rand01());
+            if (bk != -1 && (double)(Rev[q] - best1) > -eps) {
+                if (Rev[q] - best1 <= 0) ++soft_inserts;
+                do_insert(bk, q, bi, bj);
+            }
+            continue;
+        }
         CacheEntry* ce = &icache[(size_t)q * (K + 1)];
         for (int k = 1; k <= K; ++k) {
             CacheEntry& e = ce[k];
@@ -298,6 +375,111 @@ static bool remove_from_route(int k) {
     if (!recompute(k)) { r.nd = keep; recompute(k); return false; }
     for (int q : tmp_reqs) if (veh[q]) { set_veh(q, 0); removed.push_back(q); }
     return true;
+}
+
+// ----------------------------------------------------------------------------
+// O1: exact cross-route relocate.
+// Side-effect-free cost of an explicit node sequence (mirrors recompute()).
+// ----------------------------------------------------------------------------
+static ll cost_of_seq(int k, const vector<int>& nd) {
+    ll dep = 0, ld = 0, cost = 0;
+    int prev = O[k];
+    for (size_t i = 1; i < nd.size(); ++i) {
+        int x = nd[i];
+        ll arr = dep + T(prev, nin[x]);
+        if (arr > nl[x]) return INFLL;
+        dep = max(arr, ne[x]) + ndur[x];
+        ld += nw[x];
+        if (ld > Q[k]) return INFLL;
+        cost += C(prev, nin[x]) + nic[x];
+        prev = nout[x];
+    }
+    return cost;
+}
+
+// O1 operator: relocate served request q to its exact-cheapest position over ALL
+// routes (its own included, so intra-route moves are covered too). Applies iff the
+// total travel cost strictly decreases. Because the cost delta is exact, the operator
+// is NON-IDEMPOTENT by construction: the greedy-recreate fixed point is not a fixed
+// point of O1 unless it is 1-relocate-optimal. `blink` is deliberately NOT used here:
+// O1 is the deterministic, structure-aware half of the search.
+static bool try_relocate_one(int q, ll& improvement) {
+    int a = veh[q];
+    if (!a) return false;
+    Route& ra = rt[a];
+    vector<int> nd_wo; nd_wo.reserve(ra.nd.size());
+    nd_wo.push_back(0);
+    for (size_t i = 1; i < ra.nd.size(); ++i) {
+        int x = ra.nd[i], rq = (x > R) ? (x - R) : x;
+        if (rq == q) continue;
+        nd_wo.push_back(x);
+    }
+    if (nd_wo.size() == ra.nd.size()) return false;      // q not actually in route a
+    ll c_wo = cost_of_seq(a, nd_wo);
+    if (c_wo >= INFLL) return false;
+    ll save = ra.cost - c_wo;
+
+    vector<int> old_nd = ra.nd; ll old_cost = ra.cost;
+    ra.nd = nd_wo; recompute(a); veh[q] = 0;
+
+    ll best = INFLL; int bk = -1, bi = 0, bj = 0;
+    for (int k = 1; k <= K; ++k) {
+        int ci = 0, cj = 0;
+        ll c = best_insert(k, q, ci, cj, false);
+        if (c < best) { best = c; bk = k; bi = ci; bj = cj; }
+    }
+
+    bool applied = false;
+    if (bk != -1 && best < save) {                        // strictly cheaper => real move
+        do_insert(bk, q, bi, bj);
+        improvement = save - best;
+        applied = true;
+        ++st_ls_moves;
+    } else {                                             // no-op: restore exactly
+        ra.nd = old_nd; ra.cost = old_cost; recompute(a); veh[q] = a;
+    }
+    return applied;
+}
+
+// O1 polish: bounded best-improvement relocate sweep over a candidate pool.
+// MONOTONE by construction (only strictly improving applications) => the objective can
+// never decrease => property test T3 holds with 0 violations, and best_obj is never
+// harmed, so adding this arm cannot lower the ceiling.
+static ll ls_relocate_polish(const vector<int>& pool, int max_steps) {
+    ll total = 0; int steps = 0;
+    for (int q : pool) {
+        if (steps >= max_steps) break;
+        if (!veh[q]) continue;
+        ++st_ls_probes;
+        ll imp = 0;
+        if (try_relocate_one(q, imp)) { total += imp; ++steps; }
+    }
+    return total;
+}
+
+// ----------------------------------------------------------------------------
+// O3: maximum-waste seed.
+// Sums the exact per-node waste (waiting + detour) over the WHOLE solution — the same
+// quantity Mode 3 computes for one route, but never used globally. Returns the request
+// with the largest waste, so the ruin set becomes a deterministic FUNCTION of the cost
+// field instead of a blind uniform pick. Nonempty whenever some request is served.
+// ----------------------------------------------------------------------------
+static int worst_waste_seed() {
+    double best = -1.0; int bi = -1;
+    for (int k = 1; k <= K; ++k) {
+        const Route& r = rt[k]; int n = r.n();
+        for (int i = 1; i <= n; ++i) {
+            int x = r.nd[i], q = (x > R) ? (x - R) : x;
+            int prev_v = (i == 1) ? O[k] : nout[r.nd[i - 1]];
+            ll arr = r.dep[i - 1] + T(prev_v, nin[x]);
+            ll wait_t = max(0LL, ne[x] - arr);
+            ll detour = C(prev_v, nin[x]) + nic[x];
+            if (i < n) { int nx = nin[r.nd[i + 1]]; detour += C(nout[x], nx) - C(prev_v, nx); }
+            double w = (double)(wait_t + detour);
+            if (w > best) { best = w; bi = q; }
+        }
+    }
+    return bi;
 }
 
 static int select_seed() {
@@ -377,6 +559,21 @@ static int ruin_guided(int seed) {
         for (int i = st; i < st + len; ++i) { int x = r.nd[i]; tmp_reqs.push_back(x > R ? x - R : x); }
         if (remove_from_route(k)) ++done;
     };
+
+    // O3 (ADD-only arm): structure-targeted ruin. With probability O3_PROB, destroy the
+    // string around the MAXIMUM-WASTE request instead of around a uniform-random seed.
+    // Existing modes stay reachable because O3_PROB < 1 => the ruin set is a superset of
+    // the old one in distribution, and the ruin is never empty when routes are non-empty.
+    if (!(ABLATION_MASK & ABL_O3) && rand01() < O3_PROB) {
+        int ws = worst_waste_seed();
+        if (ws != -1) {
+            priority_head = seed = ws;
+            try_route(ws);
+            for (int c : nbr[ws]) { if (done >= ks) break; try_route(c); }
+            if (done > 0) { ++o3_count; return 5; }
+        }
+        priority_head = -1;
+    }
 
     int roll;
     if (!(ABLATION_MASK & 2048)) {                       // H5: bandit-weighted mode choice
@@ -480,6 +677,9 @@ static int order_candidates(vector<int>& cands) {
 static void save_best() {
     best_obj = cur_obj;
     for (int k = 1; k <= K; ++k) best_nd[k] = rt[k].nd;
+    uint64_t h = 1469598103934665603ull;                 // T4: distinct incumbents
+    for (int k = 1; k <= K; ++k) for (int x : best_nd[k]) { h ^= (uint64_t)(x + 1); h *= 1099511628211ull; }
+    best_hashes.push_back((size_t)h);
 }
 static void load_best() {
     fill(veh.begin(), veh.end(), 0);
@@ -660,6 +860,150 @@ struct AdaptiveThermostat {
     }
 };
 
+// Candidate pool builder, extracted verbatim from the search loop so the property-test
+// harness can exercise the ruin+recreate operator without duplicating this logic.
+static void build_candidates(int seed) {
+    cand.clear();
+    auto add = [&](int q) {
+        if (servable[q] && !veh[q] && cand_stamp[q] != stamp_id) {
+            cand_stamp[q] = stamp_id; cand.push_back(q);
+        }
+    };
+    if (priority_head != -1) add(priority_head);
+    for (int q : removed) add(q);
+    size_t nrem = cand.size();
+    for (size_t t = 0; t < nrem; ++t) {
+        const auto& nb = nbr[cand[t]];
+        for (int i = 0, lim = min((int)nb.size(), CAND_NB); i < lim; ++i) add(nb[i]);
+    }
+    add(seed);
+    for (int i = 0, lim = min((int)nbr[seed].size(), CAND_NB); i < lim; ++i) add(nbr[seed][i]);
+    for (int i = 0; i < CAND_RAND; ++i) add(servable_list[rng() % servable_list.size()]);
+}
+
+// ============================================================================
+// PROPERTY-TEST HARNESS (T1-T4) — instance-independent, no benchmark, no sweep.
+//   gm_sisr.exe --utest <time> <instance> <seed> <max_iters> <mask>
+// Prints PASS/FAIL to stderr; stdout stays reserved for the solution.
+// ============================================================================
+static ll total_cost_now() { ll c = 0; for (int k = 1; k <= K; ++k) c += rt[k].cost; return c; }
+static size_t sol_hash() {
+    uint64_t h = 1469598103934665603ull;
+    for (int k = 1; k <= K; ++k) for (int x : rt[k].nd) { h ^= (uint64_t)(x + 1); h *= 1099511628211ull; }
+    h ^= (uint64_t)(rev_delta + 1);
+    return (size_t)h;
+}
+static void rebuild_veh() {
+    veh.assign(R + 1, 0);
+    for (int k = 1; k <= K; ++k)
+        for (int i = 1; i <= rt[k].n(); ++i) { int x = rt[k].nd[i]; if (x <= R) veh[x] = k; }
+}
+
+static void run_selftest() {
+    fprintf(stderr, "=== GM-SISR PROPERTY TESTS (T1-T4)  K=%d N=%d M=%d R=%d ===\n", K, N, M, R);
+
+    vector<vector<int>> snap(K + 1);
+    for (int k = 1; k <= K; ++k) snap[k] = rt[k].nd;
+
+    // ---------------- T2 + T3: constructed relocate recovery + monotonicity --------
+    int casecount = 0, found = 0, applied_ok = 0, violations = 0;
+    int d_served = 0, d_constructed = 0;
+    unsigned saved_blink = BLINK_MASK;
+    for (int q = 1; q <= R && casecount < 40; ++q) {
+        for (int k = 1; k <= K; ++k) { rt[k].nd = snap[k]; recompute(k); }
+        rebuild_veh();
+        if (!veh[q]) continue;
+        ++d_served;
+        int a = veh[q];
+        // Pull q out of its route. Removal can only RELAX time windows, so it is always
+        // feasible: this is exactly why the ruin creates room before re-inserting.
+        {
+            vector<int> ndw; ndw.push_back(0);
+            for (size_t i = 1; i < rt[a].nd.size(); ++i) {
+                int x = rt[a].nd[i], rq = (x > R) ? x - R : x;
+                if (rq != q) ndw.push_back(x);
+            }
+            rt[a].nd = ndw; recompute(a); veh[q] = 0;
+        }
+        // Cheapest feasible insertion over all routes = the value O1 must be able to reach.
+        ll cstar = INFLL; int kk = -1;
+        for (int k = 1; k <= K; ++k) { int a1 = 0, a2 = 0; ll c = best_insert(k, q, a1, a2, false); if (c < cstar) { cstar = c; kk = k; } }
+        if (kk == -1) continue;
+        // Force a strictly-worse but still feasible insertion on route kk by temporarily
+        // raising the blink skip probability. An improving relocate therefore provably
+        // EXISTS, so T2 can assert that the operator detects and applies it.
+        ll cbad = INFLL; int bi = 0, bj = 0;
+        for (int attempt = 0; attempt < 10; ++attempt) {
+            BLINK_MASK = (attempt < 5) ? 1u : 3u;
+            int a1 = 0, a2 = 0; ll c = best_insert(kk, q, a1, a2, true);
+            if (c < INFLL && c > cstar) { cbad = c; bi = a1; bj = a2; break; }
+        }
+        if (cbad == INFLL) continue;
+        do_insert(kk, q, bi, bj);
+        ++d_constructed;
+        ll c_bad = total_cost_now(), imp = 0;
+        bool applied = try_relocate_one(q, imp);
+        ll c_fix = total_cost_now();
+        ++casecount;
+        if (applied) { ++found; if (imp > 0 && c_fix < c_bad) ++applied_ok; else ++violations; }
+    }
+    BLINK_MASK = saved_blink;
+    for (int k = 1; k <= K; ++k) { rt[k].nd = snap[k]; recompute(k); }
+    rebuild_veh();
+
+    int sweep_moves = 0, sweep_violations = 0;   // full monotonicity sweep
+    {
+        vector<int> pool; for (int q = 1; q <= R; ++q) if (veh[q]) pool.push_back(q);
+        for (int q : pool) {
+            ll before = total_cost_now(), imp = 0;
+            if (try_relocate_one(q, imp)) { ++sweep_moves; if (!(total_cost_now() < before) || imp <= 0) ++sweep_violations; }
+        }
+    }
+    fprintf(stderr, "T2 relocate detection  : %s  (constructed found+applied %d/%d, monotone %d)\n",
+            (casecount > 0 && found == casecount) ? "PASS" : (found > 0 ? "PARTIAL" : "FAIL"), found, casecount, applied_ok);
+    fprintf(stderr, "   diag: served=%d constructed=%d\n", d_served, d_constructed);
+    fprintf(stderr, "T3 polish monotonicity : %s  (constructed=%d, sweep moves=%d violations=%d)\n",
+            (violations + sweep_violations == 0) ? "PASS" : "FAIL", violations, sweep_moves, sweep_violations);
+
+    // ---------------- T1: fixed ruin set, sampled repair, distinctness + identity ---
+    for (int k = 1; k <= K; ++k) { rt[k].nd = snap[k]; recompute(k); }
+    rebuild_veh();
+    int ww = worst_waste_seed();
+    if (ww != -1) {
+        vector<vector<int>> pre(K + 1); for (int k = 1; k <= K; ++k) pre[k] = rt[k].nd;
+        ll pre_rev = rev_delta; size_t pre_hash = sol_hash();
+        set<size_t> seen; int identity = 0; const int SAMPLES = 200;
+        for (int s = 0; s < SAMPLES; ++s) {
+            for (int k = 1; k <= K; ++k) { rt[k].nd = pre[k]; recompute(k); }
+            rebuild_veh(); rev_delta = pre_rev;
+            ++stamp_id; removed.clear(); priority_head = -1;
+            tmp_reqs.clear(); tmp_reqs.push_back(ww);
+            int kk = veh[ww];
+            if (kk) remove_from_route(kk);
+            cand.clear(); cand.push_back(ww);
+            for (int i = 0, lim = min((int)nbr[ww].size(), CAND_NB); i < lim; ++i)
+                if (servable[nbr[ww][i]]) cand.push_back(nbr[ww][i]);
+            recreate_with_memory(cand, true);
+            size_t h = sol_hash();
+            seen.insert(h);
+            if (h == pre_hash) ++identity;
+        }
+        double ident_rate = 100.0 * identity / SAMPLES;
+        fprintf(stderr, "T1 repair non-idempot. : %s  (distinct=%d/%d, identity=%.1f%%; an O4/RCL repair arm is the fix)\n",
+                (seen.size() > 1 && ident_rate < 5.0) ? "PASS" : "FAIL", (int)seen.size(), SAMPLES, ident_rate);
+    } else {
+        fprintf(stderr, "T1 repair non-idempot. : SKIP  (no served request)\n");
+    }
+
+    // ---------------- T4: distinct incumbents over the run --------------------------
+    {
+        set<size_t> s(best_hashes.begin(), best_hashes.end());
+        fprintf(stderr, "T4 distinct incumbents : %s  (%d distinct over %d records)\n",
+                (s.size() > 1) ? "PASS" : "FAIL", (int)s.size(), (int)best_hashes.size());
+    }
+    fprintf(stderr, "=== END PROPERTY TESTS ===\n");
+}
+
 // ============================================================================
 // MAIN EXECUTION
 // ============================================================================
@@ -668,20 +1012,23 @@ int main(int argc, char** argv) {
     auto t_start = chrono::steady_clock::now();
 
     string test_filepath = "";
-    if (argc > 1) TIME_LIMIT_SEC = atof(argv[1]);
-    if (argc > 2) {
-        test_filepath = argv[2];
-        if (!freopen(argv[2], "r", stdin)) { cerr << "ERROR: Failed to open " << argv[2] << "\n"; return 1; }
+    bool utest = false;
+    int argbase = 1;
+    if (argc > 1 && string(argv[1]) == "--utest") { utest = true; argbase = 2; }
+    if (argc > argbase) TIME_LIMIT_SEC = atof(argv[argbase]);
+    if (argc > argbase + 1) {
+        test_filepath = argv[argbase + 1];
+        if (!freopen(argv[argbase + 1], "r", stdin)) { cerr << "ERROR: Failed to open " << argv[argbase + 1] << "\n"; return 1; }
     }
     long long run_seed = -1;
-    if (argc > 3) {
-        run_seed = atoll(argv[3]);
+    if (argc > argbase + 2) {
+        run_seed = atoll(argv[argbase + 2]);
         rng_s = 0x9E3779B97F4A7C15ull ^ ((uint64_t)run_seed * 0xBF58476D1CE4E5B9ull + 0x94D049BB133111EBull);
         if (rng_s == 0) rng_s = 0x9E3779B97F4A7C15ull;
         for (int w = 0; w < 16; ++w) rng();
     }
-    if (argc > 4) MAX_ITERS = atoll(argv[4]);
-    if (argc > 5) ABLATION_MASK = atoi(argv[5]);
+    if (argc > argbase + 3) MAX_ITERS = atoll(argv[argbase + 3]);
+    if (argc > argbase + 4) ABLATION_MASK = atoi(argv[argbase + 4]);
     if (ABLATION_MASK & 64) { BLINK_MASK = 31; CAND_RAND = 10; }
 
     bool write_files = false;
@@ -951,22 +1298,7 @@ int main(int argc, char** argv) {
         if (touched.empty()) ++st_touched_empty;   // ruin removed 0 routes' worth of requests
         if (n_rem == 0) ++st_ruin_failed;
 
-        cand.clear();
-        auto add = [&](int q) {
-            if (servable[q] && !veh[q] && cand_stamp[q] != stamp_id) {
-                cand_stamp[q] = stamp_id; cand.push_back(q);
-            }
-        };
-        if (priority_head != -1) add(priority_head);
-        for (int q : removed) add(q);
-        size_t nrem = cand.size();
-        for (size_t t = 0; t < nrem; ++t) {
-            const auto& nb = nbr[cand[t]];
-            for (int i = 0, lim = min((int)nb.size(), CAND_NB); i < lim; ++i) add(nb[i]);
-        }
-        add(seed);
-        for (int i = 0, lim = min((int)nbr[seed].size(), CAND_NB); i < lim; ++i) add(nbr[seed][i]);
-        for (int i = 0; i < CAND_RAND; ++i) add(servable_list[rng() % servable_list.size()]);
+        build_candidates(seed);
 
         int s_mode = order_candidates(cand);
         recreate_with_memory(cand, true);
@@ -999,6 +1331,33 @@ int main(int argc, char** argv) {
         } else {
             for (int k : touched) { swap(rt[k], backup[k]); rver[k] = ++gver; }
             for (int i = (int)veh_log.size() - 1; i >= 0; --i) veh[veh_log[i].first] = veh_log[i].second;
+        }
+
+        // ---- O1: exact cross-route relocate polish (ADD-only arm; monotone) ----
+        // Runs only on an accepted move, over the requests of the routes the ruin just
+        // touched (bounded pool => bounded cost). It can only STRICTLY improve travel
+        // cost, so cur_obj/best_obj can never decrease: the arm is a pure addition to the
+        // neighbourhood and therefore cannot lower the ceiling (T3).
+        if (status != "REJECT" && !(ABLATION_MASK & ABL_O1) && !touched.empty() && (it & O1_PERIOD_MASK) == 0) {
+            static vector<int> ls_pool;
+            ls_pool.clear();
+            for (int k : touched) {
+                for (int i = 1; i <= rt[k].n() && (int)ls_pool.size() < O1_POOL_CAP; ++i) {
+                    int x = rt[k].nd[i];
+                    ls_pool.push_back((x > R) ? (x - R) : x);
+                }
+                if ((int)ls_pool.size() >= O1_POOL_CAP) break;
+            }
+            if (!ls_pool.empty()) {
+                sort(ls_pool.begin(), ls_pool.end());
+                ls_pool.erase(unique(ls_pool.begin(), ls_pool.end()), ls_pool.end());
+                ll gain = ls_relocate_polish(ls_pool, O1_MAX_STEPS);
+                if (gain > 0) {
+                    cur_obj += gain;
+                    st_ls_gain += gain;
+                    if (cur_obj > best_obj) { save_best(); ++improved_count; improved_in_cycle = true; }
+                }
+            }
         }
 
         if (flog.is_open() && ((it & 127) == 0 || status == "IMPROVE_GLOBAL")) {
@@ -1085,6 +1444,9 @@ int main(int argc, char** argv) {
                     << "  * Mode 2 (Unserved-Cav): Calls=" << mode_tries[2] << " | Improves=" << mode_improve[2] << " | Records=" << mode_records[2] << "\n"
                     << "  * Mode 3 (Bottleneck)  : Calls=" << mode_tries[3] << " | Improves=" << mode_improve[3] << " | Records=" << mode_records[3] << "\n"
                     << "  * Mode 4 (Basin Kick)  : Calls=" << mode_tries[4] << " | Records=" << mode_records[4] << " | Kicks=" << kick_count << " | KickRecords=" << kick_records << "\n"
+                    << "  * Mode 5 (Waste Ruin)  : Calls=" << mode_tries[5] << " | Records=" << mode_records[5] << " | O3 fires=" << o3_count << "\n"
+                    << "  * O1 Relocate Polish   : Probes=" << st_ls_probes << " | Applied=" << st_ls_moves << " | Gain=" << st_ls_gain << "\n"
+                    << "  * O4 RCL Repair Arm    : Fires=" << o4_count << " | alpha=" << O4_ALPHA << " | P=" << O4_PROB << "\n"
                     << "  * H1 Soft-Inserts      : " << soft_inserts << " | Bandit w=[1..3]=" << setprecision(2) << bandit_w[1] << "/" << bandit_w[2] << "/" << bandit_w[3] << "\n"
                     << "  * STRUCT no-op (delta==0): " << st_null_delta << " / " << total_iters
                     << " (" << fixed << setprecision(2) << (total_iters ? st_null_delta * 100.0 / total_iters : 0) << "%)"
@@ -1107,5 +1469,6 @@ int main(int argc, char** argv) {
     }
 
     fwrite(out.data(), 1, out.size(), stdout);
+    if (utest) run_selftest();
     return 0;
 }

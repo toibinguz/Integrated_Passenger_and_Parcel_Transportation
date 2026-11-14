@@ -7,8 +7,8 @@ namespace fs = std::filesystem;
 // ============================================================================
 // 1. GLOBAL PARAMETERS & HYPERPARAMETERS
 // ============================================================================
-static double TIME_LIMIT_SEC = 70.0;              // Total search budget (seconds)
-static double TIME_LIMIT_PHASE1 = 10.0;           // Phase 1 exact budget (seconds)
+static double TIME_LIMIT_SEC = 200.0;              // Total search budget (seconds)
+static double TIME_LIMIT_PHASE1 = 80.0;           // Phase 1 exact budget (seconds)
 static long long MAX_ITERS = 0;                  // Phase 2 deterministic iteration budget (0 = wall-clock)
 
 // --- PHASE 1 HYPERPARAMETERS (DFS Column Enumeration + Set Packing) ---

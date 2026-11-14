@@ -25,3 +25,11 @@ Thư mục này lưu trữ toàn bộ tài liệu nghiên cứu, đặc tả k�
 - [`algorithmic_mastery_lessons.pdf`](file:///z:/Desktop/250926/archive/reports/algorithmic_mastery_lessons.pdf) (`.tex`): Bài học tinh hoa thuật toán.
 - [`phase1_algorithm_report.pdf`](file:///z:/Desktop/250926/archive/reports/phase1_algorithm_report.pdf) (`.tex`): Báo cáo thực nghiệm chuyên sâu Phase 1 Set Packing.
 - [`phase2_and_tabu_comparison.pdf`](file:///z:/Desktop/250926/archive/reports/phase2_and_tabu_comparison.pdf) (`.tex`): So sánh hiệu năng Phase 2 giữa Tabu Search và GM-SISR.
+
+---
+
+## 3. Nhật ký Thực nghiệm & Kết quả Chạy Cũ (`archive/runs/`)
+
+Lưu trữ toàn bộ dữ liệu log, báo cáo thực nghiệm `report.txt`, `result.txt` và đồ thị hội tụ của các thuật toán:
+- [`gm_sisr/output/`](file:///z:/Desktop/250926/archive/runs/gm_sisr/output): Kết quả chạy GM-SISR trên test_850 kèm telemetry log và các đồ thị hội tụ / phân tích bóc tách.
+- [`matheuristic_cg_sp/output/`](file:///z:/Desktop/250926/archive/runs/matheuristic_cg_sp/output): Toàn bộ 20 lượt chạy benchmark và thư mục latest của Matheuristic Column Generation + Set Packing.

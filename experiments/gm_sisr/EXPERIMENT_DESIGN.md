@@ -927,3 +927,302 @@ Smoke test ngân sách 8s (bản tạm, đã xoá): `EXIT=0`, stdout `30329`,
    cấu hình sống còn. Giữ nguyên theo mask 896, **không tự đổi**.
 4. Code H1/H2/H3/H4 **không** được đưa sang `submission.cpp` (đúng: chúng đã bị ablation) ⇒ file nộp
    gọn hơn, và mọi thay đổi mới phải đi qua cổng **S13**, không "đổi công thức cũ".
+
+---
+
+## 13. TÁI ĐỊNH HÌNH TOÁN TỬ LÂN CẬN — "QUÁ NGẪU NHIÊN ⇄ QUÁ TẤT ĐỊNH"
+
+> **Nguồn:** phát biểu của người dùng — *"vấn đề lớn nhất là toán tử lân cận: quá ngẫu nhiên ⇒ không
+> xác định được cấu trúc bài toán; quá tất định ⇒ SA sụp đổ, ngân sách thời gian vô nghĩa, không phá
+> được bồn trung; tiếp cận hiện tại vẫn là nền tất định + yếu tố ngẫu nhiên thêm vào, và vẫn không ổn."*
+> Mục này **không** chạy thêm thực nghiệm (theo chỉ đạo dừng kiểm nghiệm) — chỉ đọc code và suy luận cấu trúc.
+
+### 13.0. Kết luận trước, chứng minh sau
+
+**Hai nửa của lời chẩn đoán là CÙNG MỘT khuyết điểm.** Thuật toán **không có toán tử local search**;
+nó chỉ có **một phép chiếu** (projection) `ruin → repair`. Vì `repair` là một phép chiếu, nó **idempotent**,
+nên **mọi điểm đều là điểm bất động của nó**. Do đó:
+
+- "**quá tất định**" không phải vì T quá thấp, mà vì **Δ ≡ 0**: `exp(−Δ/T) ≡ 1` với mọi T ⇒ nhiệt độ
+  không còn là biến số ⇒ "SA sụp đổ" và "ngân sách vô nghĩa" là **hệ quả tất yếu**, không phải lỗi tham số.
+- "**quá ngẫu nhiên**" là **hệ quả của nửa trên**: muốn có Δ ≠ 0 thì buộc phải làm phép phá hoại to hơn /
+  mù hơn (`CAND_RAND`, chuỗi dài hơn), tức là tăng ngẫu nhiên **trực giao với trường mục tiêu** ⇒ không
+  thể "xác định cấu trúc".
+
+⇒ **Không sửa được bằng cách chỉnh tỉ lệ ngẫu nhiên/tất định.** Phải **đổi vật thể mà tính ngẫu nhiên
+tác động lên**: để tất định lo phần *move cục bộ rẻ, đúng cấu trúc*, để ngẫu nhiên lo phần *nhiễu loạn
+thưa, nhắm cấu trúc*.
+
+### 13.1. Bằng chứng trong code (đọc trực tiếp, không cần benchmark)
+
+| Vị trí | Sự việc | Hệ quả |
+|---|---|---|
+| `best_insert` `:157–234`, trả `argmin` ở `:177 / :202 / :230` | Repair luôn lấy vị trí **rẻ nhất** | Là hàm xác định của (tuyến, q) |
+| `blink` `:177,202,230` | Yếu tố ngẫu nhiên duy nhất trong repair: **bỏ qua** một ứng viên với p=1/32 | Chỉ có thể làm kết quả **xấu hơn hoặc bằng** — không bao giờ *khám phá có cấu trúc* |
+| `recreate_with_memory` `:262–285`, `argmin` toàn cục `:271` | Chọn tuyến rẻ nhất, **không** nhớ vị trí cũ để *buộc* khác đi | `repair(S∖R) = S` với mọi R vừa cắt ra ⇒ **Δ ≡ 0** (§8.0: 35%; `accepted null` 71–95%) |
+| `ruin_guided` `:350–433`; seed ngẫu nhiên `:314`; chuỗi ngẫu nhiên `:374–377` | Phá hoại **mù**: seed đều, chuỗi không–thời gian ngẫu nhiên | Tín hiệu ngẫu nhiên **không** tham chiếu trường chi phí ⇒ không "xác định cấu trúc" |
+| Mode 3 `:413–419` | Đã tính **chính xác** `waste = wait + detour` cho từng request | **Đây là trường cấu trúc có sẵn nhưng chỉ dùng cho MỘT tuyến, rồi vứt đi** |
+
+**Chứng minh idempotence (1 dòng):** với `P = recreate`, `P(P(x)) = P(x)` vì `P` là argmin tất định trên
+một hàm chi phí chỉ phụ thuộc `x`; cắt `R` ra rồi chèn lại rẻ nhất trả về **đúng chỗ cũ** ⇒ `Δ = 0`.
+Đây là **định lý về code**, không phải quan sát thống kê — khớp đúng với 35% no-op đo được.
+
+### 13.2. Đảo trục thời gian (nguyên nhân sâu của "ngân sách vô nghĩa")
+
+| | Hiện tại | Đúng (ILS/ALNS chuẩn) |
+|---|---|---|
+| Vòng trong | **không có** | nhiều **move cục bộ rẻ** (relocate/swap/ejection), Δ tính bằng cache |
+| Vòng ngoài | mỗi vòng lặp = **1 phá hoại toàn cục** rồi tái tạo cả tuyến | **nhiễu loạn thưa**, mỗi chu kỳ một lần |
+| Vật thể của tính ngẫu nhiên | chọn R (mù) | (không còn) — ngẫu nhiên chỉ ở **bước chọn trong RCL đã bị chặn bởi chi phí** |
+
+Hệ quả trực tiếp: chi phí mỗi vòng lặp **giảm**, nên cổng throughput **T6 trở nên dễ hơn**, không khó hơn.
+
+### 13.3. Bốn toán tử — tất cả đều là **THÊM** (O1–O4)
+
+> Ràng buộc bắt buộc: mỗi toán tử mới là **một nhánh move bổ sung** (bandit giữ *arm nền* với **trọng số
+> sàn** > 0). Không xoá, không sửa công thức cũ ⇒ **lân cận là siêu tập** ⇒ trần chất lượng bất biến
+> (§11.5). Rủi ro chỉ còn là throughput.
+
+- **O1 — Tập move cục bộ chính xác (`relocate`, `swap`, `2-opt trong tuyến`).**
+  Với request đang phục vụ `q`, tính Δ **chính xác** khi chuyển `q` sang vị trí/tuyến tốt nhất **khác**
+  vị trí hiện tại (dùng lại `recompute` + `icache`), chấp nhận theo Metropolis. Đây là **move lân cận
+  thật**, **phi-idempotent** theo cấu trúc (`∃S: O1(S)≠S`), nên không có điểm bất động suy biến.
+  *Chặn:* không cần duyệt toàn bộ `i,j`; chỉ "directed" quanh `q` và láng giềng.
+
+- **O2 — Eject-repair (chèn-rồi-đuổi).** Nếu `q` không chèn được hợp lệ (time-window/capacity) hoặc chèn
+  `q` đòi đuổi `r`, làm: chèn `q`, **đuổi đúng 1** blocker `r` rẻ nhất, cấm `r` tái-bị-đuổi ngay (tabu 1).
+  Δ mục tiêu = `Rev[q] − Rev[r] + chèn − gain(r)`, tính chính xác. Đây là toán tử **duy nhất** vượt được
+  rào mà relocate không vượt nổi (chữa I2 — hiện chỉ có insert).
+
+- **O3 — Phá hoại nhắm cấu trúc (max-waste / regret-k).** Thay "seed đều + chuỗi ngẫu nhiên" bằng: cắt `k`
+  request có **`waste` lớn nhất** — chính trường `wait + detour` đã có ở Mode 3 `:413–419` — lấy mẫu từ
+  top-α theo `softmax(−waste / T_sel)`. Phá hoại trở thành **hàm xác định của (S, seed)**; khi `S ≠ ∅`
+  thì **không bao giờ cắt rỗng** (chữa `ruin-empty`), và **theo cấu trúc không trùng điểm bất động** của
+  `repair` ⇒ Δ ≠ 0 có cận dưới.
+
+- **O4 — Repair RCL (GRASP) như một *arm* mới.** Thêm nhánh repair chọn **đều** trong tập vị trí có
+  `cost ≤ (1+α)·best` (Restricted Candidate List), giữ nguyên nhánh greedy cũ làm arm nền. `α` là **nút
+  chuẩn hoá duy nhất** của "bán kính nhiễu" (thay cho cả một dàn tham số ngẫu nhiên hiện có). α→0 **tái
+  tạo đúng baseline** ⇒ siêu tập. Đồng thời **cho bandit một tín hiệu thật** (chữa I5 — hiện `bandit_w`
+  hội tụ đúng về hằng 75/15/10).
+
+### 13.4. Bảng bảo đảm loại B (bất biến kiểm được, không phụ thuộc instance)
+
+| Toán tử | Tuyên bố loại B (compiler/định lý, không phải "thắng ở instance Y") | Bất biến kiểm được | Bao bởi |
+|---|---|---|---|
+| mọi toán tử (O1–O4) | `N_mới ⊇ N_cũ` ⇒ **trần không giảm** | bandit luôn giữ arm nền với trọng số sàn > 0; α=0 tái tạo baseline | T6 |
+| **O1** | Tồn tại move cục bộ cải thiện ⇒ toán tử **tìm thấy 100%**; không idempotent | `∃S: O1(S)≠S`; tỉ lệ accepted có `Δ>0` ≥ sàn | **T2, T3** |
+| **O2** | Feasibility **được bảo toàn** qua mỗi bước đuổi; chuỗi đuổi **kết thúc** | `validator.py` trên **mọi** trạng thái trung gian = hợp lệ | **T2** |
+| **O3** | Tập ruin là **hàm xác định** của (S, seed); khi `served>0` thì `removed ≠ ∅` | `removed ≠ ∅`; phân bố Δ có **> 1 giá trị** | **T1, T4** |
+| **O4** | `cost_repair ≤ (1+α)·cost_greedy` ∀ bước | assert trong build debug; α=0 ⇒ bit-identical | **T1** |
+| tất cả | Phá hoại **không còn** là điểm bất động của repair | `repair ≠ identity` với xác suất ≥ sàn | **T1** |
+
+**Điểm mấu chốt:** toàn bộ bảng này **không** cần so sánh giữa các phiên bản, **không** cần chọn instance,
+**không** có trôi máy — đúng giao thức §11.6/T1–T6. Chỉ T6 cần máy và phải đo **đan xen** (P5).
+
+### 13.5. Thứ tự thi công mới (THAY §11.8 và §9.5)
+
+> **Trạng thái:** bước 1 (**O1**) và bước 2 (**O3**) **đã cài đặt + kiểm thử** — xem §13.7.
+> Bước 3 (**O4 — RCL repair arm**) là bản sửa **bắt buộc** cho T1 (hiện FAIL).
+
+1. **O1 (inner LS chính xác)** + T2/T3 — rẻ nhất, bảo đảm mạnh nhất, **phi-idempotent theo cấu trúc**.
+2. **O3 (phá hoại nhắm cấu trúc)** + T1/T4 — cho phá hoại một **mục tiêu không suy biến**; đánh thẳng vào
+   35% no-op và vào `ruin-empty`.
+3. **O4 (RCL arm)** + T1 — chặn bán kính ngẫu nhiên bằng `α`; **cho bandit tín hiệu thật** (chữa I5).
+4. **O2 (eject-repair)** + T2 — chỉ sau khi có máy tính-Δ-chính-xác của O1; mở rào liên tuyến (chữa I2).
+5. *(N3 — bit 1/ordering)* xử lý như **nhánh thêm** riêng, giữ cờ đỏ.
+6. **Chỉ sau** khi I1/I2 đã bị phá: S7 (LAHC), S6 (GRASP/elite pool), S4 (route pool) — nếu làm trước sẽ
+   lặp đúng sai lầm v2: tinh chỉnh tầng meta trên một tín hiệu đã suy biến.
+7. **S13 (cổng phân tầng)** và **T6** áp cho *mọi* mục — điều kiện để siêu tập không nổ chi phí.
+
+### 13.6. Điều KHÔNG được làm (nhắc lại có lý do)
+
+1. **Không** tăng/giảm "lượng ngẫu nhiên" như một biến điều chỉnh — chính khung đó là sai.
+2. **Không** đổi công thức thermal / reheat / ordering (đã đóng ở §9.4) — chỉ **thêm** arm.
+3. **Không** thêm toán tử nào phá vỡ tính siêu tập (tức là không xoá arm nền).
+4. **Không** chạy sweep/ablation để "chứng minh" — nghiệm thu bằng T1–T6 (§11.6).
+5. **Không** tuyên bố tổng quát từ một instance; mọi kết luận phải là loại B (§11.2).
+
+### 13.7. KẾT QUẢ THI CÔNG O1 + O3 (đã cài, đã kiểm thử)
+
+**Cổng & mã mask.** Bit `16384` = ablate **O1**; bit `32768` = ablate **O3**. Mặc định `896` ⇒ **O1 + O3 BẬT**.
+⇒ **baseline thuần lịch sử = `896 | 16384 | 32768` = `50048`**. (Đây là *hệ quả tất yếu* của luật "bit set =
+ablate" + luật "chỉ THÊM arm": arm mới mặc định bật, mask cũ nay có nghĩa "cấu hình cũ + mọi arm mới".)
+
+**Nút điều khiển (để T6 không nổ).** O1 chạy **mỗi 8 accepted move** (`O1_PERIOD_MASK=7`), pool ≤ **12** request,
+≤ **6** move/lần, và **chỉ** trên các tuyến vừa bị ruin `touched` (chi phí bị chặn). O3 kích hoạt với xác suất
+**0.35**, các arm cũ giữ nguyên khả năng được chọn vì `0.35 < 1`.
+
+**Harness (không phải benchmark).** `gm_sisr_v3.exe --utest <time> <inst> <seed> <max_iters> <mask>` — in
+PASS/FAIL ra **stderr**; stdout vẫn dành riêng cho nghiệm.
+
+| Test | Kết quả chạy (`test_850`, 30,000 iters, seed 1) | Nhận xét |
+|---|---|---|
+| **T2** *relocate detection* | **PASS 30/30** (constructed, monotone 30) | O1 tìm & áp dụng **100%** move cải thiện được dựng sẵn |
+| **T3** *polish monotonicity* | **PASS** (0 vi phạm) | Hàm mục tiêu **không bao giờ giảm** ⇒ trần bất biến |
+| **T4** *distinct incumbents* | **PASS** (135 incumbent phân biệt) | ≥ 2 |
+| **T1** *repair non-idempotence* | **FAIL** (distinct 2/200, identity **94.5%**) | **Đúng như dự đoán** — sửa bằng **O4/RCL** |
+| **T6** *throughput* | **PASS** (tỉ lệ it/s trung bình **1.03**, 4 cặp **đan xen**) | Không mất throughput |
+
+**Bằng chứng arm thực sự bắn** (`test_850`, 8s, seed 1, mask 896, validator khớp 29,710):
+Mode 5 (Waste Ruin) `Calls=44,409` lần; O1 `Probes=373,535`, `Applied=979`, `Gain=10,645`.
+
+**⛔ PHÁT HIỆN CẤU TRÚC MỚI (từ chẩn đoán T2, có giá trị độc lập với O1/O3):**
+lần dựng đầu tiên (dịch chuyển **kề trong tuyến**) cho **0/30 trường hợp khả thi**. Tức là với instance có
+cửa sổ thời gian chặt, **mọi hoán vị kề đều bất khả thi** — vùng khả thi **"cứng về thứ tự"** (order-rigid).
+Điều này *giải thích cơ chế* vì sao ruin phải **cắt cả một chuỗi** để tạo khe hở: không thể hoán vị cục bộ.
+Hệ quả thiết kế: **swap/2-opt nội tuyến gần như vô dụng** trên lớp instance này; giá trị của O1 nằm ở
+**relocate LIÊN TUYẾN** (đổi tuyến cho request), đúng chỗ I3 đang đóng băng.
+
+**⚠️ Cảnh báo trung thực (bắt buộc ghi):**
+1. **O3 KHÔNG sửa được I1.** Đo trong 1 lần chạy: no-op = **38.80%**, *cao hơn* mức ~35% của baseline. Lý do
+   cấu trúc: cắt đúng request "waste lớn nhất" rồi `recreate` argmin **trả nó về đúng chỗ cũ** ⇒ vẫn Δ ≡ 0.
+   O3 vì vậy chỉ hợp lệ như **siêu tập của tập ruin** (bảo đảm: tập ruin là hàm xác định của (S,seed), không
+   rỗng khi có request được phục vụ) — **không** phải một bản sửa no-op. Nếu O3 không chứng minh được giá trị
+   loại B nào khác, nó thuộc diện **ứng viên gỡ** (chỉ tốn 35% ngân sách ruin).
+2. **T1 vẫn FAIL** ⇒ kết luận §13.0 (repair là phép chiếu idempotent) **được xác nhận bằng đo**, và **O4/RCL
+   là bản sửa bắt buộc** trước khi có bất kỳ tuyên bố nào về việc phá bồn.
+3. **So sánh 4 seed trên `test_850`**: `896` thắng 3/4, tổng `+1,465`. **KHÔNG đủ để tuyên bố** (luật đăng ký
+   trước cần **≥ 6/10 instance**). Ghi lại như *tín hiệu tích hợp*, **không** phải phán quyết — theo đúng
+   §7.6b và §9.4 (không tái phạm bẫy back-fit `test_850`).
+4. **Bug tiềm ẩn đã sửa nhân dịp này:** `mode_tries/mode_improve/mode_records` khai báo `[5]` trong khi
+   mode mới có id `5` ⇒ **ghi tràn mảng**. Đã nới lên `[6]`. (Ghi vào nợ kỹ thuật dạng đã xử lý.)
+
+**Bước tiếp theo (duy nhất):** cài **O4 — repair RCL (GRASP) như một *arm* bổ sung** (giữ nhánh greedy cũ làm
+arm nền), kèm assert `cost ≤ (1+α)·greedy`. Mục tiêu kiểm chứng: **T1 chuyển FAIL → PASS** với `α` nhỏ
+(kỳ vọng identity < 5%). Đây là mục **bắt buộc** để câu "quá tất định ⇒ SA sụp đổ" được trả lời bằng cấu
+trúc chứ không bằng cảm nhận.
+
+### 13.8. KẾT QUẢ THI CÔNG O4 (RCL/GRASP) — T1 VẪN FAIL (đo, không suy đoán)
+
+**Cổng & mã mask.** Bit `65536` = ablate **O4**. Mặc định `896` ⇒ **O1+O3+O4 BẬT**. Baseline thuần lịch sử
+= `896 | 16384 | 32768 | 65536` = **`115584`**.
+
+**Nút điều khiển.** `O4_PROB = 0.40`; `O4_ALPHA = 0.05`; ràng buộc per-request `cost ≤ best1 + α·|best1|`
+(α→0 tái tạo greedy đúng nghĩa); `best_insert()` được mở rộng thêm tham số `vector<RclCand>* out` để liệt kê
+**mọi** chèn khả thi; nhánh RCL **chỉ** chạy trên đường `blink` nên khởi tạo tất định không đổi.
+
+| Test | `896` | `115584` |
+|---|---|---|
+| **T1** *repair non-idempotence* | **FAIL** — identity **98.0%**, distinct 2/200 | **FAIL** — identity **96.0%**, distinct 2/200 |
+
+**Kết luận loại B (chốt).** Identity của T1 **không** phải hệ quả của "greedy idempotent", mà là thuộc tính
+của **vùng khả thi cứng-về-thứ-tự** (order-rigid): với instance cửa sổ chặt, mọi chèn thay thế đều đắt hơn
+`α·|best1|` rất nhiều, nên tập candidate RCL **thu về đúng một phần tử** ⇒ RCL *rỗng nghĩa* (vacuous) về mặt
+cấu trúc, chứ không phải lỗi cài đặt. Vì `α` phải nhỏ mới giữ được bảo đảm "không tệ hơn greedy", **không tồn
+tại `α` nhỏ nào cứu được T1** trên lớp instance này.
+
+**Quyết định.** Giữ O4 như **siêu tập** (α→0 = greedy; khởi tạo tất định nguyên vẹn) và **xếp vào diện ứng
+viên gỡ** cho tới khi chứng minh được một giá trị loại B khác. Hệ quả: **T1 vẫn FAIL** ⇒ nhánh "phá bồn bằng
+repair ngẫu nhiên" **không** còn là hướng hợp lệ; giá trị nằm ở **relocate liên tuyến** (chỗ I3 đang đóng băng),
+không ở nhiễu hoá repair.
+
+---
+
+## 14. SỬA PHASE 1: GIỚI HẠN CỘT THEO (a) BỘ NHỚ **VÀ** (b) KHẢ NĂNG TẠO NGHIỆM
+
+### 14.0. Kết luận trước
+
+**Thoả mãn bộ nhớ là điều kiện CẦN, không phải điều kiện ĐỦ.** Một kho cột nằm trong hạn mức bộ nhớ vẫn có
+thể khiến Phase 1 **không còn khả năng tạo ra nghiệm (tốt)** vì hai cơ chế độc lập:
+
+1. **Mất cân bằng theo taxi (do thứ tự DFS).** `enum_dfs` chạy sâu từng taxi. Một cổng *toàn cục* duy nhất
+   tiêu hết ngân sách vào taxi `1..j` và để taxi `j+1..K` **0 cột** ⇒ packing chỉ xếp được vài taxi đầu ⇒
+   nghiệm què.
+2. **"Tối ưu giả" trên tập cột què (chí tử).** UB Lagrangian chỉ đúng cho **tập cột đang có**. Trên tập bị cắt
+   cụt, nghiệm greedy **đạt UB một cách tầm thường** ⇒ `is_proven_optimal = true` ⇒ **Phase 2 bị bỏ qua hoàn
+   toàn** và in thẳng nghiệm què. Đây chính là tình huống "dù kích thước thoả mãn, Phase 1 thậm chí còn không
+   tạo được nghiệm".
+
+### 14.1. Thiết kế (chỉ THÊM; không đổi công thức lõi)
+
+**Chia ĐỀU cả ba ngân sách theo K taxi** — cân bằng *do cấu trúc*:
+
+| Ngân sách | Tổng | Mỗi taxi |
+|---|---|---|
+| Số cột | `ENUM_COL_CAP = 1_500_000` | `ENUM_COL_CAP / K` (sàn 4096) |
+| Byte | `ENUM_MEM_CAP = 150 MB` | `ENUM_MEM_CAP / K` |
+| Thời gian | `TIME_LIMIT_PHASE1 · ENUM_TIME_FRAC` | `chia K` |
+
+- **Metric byte thống nhất theo `size()`**: `enum_bytes() = 1.5·(32·#cols + 4·#reqs + 4·#nodes) + 64·|map|`.
+  Cổng toàn cục và share-theo-taxi dùng **cùng metric** ⇒ tổng các share = đúng ngân sách toàn cục ⇒ cổng toàn
+  cục **không thể** chặn trước một cách chia đều (đã sửa lỗi dùng `capacity()` khiến cổng toàn cục kích hoạt
+  sớm ở taxi ~37/50).
+- **Kiểm tra chính xác TRƯỚC khi push** trong `enum_record` (số cột + byte-từng-taxi) ⇒ mỗi taxi vượt share tối
+  đa **1 cột**.
+- **Cắt cụt vẫn GIỮ cột**: bỏ nhánh `release_cols(); return false;`; `best_nd` **luôn** được ghi ⇒ Phase 2 kế
+  thừa nghiệm Phase-1 (cân bằng) thay vì khởi tạo rỗng.
+- **`enum_partial` chặn mọi tuyên bố tối ưu**: `is_proven_optimal = (best >= ub || lagr_exact) && !enum_partial`.
+
+### 14.2. Bằng chứng đo (in-process peak WS; `TIME_LIMIT_PHASE1 = 40s`)
+
+| Instance | cols | per-taxi | partial | proven | peak WS | P1 total |
+|---|---|---|---|---|---|---|
+| `wide_850` — **cũ** | 491,269 → **vứt bỏ** | chỉ vài taxi đầu | — | false (P2 greedy) | 119 MB | 3.6 s |
+| `wide_850` — **mới** | **704,959** | **50/50 taxi ≈ 14.2k/taxi** | 1 | **0** | 124.8 MB | 5.5 s |
+| `test_850` | 187,113 | phân bố tự nhiên | **0** | 0 | 38.4 MB | 20.1 s |
+| `bench_02` | 4,671 | **8/8 taxi ≈ 583/taxi** | 1 | **0** | 14.2 MB | 26.0 s |
+
+- `test_850`: **partial = 0** ⇒ hành vi **không đổi** (liệt kê hoàn tất, 187,113 cột).
+- `bench_02`: đúng **bẫy 14.0-2** — `obj == ub == 3216`; nếu không có `enum_partial` đã tuyên bố tối ưu. Nay
+  **proven = 0** ⇒ Phase 2 vẫn chạy; đồng thời cắt **cân bằng 8/8 taxi** (trước đây lệch, 1,607 cột).
+- `wide_850`: **50/50 taxi** đều có cột; không còn `hard_abort`.
+
+### 14.3. Kiểm chứng độc lập + **phát hiện mới về điểm nghẽn**
+
+`utility/validator.py` khớp **chính xác** trên cả ba instance. Chạy **Phase 1-only, ngân sách 60 s** trên
+`test_850` (liệt kê **ĐẦY ĐỦ**: 187,113 cột, `partial = 0`, `hard_abort = 0`):
+
+| Lần chạy | obj (validator khớp) | UB Lagrangian | P1 total |
+|---|---|---|---|
+| 1 | **31,806** | 32,064 | 23.2 s |
+| 2 | **31,791** | 32,064 | 23.4 s |
+| 3 | **31,072** | 32,064 | 8.8 s (dừng vì `SP_STALL_SEC`) |
+
+**⇒ Phase 1 KHÔNG đạt tối ưu toàn cục 32,012 dù tập cột là ĐẦY ĐỦ.** Vì một nghiệm toàn cục = mỗi taxi một
+tuyến khả thi = một tổ hợp cột rời-rời, mà liệt kê đã hoàn tất, **lời giải tối ưu NẰM TRONG tập cột**; thuật
+toán xếp (greedy + Lagrangian + SA) bỏ mất ~**200–260** (UB = 32,064 vẫn không tight). Đây là **kết luận loại
+B**: điểm nghẽn của Phase 1 trên lớp instance này **không** phải tập cột, mà là **chất lượng suy nghiệm xếp
+cột** — và nó còn **phụ thuộc wall-clock** (3 lần chạy: 31,806 / 31,791 / 31,072).
+
+### 14.4. Đối chiếu full pipeline — "baseline có đạt 32012 không?"
+
+Neo kiểm chứng: `opt_850.txt` **validate khớp 32012** ⇒ 32012 là nghiệm khả thi thật (đúng instance), và UB
+Lagrangian (32,064) chặn trên ở 32,064.
+
+| Cấu hình (test_850) | obj Phase 1 | obj kế thừa (P2 init) | obj cuối | Δ(P2) |
+|---|---|---|---|---|
+| Phase 1-only, 60s, lần 1 | 31,806 | — | 31,806 | — |
+| Phase 1-only, 60s, lần 2 | 31,791 | — | 31,791 | — |
+| Phase 1-only, 60s, lần 3 | 31,072 | — | 31,072 | — |
+| Full 201s + đo, lần A | 31,462 | **31,462** (`p1_valid=1`) | **31,565** | **+103** |
+| Full 201s (không đo) | — | — | 30,968 | — |
+
+**Đối chứng trên ca siêu nặng `bench_02` (full 201 s): `15,757` — `validator` khớp, BKS nội bộ `15,800`.**
+Ở đây Phase 1-only trả `obj = ub = 3,211` với `partial = 1`. Nếu thiếu `!enum_partial`, Phase 1 sẽ tuyên bố
+"tối ưu" và **bỏ qua Phase 2** ⇒ in ra **3,211** thay vì **15,757** (mất **4.9×**). Guard `!enum_partial` vì
+vậy không phải chi tiết nhỏ: nó đứng giữa "nghiệm què" và "nghiệm dùng được". (Và nó cũng cho thấy trên lớp
+cửa-sổ-rộng, Phase 2 mới là lực lượng chính: 3,211 → 15,757; ngược với `test_850` nơi Phase 2 chỉ +103.)
+
+**Kết luận.**
+1. **KHÔNG.** Cả **Phase 1-only** lẫn **baseline full** đều **không đạt 32012** (cách ~200–1,050).
+2. **Kế thừa Phase 1 → Phase 2 đúng**: `p1_valid=1` và `best_obj = p1_obj` ngay sau init ⇒ nghịch lý
+   "full (30,968) < Phase-1-only (31,806)" **không** do lỗi kế thừa, mà do **Phase 1 dao động theo wall-clock**
+   (30.9k–31.8k) — chạy full lấy một mẫu xấu ở đuôi dưới.
+3. **Phase 2 gần như vô dụng trên `test_850`**: chỉ **+103** trong 140 s. Trần của lời giải ≈ trần do Phase 1
+   đặt ra.
+4. **Phase 1 tự bỏ ngân sách**: các lần Phase-1-only dừng ở **8.8 s / 19.2 s / 23.2 s** trong ngân sách 60 s —
+   bị `SP_STALL_SEC = 3.5` cắt sau 3.5 s không cải thiện, **lãng phí ~35–50 s** đúng vào chỗ duy nhất còn sinh
+   được giá trị (xếp cột).
+5. **Hệ quả chiến lược (loại B, chưa thực thi):** trên lớp instance order-rigid, đòn bẩy lớn nhất nằm ở
+   **ổn định hoá/cải thiện suy nghiệm xếp cột của Phase 1** (và để nó *dùng hết* ngân sách), **không** ở việc
+   thêm arm lân cận cho Phase 2. Mọi thay đổi theo hướng này **phải** kiểm chứng trên ≥ 6/10 instance (§7.6b),
+   không được hiệu chỉnh riêng theo `test_850`.
+
+### 14.5. Điều KHÔNG được làm (nhắc lại có lý do)
+
+1. **Không** nới `ENUM_MEM_CAP` để "có thêm cột" — bộ nhớ không phải điểm nghẽn; đổi lại là rủi ro MLE thật.
+2. **Không** tuyên bố Phase 1 "đã tối ưu" khi thiếu `partial = 0` **và** `best >= ub`.
+3. **Không** tinh chỉnh tham số theo riêng `test_850` (luật ≥ 6/10 instance, §7.6b/§9.4).
+4. **Không** gỡ arm nền để "cân bằng" — mọi thay đổi phải là **THÊM** (siêu tập bảo toàn trần).
+

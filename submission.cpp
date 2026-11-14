@@ -7,36 +7,19 @@ typedef long long ll;
 // 1. GLOBAL CONTROL PARAMETERS & HYPERPARAMETERS (ONLINE JUDGE & BENCHMARK)
 // ============================================================================
 
-// --- 1.1. Time Budgets & Phase 1 / Phase 2 Scheduling ---
-static double TIME_LIMIT_SEC = 145.0;             // Default judge search budget (seconds)
-static bool VERBOSE_LOG = false;                  // Diagnostics to stderr when enabled (--verbose/-v)
+// --- 1.1. Core Time & Phase 1 Memory Limits ---
+static double TIME_LIMIT_SEC = 145.0;                  // Default judge search budget (seconds)
+static const double P1_TIME_LIMIT_SEC = 45.0;          // Max total time budget for full Phase 1 (DFS + LagR + SP-SA)
+static const size_t P1_MEM_LIMIT_MB = 350;             // Sole Phase 1 column storage capacity limit (MB)
+static const size_t P1_MEM_LIMIT_BYTES = P1_MEM_LIMIT_MB * 1024ull * 1024ull;
+static const double P1_ENUM_TIME_FRAC = 0.15;          // Max fraction of effective P1 budget spent on DFS enumeration
+static const double P1_SP_GATE_GREEDY_RATIO = 0.90;    // Min P1/P2-greedy ratio to run SP-SA when enum_partial=true
+static const double P1_WAVE_SEC = 5.5;                 // Target duration per SP-SA wave (seconds)
+static const double P1_WAVE_STALL_SEC = 2.5;           // No-improvement stall timeout inside one SP-SA wave (seconds)
+static const int P1_MAX_STAGNANT_WAVES = 2;            // Consecutive non-improving waves before handing to P2
+static bool VERBOSE_LOG = false;                       // Diagnostics to stderr when enabled (--verbose/-v)
 
-static const double P1_ENUM_MAX_SEC = 1.8;        // Hard time cap for Phase 1 DFS column enumeration (s)
-static const double P1_ENUM_TIME_FRAC = 0.15;     // Max fraction of TIME_LIMIT_SEC spent enumerating columns
-static const long long P1_ENUM_MIN_SLICE_US = 120000LL; // Minimum per-taxi preferred slice (120ms)
-static const long long P1_ENUM_SLICE_AVG_MULT = 3LL;    // Multiplier on average remaining time per taxi
-static const long long P1_ENUM_FLOOR_US = 5000LL;       // Emergency floor slice per taxi near deadline (5ms)
-
-static const double P1_SP_GATE_GREEDY_RATIO = 0.90;     // Min P1/P2-greedy ratio to run SP-SA when enum_partial
-static const double P1_SP_MAX_SEC_COMPLETE = 25.0;      // Max Phase 1 SP-SA time when column pool is complete
-static const double P1_SP_TIME_FRAC_COMPLETE = 0.75;    // Max fraction of TIME_LIMIT_SEC for complete SP-SA
-static const double P1_SP_MAX_SEC_PARTIAL = 4.0;        // Max Phase 1 SP-SA time when enum_partial=true
-static const double P1_SP_TIME_FRAC_PARTIAL = 0.30;     // Max fraction of TIME_LIMIT_SEC for partial SP-SA
-static const double P1_WAVE_MAX_SEC_CAP = 5.5;          // Max duration per SP-SA wave (s)
-static const double P1_WAVE_MIN_SEC = 0.5;              // Min duration per SP-SA wave (s)
-static const double P1_WAVE_BUDGET_FRAC = 0.45;         // Fraction of sp_budget allocated to a single wave
-static const double P1_WAVE_STALL_MAX_SEC = 2.5;        // Max no-improvement stall inside a wave (s)
-static const double P1_WAVE_STALL_MIN_SEC = 0.3;        // Min no-improvement stall inside a wave (s)
-static const double P1_WAVE_STALL_FRAC = 0.45;          // Stall threshold as fraction of wave_max_sec
-static const int P1_MAX_STAGNANT_WAVES = 2;             // Consecutive non-improving waves before handing to P2
-
-// --- 1.2. Phase 1 DFS Enumeration Quotas & Memory Caps ---
-static const long long ENUM_STATE_CAP = 500000000;      // Max DFS states across Phase 1
-static const size_t ENUM_MEM_CAP = 150ull * 1024 * 1024;// Total memory budget for column storage (150 MB)
-static const size_t ENUM_COL_CAP = 1500000;             // Total unique column count cap
-static const long long ENUM_MIN_COL_PER_TAXI = 4096;    // Minimum guaranteed column quota per taxi
-
-// --- 1.3. Phase 1 Lagrangian Relaxation & Multi-Wave Set Packing SA ---
+// --- 1.2. Phase 1 Lagrangian Relaxation & Multi-Wave Set Packing SA ---
 static const int LAGR_MAX_IT = 2000;              // Max Lagrangian subgradient iterations
 static const ll LAGR_WORK = 200000000;            // Work budget for Lagrangian subgradient
 static const double LAGR_INIT_LAMBDA = 2.0;       // Initial subgradient step multiplier
@@ -50,7 +33,7 @@ static const int SP_PERTURB_DROP_PCT = 20;        // % of taxis dropped on even-
 static const int SP_OP1_PROB_CUTOFF = 45;         // Cumulative % prob for Op1 (Dual Insertion)
 static const int SP_OP2_PROB_CUTOFF = 80;         // Cumulative % prob for Op2 (Elite Swap); rest is Op3
 
-// --- 1.4. Phase 2 Hyperparameters (GM-SISR mask=896 + Eject50 + O1 + SEDCA-V4) ---
+// --- 1.3. Phase 2 Hyperparameters (GM-SISR mask=896 + Eject50 + O1 + SEDCA-V4) ---
 static const int NB_SIZE = 60;                    // Normalized spatio-temporal neighbor list size
 static const double C_AVG = 10.0;                 // SISR: average removed requests
 static const int L_MAX = 10;                      // SISR: maximum string length
@@ -202,20 +185,20 @@ static inline void load_best() {
 }
 
 // ============================================================================
-// 5. PHASE 1: BALANCED COLUMN ENUMERATION + DUAL-GUIDED MULTI-WAVE SP-SA
+// 5. PHASE 1: RESUMABLE REDISTRIBUTED COLUMN ENUMERATION + MULTI-WAVE SP-SA
 // ============================================================================
 struct Column { int k; ll profit; int rbeg, rlen, nbeg, nlen; };
+struct ResumeFrame { int phase; size_t idx; };
 static vector<Column> cols;
 static vector<int> col_req, col_nodes;
 static unordered_map<uint64_t, int> col_index;
-static long long enum_states;
-static bool enum_abort;
-static bool enum_partial;
-static bool enum_k_cut;
-static chrono::steady_clock::time_point enum_deadline;
-static size_t enum_mem_per_taxi = 0, enum_col_per_taxi = 0;
-static chrono::steady_clock::time_point enum_k_deadline;
+static long long enum_states = 0, enum_round_states = 0;
+static bool enum_abort = false, enum_partial = false, enum_k_cut = false, enum_resuming = false;
+static chrono::steady_clock::time_point enum_deadline, enum_round_deadline;
+static size_t enum_round_mem_quota = 0;
 static size_t enum_k_col0 = 0, enum_k_req0 = 0, enum_k_nodes0 = 0, enum_k_idx0 = 0;
+static vector<vector<ResumeFrame>> saved_paths;
+static vector<ResumeFrame> resume_in, resume_out;
 static vector<int> e_seq, e_open, e_reqs, e_sorted, e_by_l;
 static vector<ll> e_l;
 static vector<char> e_used;
@@ -239,6 +222,9 @@ static inline void release_cols() {
     vector<int>().swap(col_req);
     vector<int>().swap(col_nodes);
     unordered_map<uint64_t, int>().swap(col_index);
+    vector<vector<ResumeFrame>>().swap(saved_paths);
+    vector<ResumeFrame>().swap(resume_in);
+    vector<ResumeFrame>().swap(resume_out);
 }
 
 static void enum_record(int k, ll profit) {
@@ -260,9 +246,8 @@ static void enum_record(int k, ll profit) {
     }
     size_t col_add = sizeof(Column) + e_sorted.size() * sizeof(int) + e_seq.size() * sizeof(int);
     col_add += col_add / 2 + 64;
-    if (cols.size() - enum_k_col0 >= enum_col_per_taxi) { enum_k_cut = true; enum_partial = true; return; }
-    if (enum_k_bytes() + col_add > enum_mem_per_taxi) { enum_k_cut = true; enum_partial = true; return; }
-    if (cols.size() >= ENUM_COL_CAP) { enum_abort = true; enum_partial = true; return; }
+    if (enum_bytes() + col_add > P1_MEM_LIMIT_BYTES) { enum_abort = true; return; }
+    if (enum_k_bytes() + col_add > enum_round_mem_quota) { enum_k_cut = true; return; }
     col_index.emplace(h, (int)cols.size());
     cols.push_back({k, profit, (int)col_req.size(), (int)e_sorted.size(), (int)col_nodes.size(), (int)e_seq.size()});
     col_req.insert(col_req.end(), e_sorted.begin(), e_sorted.end());
@@ -274,30 +259,74 @@ static inline bool open_ok(ll dep, int v, int skip) {
     return true;
 }
 
-static void enum_dfs(int k, int last, ll time, int load, ll profit) {
+static void enum_dfs(int k, int last, ll time, int load, ll profit, int depth) {
     if (enum_abort || enum_k_cut) return;
-    if (++enum_states > ENUM_STATE_CAP) { enum_abort = true; enum_partial = true; return; }
-    if ((enum_states & 4095) == 0) {
-        auto now = chrono::steady_clock::now();
-        if (now > enum_k_deadline || now > enum_deadline) { enum_k_cut = true; enum_partial = true; return; }
-        if (enum_k_bytes() > enum_mem_per_taxi) { enum_k_cut = true; enum_partial = true; return; }
-        if (enum_bytes() > ENUM_MEM_CAP) { enum_abort = true; enum_partial = true; return; }
+
+    int start_phase = 0;
+    size_t start_idx = 0;
+    bool skip_record = false;
+
+    if (enum_resuming) {
+        if (depth < (int)resume_in.size()) {
+            ResumeFrame rf = resume_in[depth];
+            if (rf.phase == -1) {
+                enum_resuming = false;
+            } else {
+                skip_record = true;
+                start_phase = rf.phase;
+                start_idx = rf.idx;
+            }
+        } else {
+            enum_resuming = false;
+        }
     }
 
-    if (e_open.empty() && !e_seq.empty() && profit > 0) enum_record(k, profit);
-
-    for (size_t oi = 0; oi < e_open.size(); ++oi) {
-        int q = e_open[oi], x = R + q;
-        ll arr = time + T(last, nin[x]);
-        if (arr > nl[x]) continue;
-        ll dep = max(arr, ne[x]) + ndur[x];
-        if (!open_ok(dep, nout[x], q)) continue;
-        e_open[oi] = e_open.back(); e_open.pop_back(); e_seq.push_back(x);
-        enum_dfs(k, nout[x], dep, load + nw[x], profit - C(last, nin[x]) + Rev[q]);
-        e_seq.pop_back(); e_open.push_back(q); swap(e_open[oi], e_open.back());
+    if (!enum_resuming) {
+        ++enum_states;
+        ++enum_round_states;
+        if ((enum_round_states & 4095) == 0) {
+            auto now = chrono::steady_clock::now();
+            if (now > enum_deadline || enum_bytes() > P1_MEM_LIMIT_BYTES) {
+                enum_abort = true;
+                resume_out.push_back({-1, 0});
+                return;
+            }
+            if (now > enum_round_deadline || enum_k_bytes() > enum_round_mem_quota) {
+                enum_k_cut = true;
+                resume_out.push_back({-1, 0});
+                return;
+            }
+        }
+        if (!skip_record && e_open.empty() && !e_seq.empty() && profit > 0) {
+            enum_record(k, profit);
+            if (enum_abort || enum_k_cut) {
+                resume_out.push_back({-1, 0});
+                return;
+            }
+        }
     }
 
-    for (size_t idx = lower_bound(e_l.begin(), e_l.end(), time) - e_l.begin(); idx < e_by_l.size(); ++idx) {
+    if (start_phase == 0) {
+        size_t oi0 = (enum_resuming && start_phase == 0) ? start_idx : 0;
+        for (size_t oi = oi0; oi < e_open.size(); ++oi) {
+            int q = e_open[oi], x = R + q;
+            ll arr = time + T(last, nin[x]);
+            if (arr > nl[x]) continue;
+            ll dep = max(arr, ne[x]) + ndur[x];
+            if (!open_ok(dep, nout[x], q)) continue;
+            e_open[oi] = e_open.back(); e_open.pop_back(); e_seq.push_back(x);
+            enum_dfs(k, nout[x], dep, load + nw[x], profit - C(last, nin[x]) + Rev[q], depth + 1);
+            e_seq.pop_back(); e_open.push_back(q); swap(e_open[oi], e_open.back());
+            if (enum_abort || enum_k_cut) {
+                resume_out.push_back({0, oi});
+                return;
+            }
+        }
+    }
+
+    size_t lb = lower_bound(e_l.begin(), e_l.end(), time) - e_l.begin();
+    size_t idx0 = (enum_resuming && start_phase == 1) ? start_idx : lb;
+    for (size_t idx = idx0; idx < e_by_l.size(); ++idx) {
         int q = e_by_l[idx];
         if (e_used[q]) continue;
         ll arr = time + T(last, nin[q]);
@@ -306,13 +335,17 @@ static void enum_dfs(int k, int last, ll time, int load, ll profit) {
         if (q > N && (load + nw[q] > Q[k] || dep + T(nout[q], nin[R + q]) > nl[R + q])) continue;
         if (!open_ok(dep, nout[q], -1)) continue;
         e_used[q] = 1; e_seq.push_back(q); e_reqs.push_back(q);
-        if (q <= N) enum_dfs(k, nout[q], dep, load, profit - C(last, nin[q]) - nic[q] + Rev[q]);
+        if (q <= N) enum_dfs(k, nout[q], dep, load, profit - C(last, nin[q]) - nic[q] + Rev[q], depth + 1);
         else {
             e_open.push_back(q);
-            enum_dfs(k, nout[q], dep, load + nw[q], profit - C(last, nin[q]));
+            enum_dfs(k, nout[q], dep, load + nw[q], profit - C(last, nin[q]), depth + 1);
             e_open.pop_back();
         }
         e_used[q] = 0; e_seq.pop_back(); e_reqs.pop_back();
+        if (enum_abort || enum_k_cut) {
+            resume_out.push_back({1, idx});
+            return;
+        }
     }
 }
 
@@ -323,35 +356,75 @@ static bool column_solve(const vector<int>& s_list, chrono::steady_clock::time_p
     e_used.assign(R + 1, 0);
     enum_states = 0; enum_abort = false; enum_partial = false;
 
-    const double enum_budget = min(P1_ENUM_MAX_SEC, TIME_LIMIT_SEC * P1_ENUM_TIME_FRAC);
+    const double p1_budget = min(P1_TIME_LIMIT_SEC, TIME_LIMIT_SEC * 0.85);
+    const auto p1_deadline = t_start + chrono::microseconds((ll)(p1_budget * 1e6));
+    const double enum_budget = p1_budget * P1_ENUM_TIME_FRAC;
     auto t_enum_start = chrono::steady_clock::now();
-    enum_deadline = t_enum_start + chrono::microseconds((ll)(enum_budget * 1e6));
+    enum_deadline = min(p1_deadline, t_enum_start + chrono::microseconds((ll)(enum_budget * 1e6)));
 
-    const int KK = max(1, K);
-    enum_mem_per_taxi = ENUM_MEM_CAP / (size_t)KK;
-    enum_col_per_taxi = (size_t)max<ll>(ENUM_MIN_COL_PER_TAXI, (ll)ENUM_COL_CAP / KK);
+    saved_paths.assign(K + 1, {});
+    vector<int> active(K), next_active;
+    iota(active.begin(), active.end(), 1);
+    int enum_rounds = 0;
 
-    for (int k = 1; k <= K && !enum_abort; ++k) {
-        auto now = chrono::steady_clock::now();
-        if (now >= enum_deadline) { enum_abort = true; enum_partial = true; break; }
-        long long rem_us = chrono::duration_cast<chrono::microseconds>(enum_deadline - now).count();
-        long long min_per_rem = (long long)(enum_budget * 1e6) / (2 * KK);
-        long long reserve_rest = (long long)(K - k) * min_per_rem;
-        long long avail_us = max(P1_ENUM_FLOOR_US, rem_us - reserve_rest);
-        long long avg_us = rem_us / (K - k + 1);
-        long long slice_us = min(avail_us, max(P1_ENUM_MIN_SLICE_US, P1_ENUM_SLICE_AVG_MULT * avg_us));
+    while (!active.empty() && !enum_abort) {
+        ++enum_rounds;
+        next_active.clear();
+        for (size_t i = 0; i < active.size(); ++i) {
+            int k = active[i];
+            auto now = chrono::steady_clock::now();
+            size_t cur_mem = enum_bytes();
+            if (now >= enum_deadline || cur_mem >= P1_MEM_LIMIT_BYTES) {
+                enum_abort = true;
+                break;
+            }
+            long long rem_us = chrono::duration_cast<chrono::microseconds>(enum_deadline - now).count();
+            if (rem_us < 2000LL) {
+                enum_abort = true;
+                break;
+            }
+            size_t rem_taxis = active.size() - i;
+            size_t rem_mem = P1_MEM_LIMIT_BYTES - cur_mem;
+            if (rem_mem < 65536ull) {
+                enum_abort = true;
+                break;
+            }
+            long long slice_us = max(2000LL, rem_us / (long long)rem_taxis);
+            enum_round_mem_quota = min(rem_mem, max<size_t>(65536ull, rem_mem / rem_taxis));
+            enum_round_deadline = now + chrono::microseconds(slice_us);
 
-        enum_k_cut = false;
-        enum_k_col0 = cols.size(); enum_k_req0 = col_req.size();
-        enum_k_nodes0 = col_nodes.size(); enum_k_idx0 = col_index.size();
-        enum_k_deadline = now + chrono::microseconds(slice_us);
-        enum_dfs(k, O[k], 0, 0, 0);
+            enum_k_cut = false;
+            enum_k_col0 = cols.size(); enum_k_req0 = col_req.size();
+            enum_k_nodes0 = col_nodes.size(); enum_k_idx0 = col_index.size();
+            enum_round_states = 0;
+
+            resume_in.swap(saved_paths[k]);
+            resume_out.clear();
+            enum_resuming = !resume_in.empty();
+            e_seq.clear(); e_open.clear(); e_reqs.clear();
+            fill(e_used.begin(), e_used.end(), 0);
+
+            enum_dfs(k, O[k], 0, 0, 0, 0);
+
+            if (enum_abort) break;
+            if (enum_k_cut) {
+                reverse(resume_out.begin(), resume_out.end());
+                saved_paths[k].swap(resume_out);
+                next_active.push_back(k);
+            } else {
+                saved_paths[k].clear();
+            }
+        }
+        if (enum_abort) break;
+        active.swap(next_active);
+        next_active.clear();
     }
+    enum_partial = !active.empty() || enum_abort;
     col_index = unordered_map<uint64_t, int>();
 
     double enum_sec = chrono::duration<double>(chrono::steady_clock::now() - t_enum_start).count();
     const int NC = (int)cols.size();
-    if (NC == 0) return false;
+    if (NC == 0) { release_cols(); return false; }
 
     vector<int> owner(R + 1, -1), chosen(K + 1, -1);
     ll cur = 0;
@@ -428,8 +501,8 @@ static bool column_solve(const vector<int>& s_list, chrono::steady_clock::time_p
         }
 
         if (VERBOSE_LOG) {
-            fprintf(stderr, "[P1: ENUM] cols=%d partial=%d enum_t=%.3fs | UB=%lld greedy=%lld lagr_exact=%d\n",
-                    NC, (int)enum_partial, enum_sec, ub, best, (int)lagr_exact);
+            fprintf(stderr, "[P1: ENUM] cols=%d rounds=%d mem=%.1fMB partial=%d enum_t=%.3fs | UB=%lld greedy=%lld lagr_exact=%d\n",
+                    NC, enum_rounds, enum_bytes() / (1024.0 * 1024.0), (int)enum_partial, enum_sec, ub, best, (int)lagr_exact);
         }
 
         // 3. Fast Dual-Guided Multi-Wave Set Packing SA
@@ -494,19 +567,14 @@ static bool column_solve(const vector<int>& s_list, chrono::steady_clock::time_p
                     }
                 };
 
-                const double used_total = chrono::duration<double>(chrono::steady_clock::now() - t_start).count();
-                const double rem_total = max(0.05, TIME_LIMIT_SEC - used_total);
-                double sp_budget = !enum_partial
-                    ? min({P1_SP_MAX_SEC_COMPLETE, TIME_LIMIT_SEC * P1_SP_TIME_FRAC_COMPLETE, rem_total})
-                    : min({P1_SP_MAX_SEC_PARTIAL, TIME_LIMIT_SEC * P1_SP_TIME_FRAC_PARTIAL, rem_total});
-                double wave_max_sec = min(P1_WAVE_MAX_SEC_CAP, max(P1_WAVE_MIN_SEC, sp_budget * P1_WAVE_BUDGET_FRAC));
-                double wave_stall_sec = min(P1_WAVE_STALL_MAX_SEC, max(P1_WAVE_STALL_MIN_SEC, wave_max_sec * P1_WAVE_STALL_FRAC));
-
                 auto sp_start = chrono::steady_clock::now();
-                auto sp_deadline = sp_start + chrono::microseconds((ll)(sp_budget * 1e6));
+                auto sp_deadline = p1_deadline;
+                double sp_rem = chrono::duration<double>(sp_deadline - sp_start).count();
+                double wave_max_sec = min(P1_WAVE_SEC, max(0.0, sp_rem));
+                double wave_stall_sec = min(P1_WAVE_STALL_SEC, wave_max_sec);
                 int waves_no_impr = 0;
 
-                for (int wave_id = 0;; ++wave_id) {
+                for (int wave_id = 0; sp_rem > 0.005; ++wave_id) {
                     auto now = chrono::steady_clock::now();
                     if (now >= sp_deadline || best >= ub) break;
 
@@ -669,8 +737,8 @@ static bool column_solve(const vector<int>& s_list, chrono::steady_clock::time_p
             }
         }
     } else if (VERBOSE_LOG) {
-        fprintf(stderr, "[P1: ENUM] cols=%d partial=1 enum_t=%.3fs | greedy=%lld -> handoff to Phase 2\n",
-                NC, enum_sec, best);
+        fprintf(stderr, "[P1: ENUM] cols=%d rounds=%d mem=%.1fMB partial=1 enum_t=%.3fs | greedy=%lld -> handoff to Phase 2\n",
+                NC, enum_rounds, enum_bytes() / (1024.0 * 1024.0), enum_sec, best);
     }
 
     for (int k = 1; k <= K; ++k) {
